@@ -78,3 +78,8 @@ docker-compose.override.yml
 
 # stray editor/sed backups
 *.bak
+
+# Local DB dumps (large, may contain data) — never commit
+dumps/
+*.dump
+*.sql.gz
