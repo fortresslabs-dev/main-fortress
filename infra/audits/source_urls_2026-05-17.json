@@ -1,0 +1,1107 @@
+{
+  "generated_at": "2026-05-17T02:01:54.232973+00:00",
+  "summary": {
+    "ok": 92,
+    "404": 12,
+    "error": 17,
+    "skipped": 16
+  },
+  "results": [
+    {
+      "connector": "ca_dfpi",
+      "key": "bulletins",
+      "url": "https://dfpi.ca.gov/industry-guidance/bulletins-letters/",
+      "status": "error",
+      "http_code": 403,
+      "error": "http_403"
+    },
+    {
+      "connector": "ca_dfpi",
+      "key": "ccpa_guidance",
+      "url": "https://cppa.ca.gov/regulations/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "ca_dfpi",
+      "key": "cfl_guidance",
+      "url": "https://dfpi.ca.gov/consumers-investors/loans/california-financing-law/",
+      "status": "error",
+      "http_code": 403,
+      "error": "http_403"
+    },
+    {
+      "connector": "ca_dfpi",
+      "key": "dfal_guidance",
+      "url": "https://dfpi.ca.gov/digital-financial-assets/",
+      "status": "error",
+      "http_code": 403,
+      "error": "http_403"
+    },
+    {
+      "connector": "ca_dfpi",
+      "key": "dfpi_main",
+      "url": "https://dfpi.ca.gov/",
+      "status": "error",
+      "http_code": 403,
+      "error": "http_403"
+    },
+    {
+      "connector": "ca_dfpi",
+      "key": "enforcement",
+      "url": "https://dfpi.ca.gov/newsroom/enforcement-actions/",
+      "status": "error",
+      "http_code": 403,
+      "error": "http_403"
+    },
+    {
+      "connector": "ca_dfpi",
+      "key": "licensing",
+      "url": "https://dfpi.ca.gov/consumers-investors/industry-guidance/licensing/",
+      "status": "error",
+      "http_code": 403,
+      "error": "http_403"
+    },
+    {
+      "connector": "cecl",
+      "key": "fdic_cecl",
+      "url": "https://www.fdic.gov/regulations/examinations/credit-risk/cecl.html",
+      "status": "404",
+      "http_code": 404,
+      "error": null
+    },
+    {
+      "connector": "cecl",
+      "key": "frb_cecl",
+      "url": "https://www.federalreserve.gov/supervisionreg/topics/accounting.htm",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cecl",
+      "key": "occ_acl_policy",
+      "url": "https://www.occ.gov/news-issuances/bulletins/2020/bulletin-2020-51.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cecl",
+      "key": "occ_cecl_guide",
+      "url": "https://www.occ.gov/publications-and-resources/publications/comptrollers-handbook/files/credit-risk/index-credit-risk.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cecl",
+      "key": "occ_model_risk",
+      "url": "https://www.occ.gov/news-issuances/bulletins/2011/bulletin-2011-12.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cfpb",
+      "key": "compliance_resources",
+      "url": "https://www.consumerfinance.gov/compliance/compliance-resources/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cfpb",
+      "key": "exam_procedures",
+      "url": "https://www.consumerfinance.gov/policy-compliance/guidance/supervision-examinations/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cfpb",
+      "key": "fdic_bankfind",
+      "url": "https://banks.data.fdic.gov/api/",
+      "status": "404",
+      "http_code": 404,
+      "error": null
+    },
+    {
+      "connector": "cfpb",
+      "key": "ffiec_census",
+      "url": "https://www.ffiec.gov/censusapp.htm",
+      "status": "error",
+      "http_code": 403,
+      "error": "http_403"
+    },
+    {
+      "connector": "cfpb",
+      "key": "final_rules",
+      "url": "https://www.consumerfinance.gov/rules-policy/final-rules/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cfpb",
+      "key": "hmda",
+      "url": "https://www.consumerfinance.gov/data-research/hmda/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cfpb",
+      "key": "hmda_api",
+      "url": "https://ffiec.cfpb.gov/api/hmda/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cfpb",
+      "key": "hmda_faq",
+      "url": "https://www.consumerfinance.gov/data-research/hmda/for-filers",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cfpb",
+      "key": "hmda_fig_html_2025",
+      "url": "https://ffiec.cfpb.gov/documentation/fig/2025/overview",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cfpb",
+      "key": "hmda_fig_html_2026",
+      "url": "https://ffiec.cfpb.gov/documentation/fig/2026/overview",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cfpb",
+      "key": "hmda_filing_guide_pdf",
+      "url": "https://ffiec.cfpb.gov/resources/HMDA_Filing_Instructions_Guide_2024_v1.pdf",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cfpb",
+      "key": "regulation_b",
+      "url": "https://www.consumerfinance.gov/rules-policy/regulations/1002/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cfpb",
+      "key": "regulation_e",
+      "url": "https://www.consumerfinance.gov/rules-policy/regulations/1005/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cfpb",
+      "key": "regulation_e_commentary",
+      "url": "https://www.consumerfinance.gov/rules-policy/regulations/1005/interp/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cfpb",
+      "key": "rss_feed",
+      "url": "https://www.consumerfinance.gov/feed/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cfpb",
+      "key": "section_1071",
+      "url": "https://www.consumerfinance.gov/rules-policy/final-rules/small-business-lending-under-the-equal-credit-opportunity-act-regulation-b/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cfpb",
+      "key": "supervisory_highlights",
+      "url": "https://www.consumerfinance.gov/compliance/supervisory-highlights/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cra",
+      "key": "fdic_cra",
+      "url": "https://www.fdic.gov/banker-resource-center/community-reinvestment-act-cra",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cra",
+      "key": "fdic_cra_manual",
+      "url": "https://www.fdic.gov/regulations/cra/index.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cra",
+      "key": "ffiec_cra_ratings",
+      "url": "https://www.ffiec.gov/cra/ratings.htm",
+      "status": "error",
+      "http_code": 403,
+      "error": "http_403"
+    },
+    {
+      "connector": "cra",
+      "key": "frb_cra",
+      "url": "https://www.federalreserve.gov/apps/reportforms/moreinfo.aspx?pCode=CRA",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cra",
+      "key": "frb_cra_examinations",
+      "url": "https://www.federalreserve.gov/releases/crainfo/",
+      "status": "404",
+      "http_code": 404,
+      "error": null
+    },
+    {
+      "connector": "cra",
+      "key": "occ_cra",
+      "url": "https://www.occ.gov/topics/supervision-and-examination/cra/index-cra.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cra",
+      "key": "occ_cra_guidance_pdf",
+      "url": "https://www.occ.gov/publications-and-resources/publications/comptrollers-handbook/files/cra/pub-ch-cra.pdf",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cra",
+      "key": "rss_occ",
+      "url": "https://www.occ.gov/tools/subscribe/rss.xml",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cre_concentration",
+      "key": "fdic_cre_manual",
+      "url": "https://www.fdic.gov/regulations/examinations/supervisory/insights/siwin06/si_win06.pdf",
+      "status": "404",
+      "http_code": 404,
+      "error": null
+    },
+    {
+      "connector": "cre_concentration",
+      "key": "fdic_cre_supervisory",
+      "url": "https://www.fdic.gov/credit/commercial-real-estate-lending",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cre_concentration",
+      "key": "frb_sr_07_1",
+      "url": "https://www.federalreserve.gov/boarddocs/srletters/2007/SR0701.htm",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cre_concentration",
+      "key": "joint_guidance_2006",
+      "url": "https://www.fdic.gov/news/financial-institution-letters/2007/fil07006.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cre_concentration",
+      "key": "occ_cre_guidance",
+      "url": "https://www.occ.gov/news-issuances/bulletins/2007/bulletin-2007-1.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "cre_concentration",
+      "key": "occ_cre_page",
+      "url": "https://www.occ.gov/topics/supervision-and-examination/credit-and-market-risk/commercial-real-estate/index-commercial-real-estate.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fdic",
+      "key": "base_url",
+      "url": "https://www.fdic.gov",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fdic",
+      "key": "capital_markets",
+      "url": "https://www.fdic.gov/capital-markets",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fdic",
+      "key": "compliance_manual",
+      "url": "https://www.fdic.gov/consumer-compliance-examination-manual",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fdic",
+      "key": "deposit_insurance",
+      "url": "https://www.fdic.gov/resources/deposit-insurance/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fdic",
+      "key": "financial_institution_letters",
+      "url": "https://www.fdic.gov/news/financial-institution-letters",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fdic",
+      "key": "laws_and_regulations",
+      "url": "https://www.fdic.gov/laws-and-regulations",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fdic",
+      "key": "risk_management_manual_pdf",
+      "url": "https://www.fdic.gov/resources/supervision-and-examinations/examination-policies-manual/risk-management-manual-complete.pdf",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fdic",
+      "key": "risk_management_manual_toc",
+      "url": "https://www.fdic.gov/risk-management-manual-examination-policies",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "ffiec_bsa",
+      "key": "ffiec_bsa_beneficial",
+      "url": "https://bsaaml.ffiec.gov/manual/RegulatoryRequirements/01",
+      "status": "skipped",
+      "http_code": null,
+      "error": "cf_gated_no_scrape_host"
+    },
+    {
+      "connector": "ffiec_bsa",
+      "key": "ffiec_bsa_cdd",
+      "url": "https://bsaaml.ffiec.gov/manual/CustomerIdentificationProgram/01",
+      "status": "skipped",
+      "http_code": null,
+      "error": "cf_gated_no_scrape_host"
+    },
+    {
+      "connector": "ffiec_bsa",
+      "key": "ffiec_bsa_ctr",
+      "url": "https://bsaaml.ffiec.gov/manual/CurrencyTransactionReporting/01",
+      "status": "skipped",
+      "http_code": null,
+      "error": "cf_gated_no_scrape_host"
+    },
+    {
+      "connector": "ffiec_bsa",
+      "key": "ffiec_bsa_info_sharing",
+      "url": "https://bsaaml.ffiec.gov/manual/Section314/01",
+      "status": "skipped",
+      "http_code": null,
+      "error": "cf_gated_no_scrape_host"
+    },
+    {
+      "connector": "ffiec_bsa",
+      "key": "ffiec_bsa_main",
+      "url": "https://bsaaml.ffiec.gov/manual",
+      "status": "skipped",
+      "http_code": null,
+      "error": "cf_gated_no_scrape_host"
+    },
+    {
+      "connector": "ffiec_bsa",
+      "key": "ffiec_bsa_overview",
+      "url": "https://bsaaml.ffiec.gov/manual/Introduction/01",
+      "status": "skipped",
+      "http_code": null,
+      "error": "cf_gated_no_scrape_host"
+    },
+    {
+      "connector": "ffiec_bsa",
+      "key": "ffiec_bsa_pdf",
+      "url": "https://bsaaml.ffiec.gov/docs/FFIEC_BSA_AML_ExamManual.pdf",
+      "status": "skipped",
+      "http_code": null,
+      "error": "cf_gated_no_scrape_host"
+    },
+    {
+      "connector": "ffiec_bsa",
+      "key": "ffiec_bsa_products",
+      "url": "https://bsaaml.ffiec.gov/manual/ProductsServiceRisks/01",
+      "status": "skipped",
+      "http_code": null,
+      "error": "cf_gated_no_scrape_host"
+    },
+    {
+      "connector": "ffiec_bsa",
+      "key": "ffiec_bsa_risk_assessment",
+      "url": "https://bsaaml.ffiec.gov/manual/BSAAMLComplianceProgram/01",
+      "status": "skipped",
+      "http_code": null,
+      "error": "cf_gated_no_scrape_host"
+    },
+    {
+      "connector": "ffiec_bsa",
+      "key": "ffiec_bsa_sar",
+      "url": "https://bsaaml.ffiec.gov/manual/SuspiciousActivityReporting/01",
+      "status": "skipped",
+      "http_code": null,
+      "error": "cf_gated_no_scrape_host"
+    },
+    {
+      "connector": "ffiec_call_report",
+      "key": "call_report_main",
+      "url": "https://www.ffiec.gov/nicpubweb/nicweb/SearchForm.aspx",
+      "status": "error",
+      "http_code": 403,
+      "error": "http_403"
+    },
+    {
+      "connector": "ffiec_call_report",
+      "key": "cdrh_submission",
+      "url": "https://cdr.ffiec.gov/public/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "ffiec_call_report",
+      "key": "fdic_call_reports",
+      "url": "https://www.fdic.gov/bank/statistical/guide/2024/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "ffiec_call_report",
+      "key": "fdic_statistics",
+      "url": "https://www.fdic.gov/bank/statistical/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "ffiec_call_report",
+      "key": "ffiec_031_instructions",
+      "url": "https://www.ffiec.gov/PDF/FFIEC_forms/FFIEC031_20240630_i.pdf",
+      "status": "error",
+      "http_code": 403,
+      "error": "http_403"
+    },
+    {
+      "connector": "ffiec_call_report",
+      "key": "ffiec_041_instructions",
+      "url": "https://www.ffiec.gov/PDF/FFIEC_forms/FFIEC041_20240630_i.pdf",
+      "status": "error",
+      "http_code": 403,
+      "error": "http_403"
+    },
+    {
+      "connector": "ffiec_call_report",
+      "key": "ffiec_051_instructions",
+      "url": "https://www.ffiec.gov/PDF/FFIEC_forms/FFIEC051_20240630_i.pdf",
+      "status": "error",
+      "http_code": 403,
+      "error": "http_403"
+    },
+    {
+      "connector": "ffiec_call_report",
+      "key": "ffiec_forms",
+      "url": "https://www.ffiec.gov/nicpubweb/content/FFIEC_Forms_052_031.htm",
+      "status": "error",
+      "http_code": 403,
+      "error": "http_403"
+    },
+    {
+      "connector": "ffiec_call_report",
+      "key": "frb_y9c",
+      "url": "https://www.federalreserve.gov/apps/reportforms/moreinfo.aspx?pCode=FR_Y-9C",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "ffiec_cybersecurity",
+      "key": "ffiec_cat_pdf",
+      "url": "https://www.ffiec.gov/pdf/cybersecurity/FFIEC_CAT_May_2017.pdf",
+      "status": "error",
+      "http_code": 403,
+      "error": "http_403"
+    },
+    {
+      "connector": "ffiec_cybersecurity",
+      "key": "ffiec_cyber_main",
+      "url": "https://www.ffiec.gov/cybersecurity.htm",
+      "status": "error",
+      "http_code": 403,
+      "error": "http_403"
+    },
+    {
+      "connector": "ffiec_cybersecurity",
+      "key": "ffiec_it_business_continuity",
+      "url": "https://ithandbook.ffiec.gov/it-booklets/business-continuity-management.aspx",
+      "status": "skipped",
+      "http_code": null,
+      "error": "cf_gated_no_scrape_host"
+    },
+    {
+      "connector": "ffiec_cybersecurity",
+      "key": "ffiec_it_development",
+      "url": "https://ithandbook.ffiec.gov/it-booklets/development-acquisition.aspx",
+      "status": "skipped",
+      "http_code": null,
+      "error": "cf_gated_no_scrape_host"
+    },
+    {
+      "connector": "ffiec_cybersecurity",
+      "key": "ffiec_it_handbook",
+      "url": "https://ithandbook.ffiec.gov/",
+      "status": "skipped",
+      "http_code": null,
+      "error": "cf_gated_no_scrape_host"
+    },
+    {
+      "connector": "ffiec_cybersecurity",
+      "key": "ffiec_it_information_security",
+      "url": "https://ithandbook.ffiec.gov/it-booklets/information-security.aspx",
+      "status": "skipped",
+      "http_code": null,
+      "error": "cf_gated_no_scrape_host"
+    },
+    {
+      "connector": "ffiec_cybersecurity",
+      "key": "ffiec_it_management",
+      "url": "https://ithandbook.ffiec.gov/it-booklets/management.aspx",
+      "status": "skipped",
+      "http_code": null,
+      "error": "cf_gated_no_scrape_host"
+    },
+    {
+      "connector": "ffiec_cybersecurity",
+      "key": "ffiec_it_operations",
+      "url": "https://ithandbook.ffiec.gov/it-booklets/operations.aspx",
+      "status": "skipped",
+      "http_code": null,
+      "error": "cf_gated_no_scrape_host"
+    },
+    {
+      "connector": "ffiec_cybersecurity",
+      "key": "nist_csf",
+      "url": "https://www.nist.gov/cyberframework",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "ffiec_cybersecurity",
+      "key": "occ_cyber_bulletins",
+      "url": "https://www.occ.gov/topics/supervision-and-examination/bank-operations/cybersecurity/index-cybersecurity.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fincen_sar",
+      "key": "administrative_rulings",
+      "url": "https://www.fincen.gov/resources/statutes-regulations/administrative-rulings",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fincen_sar",
+      "key": "beneficial_ownership",
+      "url": "https://www.fincen.gov/boi",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fincen_sar",
+      "key": "filing_information",
+      "url": "https://www.fincen.gov/resources/filing-information",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fincen_sar",
+      "key": "fincen_guidance",
+      "url": "https://www.fincen.gov/resources/statutes-regulations/guidance",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fincen_sar",
+      "key": "guidance",
+      "url": "https://www.fincen.gov/resources/statutes-regulations/guidance",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fincen_sar",
+      "key": "legal_authorities",
+      "url": "https://www.fincen.gov/resources/fincens-legal-authorities",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fincen_sar",
+      "key": "news_page",
+      "url": "https://www.fincen.gov/news",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fincen_sar",
+      "key": "sar_activity_review_pdf",
+      "url": "https://www.fincen.gov/sites/default/files/shared/sar_tti_23.pdf",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fl_ofr",
+      "key": "banking",
+      "url": "https://flofr.gov/divisions-offices/division-of-financial-institutions",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fl_ofr",
+      "key": "consumer_finance",
+      "url": "https://flofr.gov/divisions-offices/division-of-consumer-finance",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fl_ofr",
+      "key": "enforcement",
+      "url": "https://flofr.gov/enforcement/final-administrative-actions",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fl_ofr",
+      "key": "guidance",
+      "url": "https://flofr.gov/regulation/industry-alerts",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fl_ofr",
+      "key": "money_services",
+      "url": "https://flofr.gov/divisions-offices/division-of-consumer-finance",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "fl_ofr",
+      "key": "ofr_main",
+      "url": "https://www.flofr.gov/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "il_idfpr",
+      "key": "banking_division",
+      "url": "https://idfpr.illinois.gov/banking.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "il_idfpr",
+      "key": "commercial_banks",
+      "url": "https://idfpr.illinois.gov/banks/cbt.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "il_idfpr",
+      "key": "idfpr_main",
+      "url": "https://idfpr.illinois.gov/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "irr",
+      "key": "fdic_irr_guidance",
+      "url": "https://www.fdic.gov/capital-markets/interest-rate-risk",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "irr",
+      "key": "ffiec_irr_advisory",
+      "url": "https://www.ffiec.gov/press/pr010614.htm",
+      "status": "error",
+      "http_code": 403,
+      "error": "http_403"
+    },
+    {
+      "connector": "irr",
+      "key": "frb_sr96_13",
+      "url": "https://www.federalreserve.gov/boarddocs/srletters/1996/SR9613.htm",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "irr",
+      "key": "occ_irr_bulletin",
+      "url": "https://www.occ.gov/news-issuances/bulletins/2010/bulletin-2010-1.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "irr",
+      "key": "occ_irr_handbook",
+      "url": "https://www.occ.gov/publications-and-resources/publications/comptrollers-handbook/files/interest-rate-risk/pub-ch-interest-rate-risk.pdf",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "irr",
+      "key": "occ_irr_page",
+      "url": "https://www.occ.gov/topics/supervision-and-examination/capital-and-liquidity/interest-rate-risk/index-interest-rate-risk.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "liquidity_risk",
+      "key": "fdic_liquidity",
+      "url": "https://www.fdic.gov/resources/supervision-and-examinations/examination-policies-manual/section-6-1.pdf",
+      "status": "404",
+      "http_code": 404,
+      "error": null
+    },
+    {
+      "connector": "liquidity_risk",
+      "key": "frb_liquidity",
+      "url": "https://www.federalreserve.gov/supervisionreg/topics/liquidity_risk.htm",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "liquidity_risk",
+      "key": "interagency_2010",
+      "url": "https://www.fdic.gov/regulations/applications/ifr/2010/2010-12-ifr.pdf",
+      "status": "404",
+      "http_code": 404,
+      "error": null
+    },
+    {
+      "connector": "liquidity_risk",
+      "key": "occ_liquidity",
+      "url": "https://www.occ.gov/publications-and-resources/publications/comptrollers-handbook/files/liquidity/index-liquidity.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "liquidity_risk",
+      "key": "occ_post_svb",
+      "url": "https://www.occ.gov/news-issuances/bulletins/2023/bulletin-2023-13.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "nydfs",
+      "key": "circulars",
+      "url": "https://www.dfs.ny.gov/industry_guidance/circular_letters",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "nydfs",
+      "key": "industry_letters",
+      "url": "https://www.dfs.ny.gov/industry_guidance/industry_letters",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "nydfs",
+      "key": "nydfs_main",
+      "url": "https://www.dfs.ny.gov/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "nydfs",
+      "key": "part_500_cyber",
+      "url": "https://www.dfs.ny.gov/industry_guidance/cybersecurity",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "nydfs",
+      "key": "part_500_text",
+      "url": "https://www.dfs.ny.gov/docs/legal/regulations/adoptions/dfsrf500txt.pdf",
+      "status": "404",
+      "http_code": 404,
+      "error": null
+    },
+    {
+      "connector": "occ_bsa",
+      "key": "bank_supervision_pdf",
+      "url": "https://www.occ.gov/publications-and-resources/publications/comptrollers-handbook/files/bank-supervision-process/pub-ch-bank-supervision-process.pdf",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "occ_bsa",
+      "key": "bsa_guidance",
+      "url": "https://www.occ.gov/topics/supervision-and-examination/bsa/index-bsa.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "occ_bsa",
+      "key": "bulletins",
+      "url": "https://www.occ.gov/news-issuances/bulletins/index-bulletins.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "occ_bsa",
+      "key": "comptrollers_handbook",
+      "url": "https://www.occ.gov/publications-and-resources/publications/comptrollers-handbook/index-comptrollers-handbook.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "occ_bsa",
+      "key": "interpretive_letters",
+      "url": "https://www.occ.gov/topics/laws-and-regulations/interpretations-and-actions/index-interpretive-letters.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "occ_bsa",
+      "key": "large_bank_supervision_pdf",
+      "url": "https://www.occ.gov/publications-and-resources/publications/comptrollers-handbook/files/large-bank-supervision/pub-ch-large-bank-supervision.pdf",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "occ_bsa",
+      "key": "laws_and_regulations",
+      "url": "https://www.occ.gov/topics/laws-and-regulations/index-laws-and-regulations.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "occ_bsa",
+      "key": "manual",
+      "url": "https://www.occ.gov/publications-and-resources/publications/comptrollers-handbook/files/bsa/index-bsa.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "occ_bsa",
+      "key": "no_objection_letters",
+      "url": "https://www.occ.gov/topics/laws-and-regulations/interpretations-and-actions/index-no-objection-letters.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "ofac_sdn",
+      "key": "sanctions_programs",
+      "url": "https://ofac.treasury.gov/sanctions-programs-and-country-information",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "ofac_sdn",
+      "key": "sdn_xml",
+      "url": "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN_ADVANCED.XML",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "operational_risk",
+      "key": "frb_operational",
+      "url": "https://www.federalreserve.gov/supervisionreg/topics/operational-resilience.htm",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "operational_risk",
+      "key": "occ_op_risk",
+      "url": "https://www.occ.gov/publications-and-resources/publications/comptrollers-handbook/files/operational-risk/index-operational-risk.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "operational_risk",
+      "key": "occ_op_risk_pdf",
+      "url": "https://www.occ.gov/publications-and-resources/publications/comptrollers-handbook/files/operational-risk/pub-ch-operational-risk.pdf",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "peer_benchmarks",
+      "key": "fdic_bankfind_institutions",
+      "url": "https://banks.data.fdic.gov/api/institutions?fields=CERT,ASSET,STALP,CLASS&limit=500&filters=ACTIVE%3A1",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "peer_benchmarks",
+      "key": "fdic_bankfind_summary",
+      "url": "https://banks.data.fdic.gov/api/summary?fields=ASSET,INTINC,INTEXP&limit=1000&offset=0&filters=ACTIVE%3A1",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "peer_benchmarks",
+      "key": "ffiec_ubpr",
+      "url": "https://www.ffiec.gov/npw/FinancialReport/ReturnFinancialReport?rpt=BHC&selectedyear=2025",
+      "status": "error",
+      "http_code": 403,
+      "error": "http_403"
+    },
+    {
+      "connector": "peer_benchmarks",
+      "key": "occ_quarterly_journal",
+      "url": "https://www.occ.gov/publications-and-resources/publications/quarterly-journal/index-quarterly-journal.html",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "tx_dob",
+      "key": "bank_supervision",
+      "url": "https://www.dob.texas.gov/industry/banks/",
+      "status": "404",
+      "http_code": 404,
+      "error": null
+    },
+    {
+      "connector": "tx_dob",
+      "key": "consumer_lending",
+      "url": "https://www.dob.texas.gov/industry/consumer-lenders/",
+      "status": "404",
+      "http_code": 404,
+      "error": null
+    },
+    {
+      "connector": "tx_dob",
+      "key": "dob_main",
+      "url": "https://www.dob.texas.gov/",
+      "status": "ok",
+      "http_code": 200,
+      "error": null
+    },
+    {
+      "connector": "tx_dob",
+      "key": "enforcement",
+      "url": "https://www.dob.texas.gov/about/news/enforcement-actions/",
+      "status": "404",
+      "http_code": 404,
+      "error": null
+    },
+    {
+      "connector": "tx_dob",
+      "key": "guidance",
+      "url": "https://www.dob.texas.gov/industry/banks/guidance/",
+      "status": "404",
+      "http_code": 404,
+      "error": null
+    },
+    {
+      "connector": "tx_dob",
+      "key": "money_services",
+      "url": "https://www.dob.texas.gov/industry/money-services-businesses/",
+      "status": "404",
+      "http_code": 404,
+      "error": null
+    }
+  ]
+}

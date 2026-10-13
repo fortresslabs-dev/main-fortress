@@ -1,0 +1,357 @@
+Citation	Regulator	Obligation	Rule
+31 CFR 1010.205	FinCEN	1 obligation(s)	3 rule(s)
+	Medium	1010.205 — Determine whether the financial institution qualifies for an exemption from the general anti-money laundering program requirement and, if not exempt, ensure the standard program requirement applies.	
+			[REGULATORY] Exemption eligibility for AML program requirements must be assessed and documented for each in-scope entity  · evidence: Policy repository
+			[REGULATORY] Entities that do not meet exemption criteria must be enrolled in the standard AML program requirement without gap  · evidence: Compliance risk assessment
+			[BUSINESS] Exemption determinations must be re-assessed when business lines, licensing status, or ownership structure change  · evidence: Change management log
+31 CFR 1010.210	FinCEN	1 obligation(s)	4 rule(s)
+	Critical	1010.210(b) — Establish, implement, and maintain an effective, risk-based anti-money laundering program reasonably designed to prevent the institution from being used to facilitate money laundering or terrorist financing.	
+			[REGULATORY] A written AML program covering internal controls, independent testing, a designated compliance officer, ongoing training, and risk-based customer due diligence procedures must exist  · evidence: Policy repository
+			[REGULATORY] AML program must be commensurate with the institution's money laundering/terrorist financing risk profile across products, services, customers, and geographies  · evidence: Enterprise risk assessment
+			[BUSINESS] AML program must be approved by the board of directors or an equivalent senior committee, with approval evidenced and dated  · evidence: Board minutes
+			[TECHNICAL] AML program effectiveness must be independently tested on a risk-based cycle defined by policy  · evidence: Independent testing/audit tracker
+31 CFR 1010.220	FinCEN	1 obligation(s)	5 rule(s)
+	Critical	1010.220(a) — Implement a written Customer Identification Program (CIP), appropriate for the institution's size and type of business, enabling formation of a reasonable belief that it knows the true identity of each customer.	
+			[REGULATORY] Written CIP must be part of, and consistent with, the institution's AML program  · evidence: Policy repository
+			[REGULATORY] CIP must collect at minimum name, date of birth (for individuals), address, and identification number prior to account opening  · evidence: Account opening system
+			[REGULATORY] CIP must include risk-based procedures for verifying identity within a reasonable time after account opening  · evidence: CIP/CDD system
+			[TECHNICAL] Customer records must be checked against government lists of known or suspected terrorists or terrorist organizations  · evidence: Watchlist screening system
+			[BUSINESS] CIP must define recordkeeping requirements and the customer notice provided at account opening  · evidence: Account opening workflow
+31 CFR 1010.230	FinCEN	8 obligation(s)	18 rule(s)
+	Critical	1010.230(b) — Establish written procedures to identify and verify beneficial owners of legal entity customers at account opening.	
+			[REGULATORY] Written beneficial ownership procedures must exist  · evidence: Policy repository
+			[REGULATORY] Exactly one control-prong individual must be identified per legal entity customer  · evidence: CIP/CDD system
+			[REGULATORY] Ownership threshold parameter must equal 25 percent  · evidence: Rule config
+			[REGULATORY] Identity of each beneficial owner must be verified per CIP procedures  · evidence: CIP/CDD system
+			[BUSINESS] Account may not be activated until beneficial ownership is complete  · evidence: Account opening workflow
+			[TECHNICAL] Beneficial ownership record must link to the legal entity by immutable customer ID  · evidence: Database schema
+	Critical	1010.230(d)(1) — Identify each individual who directly or indirectly owns 25 percent or more of the equity interests of a legal entity customer.	
+			[REGULATORY] IF legal_entity_account THEN beneficial_owner records exist for each owner at or above 25 percent  · evidence: CDD system
+			[REGULATORY] Ownership threshold parameter must equal 25 percent  · evidence: Rule config
+			[REGULATORY] Count of ownership-prong individuals must not exceed four  · evidence: CDD system
+			[TECHNICAL] Indirect ownership must be computed through intermediate entities, not only direct holdings  · evidence: Ownership graph
+	Critical	1010.230(d)(2) — Identify one individual with significant responsibility to control, manage, or direct the legal entity customer.	
+			[REGULATORY] Exactly one control-prong individual must be recorded per legal entity customer  · evidence: CDD system
+			[TECHNICAL] Control prong must be required even when no owner reaches 25 percent  · evidence: CDD system
+	Critical	1010.230(b)(2) — Verify the identity of each beneficial owner using CIP-equivalent procedures.	
+			[REGULATORY] Identity of each beneficial owner must be verified using CIP-equivalent methods  · evidence: CDD system
+	High	1010.230(e) — Obtain a certification of beneficial ownership from the individual opening the account, or equivalent information.	
+			[REGULATORY] A signed beneficial ownership certification or equivalent must be on file  · evidence: Document repository
+	High	1010.230(b)(1) — Conduct ongoing monitoring to update customer information and reassess the risk profile on a risk basis.	
+			[REGULATORY] Customer risk profile must be reassessed when monitoring identifies material change  · evidence: CDD system
+			[BUSINESS] Negative news hits must trigger a risk-rating review within the defined SLA  · evidence: Monitoring queue
+	High	1010.230(h) — Retain beneficial ownership records for five years after the account is closed.	
+			[REGULATORY] Beneficial ownership records retained 5 years after account closure  · evidence: Archive index
+	Medium	1010.230(g) — Apply the listed exclusions and exemptions correctly when determining whether an entity is a legal entity customer.	
+			[REGULATORY] Excluded entity types must not be flagged as requiring beneficial ownership  · evidence: CDD rules engine
+31 CFR 1010.306	FinCEN	1 obligation(s)	2 rule(s)
+	Critical	1010.306(a)(1) — File the CTR within 15 calendar days following the date of the reportable transaction.	
+			[REGULATORY] CTR filed date minus transaction date must be 15 calendar days or fewer  · evidence: Filing record
+			[BUSINESS] Alert at day 10 for any unfiled CTR  · evidence: Alerting service
+31 CFR 1010.310	FinCEN	1 obligation(s)	3 rule(s)
+	Critical	1010.310 — Identify all transactions in currency subject to reporting under the general Reports of Transactions in Currency framework (§§ 1010.310-1010.314), as distinct from institution-type-specific mirror provisions.	
+			[REGULATORY] Institution must identify all currency transactions subject to the general CTR reporting framework  · evidence: CTR system rules
+			[TECHNICAL] CTR rule engine must reference the reporting form and threshold applicable to the institution's chapter X part  · evidence: Transaction monitoring system config
+			[BUSINESS] Front-line and operations staff must be trained to recognize reportable currency transactions at the time of the transaction  · evidence: Training records
+31 CFR 1010.311	FinCEN	1 obligation(s)	4 rule(s)
+	Critical	1010.311 — File a Currency Transaction Report for each transaction in currency of more than $10,000.	
+			[REGULATORY] IF currency transaction exceeds 10000 THEN CTR must be filed  · evidence: Teller / core log
+			[REGULATORY] Threshold parameter must be strictly greater than 10000, not equal to  · evidence: Rule config
+			[REGULATORY] Aggregation must be by same person and same business day  · evidence: Aggregation engine
+			[BUSINESS] Teller system must prompt for CTR data capture at the point of transaction  · evidence: Teller UI logs
+31 CFR 1010.312	FinCEN	1 obligation(s)	1 rule(s)
+	High	1010.312 — Verify and record the identity of the person presenting a reportable currency transaction.	
+			[REGULATORY] Identity of the presenter must be verified and recorded for reportable transactions  · evidence: Teller record
+31 CFR 1010.313	FinCEN	1 obligation(s)	2 rule(s)
+	Critical	1010.313(b) — Aggregate multiple currency transactions totalling more than $10,000 by or on behalf of the same person in one business day.	
+			[REGULATORY] Aggregate all currency transactions by the same person within one business day  · evidence: Aggregation engine
+			[TECHNICAL] Aggregation must span channels and branches, not a single teller session  · evidence: Aggregation engine
+31 CFR 1010.314	FinCEN	1 obligation(s)	3 rule(s)
+	Critical	1010.314 — Detect and report structuring — the breaking of currency transactions to evade the reporting threshold.	
+			[REGULATORY] Detect multiple sub-threshold currency transactions aggregating above 10000 in one day  · evidence: Monitoring engine
+			[REGULATORY] Structuring detections must generate a SAR referral  · evidence: Case system
+			[BUSINESS] Detection window must also cover multi-day patterns per institution policy  · evidence: Monitoring config
+31 CFR 1010.315	FinCEN	1 obligation(s)	3 rule(s)
+	Medium	1010.315 — Apply currency transaction reporting exemptions correctly for eligible non-bank financial institution customers where the institution chooses to exempt them.	
+			[REGULATORY] Exemption eligibility criteria for non-bank financial institution customers must be documented and reassessed periodically  · evidence: CDD/exemption system
+			[REGULATORY] Underlying transaction records must still be retained for exempted customers even where CTR filing is waived  · evidence: Recordkeeping system
+			[BUSINESS] Exemption list must be reviewed at least annually for continued eligibility  · evidence: Periodic review log
+31 CFR 1010.320	FinCEN	1 obligation(s)	4 rule(s)
+	Critical	1010.320 — Maintain a chapter-wide suspicious activity reporting program that identifies, investigates, and reports known or suspected violations of law and suspicious transactions via a FinCEN Suspicious Activity Report (SAR).	
+			[REGULATORY] SAR must be filed no later than 30 calendar days after initial detection of facts constituting a basis for filing (extendable to 60 days absent an identified suspect)  · evidence: SAR case management system
+			[REGULATORY] SAR confidentiality and safe-harbor protections (no disclosure of a SAR or its existence, including in response to a subpoena) must be enforced institution-wide  · evidence: Legal hold / disclosure control procedure
+			[BUSINESS] Supporting documentation for each SAR decision (including decisions not to file) must be retained and available to regulators/law enforcement on request  · evidence: SAR supporting-documentation archive
+			[TECHNICAL] Suspicious activity alerts must escalate through a documented case management workflow to a filing/no-filing decision with rationale  · evidence: Case management system
+31 CFR 1010.330	FinCEN	1 obligation(s)	3 rule(s)
+	Medium	1010.330 — File FinCEN Form 8300 for each receipt of more than $10,000 in currency in the course of a trade or business, including related transactions.	
+			[REGULATORY] Form 8300 must be filed within 15 days of receiving reportable currency  · evidence: Form 8300 filing log
+			[REGULATORY] Related transactions must be aggregated for purposes of the $10,000 threshold determination  · evidence: Transaction aggregation logic
+			[BUSINESS] Required annual customer notice for reported transactions must be issued where applicable  · evidence: Customer notice records
+31 CFR 1010.331	FinCEN	1 obligation(s)	2 rule(s)
+	Low	1010.331 — Where the institution (or an affiliated function) acts as, or processes payments on behalf of, a court clerk receiving bail in currency exceeding $10,000, file the report required by this section.	
+			[BUSINESS] Applicability assessment must confirm whether the institution has any court-clerk bail-processing exposure  · evidence: Applicability assessment
+			[REGULATORY] If applicable, reporting procedures equivalent to the Form 8300 filing obligation must be established for bail receipts  · evidence: Policy repository
+31 CFR 1010.340	FinCEN	1 obligation(s)	1 rule(s)
+	Medium	1010.340 — File a CMIR for the physical transport of currency or monetary instruments exceeding $10,000 into or out of the United States.	
+			[REGULATORY] IF physical transport of over 10000 in currency or instruments across the border THEN CMIR filed  · evidence: Filing record
+31 CFR 1010.350	FinCEN	1 obligation(s)	4 rule(s)
+	High	1010.350 — Determine Report of Foreign Bank and Financial Accounts (FBAR) filing obligations for United States persons with a financial interest in, or signature authority over, foreign financial accounts exceeding the aggregate $10,000 threshold.	
+			[REGULATORY] FinCEN Form 114 (FBAR) must be filed annually by the applicable deadline for all in-scope U.S. persons and accounts  · evidence: FBAR filing tracker
+			[BUSINESS] Employees or officers with signature authority over company-owned foreign accounts must be identified and included in the FBAR filing determination  · evidence: Signatory authority register
+			[TECHNICAL] Foreign account balances must be aggregated across all accounts to test the $10,000 threshold  · evidence: Account aggregation system
+			[REGULATORY] FBAR-related records must be retained for five years  · evidence: Archive index
+31 CFR 1010.360	FinCEN	1 obligation(s)	2 rule(s)
+	Low	1010.360 — Maintain readiness to comply with reporting requirements on transactions with foreign financial agencies if and when the Secretary issues an implementing regulation under this section.	
+			[BUSINESS] Institution must monitor for a Secretary determination or implementing regulation under this section and update procedures accordingly  · evidence: Regulatory change management log
+			[REGULATORY] No standalone reporting obligation is currently active under this section; retain as a monitored/contingent citation rather than a live control  · evidence: Regulatory horizon-scanning register
+31 CFR 1010.370	FinCEN	1 obligation(s)	2 rule(s)
+	Low	1010.370 — Maintain readiness to comply with reporting requirements on certain domestic transactions if and when the Secretary issues an implementing regulation under this section.	
+			[BUSINESS] Institution must monitor for a Secretary determination triggering domestic-transaction reporting under this section  · evidence: Regulatory horizon-scanning register
+			[REGULATORY] No standalone reporting obligation is currently active under this section; retain as a monitored/contingent citation rather than a live control  · evidence: Regulatory change management log
+31 CFR 1010.380	FinCEN	1 obligation(s)	4 rule(s)
+	Critical	1010.380 — Where the institution, or a reporting-company client for which it provides formation/registered-agent-type services, is a reporting company under the Corporate Transparency Act, file and keep current beneficial ownership information (BOI) reports with FinCEN.	
+			[REGULATORY] Initial BOI report must be filed within the statutory/regulatory deadline applicable to the reporting company's formation or registration date  · evidence: BOI filing tracker
+			[REGULATORY] Updated BOI report must be filed within 30 days of any change to previously reported beneficial ownership information  · evidence: BOI change log
+			[BUSINESS] This entity-level FinCEN BOI reporting obligation must be tracked separately from, and not conflated with, the account-opening beneficial-ownership collection obligation under § 1010.230  · evidence: Policy repository
+			[TECHNICAL] Access controls and confidentiality safeguards for BOI data retrieved via FinCEN identifier must meet this section's security requirements  · evidence: BOI system access controls
+31 CFR 1010.410	FinCEN	3 obligation(s)	8 rule(s)
+	Critical	1010.410(f) — Include required originator and beneficiary information in transmittal orders of $3,000 or more.	
+			[REGULATORY] IF transmittal amount is 3000 or more THEN originator name and address must be present  · evidence: Wire message
+			[REGULATORY] IF transmittal amount is 3000 or more THEN amount and execution date must be present  · evidence: Wire message
+			[REGULATORY] Beneficiary institution identifier must be present on covered transmittals  · evidence: Wire message
+			[REGULATORY] Originator account number must be present where the order is made from an account  · evidence: Wire message
+			[TECHNICAL] Threshold parameter must equal 3000 — assert it is not set to 10000  · evidence: Rule config
+			[BUSINESS] Wires failing Travel Rule validation must be queued for repair, not released  · evidence: Wire queue
+	Critical	1010.410(f)(2) — As an intermediary institution, pass on all Travel Rule information received to the next institution.	
+			[REGULATORY] IF acting as intermediary THEN all received originator information must be forwarded unchanged  · evidence: Wire message
+	High	1010.410(e) — Retain records for each funds transfer of $3,000 or more as originator's, intermediary, or beneficiary bank.	
+			[REGULATORY] Funds transfer records of 3000 or more retained for 5 years  · evidence: Archive index
+31 CFR 1010.415	FinCEN	1 obligation(s)	2 rule(s)
+	High	1010.415 — Record required information for sales of monetary instruments for currency between $3,000 and $10,000.	
+			[REGULATORY] IF monetary instrument sold for currency between 3000 and 10000 THEN log entry required  · evidence: MIL system
+			[REGULATORY] Monetary instrument log must capture purchaser identity and instrument details  · evidence: MIL system
+31 CFR 1010.420	FinCEN	1 obligation(s)	2 rule(s)
+	Medium	1010.420 — Make and retain records for persons having a financial interest in, or signature authority over, a foreign financial account, regardless of whether that account ultimately triggers an FBAR filing.	
+			[REGULATORY] Records identifying each foreign financial account (institution name, account number, and maximum value during the year) must be retained for five years  · evidence: Archive index
+			[BUSINESS] Recordkeeping obligation applies independently of whether the account value requires FBAR filing  · evidence: Records retention policy
+31 CFR 1010.430	FinCEN	2 obligation(s)	4 rule(s)
+	High	1010.430(d) — Retain all BSA records for a period of five years.	
+			[REGULATORY] All BSA record classes must have a retention period of at least 5 years  · evidence: Retention schedule
+			[TECHNICAL] Deletion jobs must be blocked for records under the 5-year clock  · evidence: Archive policy
+	Medium	1010.430(a) — Maintain records in a manner that makes them accessible within a reasonable period of time.	
+			[REGULATORY] BSA records must be retrievable within a reasonable period on request  · evidence: Archive search
+			[TECHNICAL] Restore test must be performed on the BSA archive at defined intervals  · evidence: Restore test log
+31 CFR 1010.440	FinCEN	1 obligation(s)	2 rule(s)
+	Low	1010.440 — Assess the extraterritorial application of Subpart D recordkeeping requirements to persons located outside the United States.	
+			[BUSINESS] Applicability of Subpart D recordkeeping requirements to overseas branches, subsidiaries, and persons must be assessed during global program scoping  · evidence: Global program scoping documentation
+			[REGULATORY] Scoping determination must be documented and refreshed when the institution's overseas footprint changes  · evidence: Applicability assessment
+31 CFR 1010.520	FinCEN	2 obligation(s)	4 rule(s)
+	High	1010.520(b)(3) — Search records for subjects named in a FinCEN 314(a) request and respond within 14 days.	
+			[REGULATORY] IF 314(a) request received THEN search completed within 14 calendar days  · evidence: 314 case log
+			[REGULATORY] Positive matches must be reported to FinCEN  · evidence: Filing record
+			[BUSINESS] Alert at day 10 for any incomplete 314(a) search  · evidence: Alerting service
+	Critical	1010.520(b)(3)(iii) — Do not disclose the existence or contents of a 314(a) request to any person other than as permitted.	
+			[REGULATORY] 314(a) request contents must not be disclosed outside permitted recipients  · evidence: Access log
+31 CFR 1010.540	FinCEN	1 obligation(s)	2 rule(s)
+	Medium	1010.540(b) — File the required notice with FinCEN before sharing information with another financial institution under 314(b), and renew it annually.	
+			[REGULATORY] IF sharing under 314(b) THEN a current FinCEN notice must be on file  · evidence: Filing record
+			[BUSINESS] 314(b) notice must be renewed annually  · evidence: Compliance calendar
+31 CFR 1010.610	FinCEN	2 obligation(s)	2 rule(s)
+	High	1010.610(a) — Apply risk-based due diligence to correspondent accounts maintained for foreign financial institutions.	
+			[REGULATORY] Each foreign correspondent account must carry a documented risk assessment  · evidence: CDD system
+	High	1010.610(b) — Apply enhanced due diligence to correspondent accounts for higher-risk foreign financial institutions.	
+			[REGULATORY] Higher-risk foreign correspondent accounts must have EDD documentation on file  · evidence: CDD system
+31 CFR 1010.620	FinCEN	2 obligation(s)	3 rule(s)
+	High	1010.620(b) — Apply enhanced scrutiny to private banking accounts held by senior foreign political figures.	
+			[REGULATORY] IF customer identified as senior foreign political figure THEN enhanced scrutiny applied  · evidence: CDD system
+			[BUSINESS] PEP determination must be re-run on periodic review  · evidence: Screening service
+	High	1010.620(c) — Ascertain the source of funds and identify the nominal and beneficial owners of private banking accounts.	
+			[REGULATORY] Source of funds and beneficial owner identification must be documented for private banking accounts  · evidence: CDD system
+31 CFR 1010.630	FinCEN	1 obligation(s)	2 rule(s)
+	Critical	1010.630 — Do not establish or maintain a correspondent account for a foreign shell bank.	
+			[REGULATORY] No correspondent account may exist for an entity meeting the foreign shell bank definition  · evidence: Account inventory
+			[BUSINESS] Certification of non-shell status must be obtained and refreshed  · evidence: Vendor repository
+31 CFR 1010.651	FinCEN	1 obligation(s)	3 rule(s)
+	Critical	1010.651 — Comply with the Section 311 special measure imposed on Burma, including the prohibition/restriction on correspondent account relationships and enhanced due diligence to detect indirect access.	
+			[REGULATORY] Institution must apply the correspondent account prohibition/restriction applicable to Burma under this special measure  · evidence: Correspondent banking due diligence system
+			[REGULATORY] Enhanced due diligence must be applied to identify and prevent indirect use of correspondent accounts on behalf of Burma-linked banking activity  · evidence: Correspondent banking due diligence system
+			[TECHNICAL] Screening system must incorporate FinCEN's current Section 311 special measures list and update promptly on designation or rescission changes  · evidence: Watchlist update log
+31 CFR 1010.653	FinCEN	1 obligation(s)	3 rule(s)
+	Critical	1010.653 — Comply with the Section 311 special measure imposed on Commercial Bank of Syria (including Syrian Lebanese Commercial Bank), prohibiting correspondent accounts and requiring due diligence against indirect access.	
+			[REGULATORY] Institution must not open or maintain a correspondent account for Commercial Bank of Syria or Syrian Lebanese Commercial Bank  · evidence: Correspondent banking due diligence system
+			[REGULATORY] Due diligence must be reasonably designed to identify and prevent indirect use of correspondent accounts by the designated bank  · evidence: Correspondent banking due diligence system
+			[BUSINESS] Existing correspondent relationships must be screened against this designation at onboarding and periodically thereafter  · evidence: Sanctions/311 screening list
+31 CFR 1010.658	FinCEN	1 obligation(s)	3 rule(s)
+	Critical	1010.658 — Comply with the Section 311 special measure imposed on FBME Bank, Ltd., prohibiting correspondent accounts and requiring due diligence against indirect access.	
+			[REGULATORY] Institution must not open or maintain a correspondent account for FBME Bank, Ltd.  · evidence: Correspondent banking due diligence system
+			[REGULATORY] Due diligence must be reasonably designed to identify and prevent indirect use of correspondent accounts by FBME Bank, Ltd.  · evidence: Correspondent banking due diligence system
+			[BUSINESS] Existing correspondent relationships must be screened against this designation at onboarding and periodically thereafter  · evidence: Sanctions/311 screening list
+31 CFR 1010.659	FinCEN	1 obligation(s)	3 rule(s)
+	Critical	1010.659 — Comply with the Section 311 special measure imposed on North Korea (Democratic People's Republic of Korea), prohibiting correspondent accounts and requiring due diligence against indirect access.	
+			[REGULATORY] Institution must not open or maintain a correspondent account involving North Korea-linked banking activity subject to this special measure  · evidence: Correspondent banking due diligence system
+			[REGULATORY] Due diligence must be reasonably designed to identify and prevent indirect use of correspondent accounts on behalf of North Korea-linked banks  · evidence: Correspondent banking due diligence system
+			[TECHNICAL] Screening system must incorporate this designation and update promptly on any changes  · evidence: Watchlist update log
+31 CFR 1010.660	FinCEN	1 obligation(s)	3 rule(s)
+	Critical	1010.660 — Comply with the Section 311 special measure imposed on Bank of Dandong, prohibiting correspondent accounts and requiring due diligence against indirect access.	
+			[REGULATORY] Institution must not open or maintain a correspondent account for Bank of Dandong  · evidence: Correspondent banking due diligence system
+			[REGULATORY] Due diligence must be reasonably designed to identify and prevent indirect use of correspondent accounts by Bank of Dandong  · evidence: Correspondent banking due diligence system
+			[BUSINESS] Existing correspondent relationships must be screened against this designation at onboarding and periodically thereafter  · evidence: Sanctions/311 screening list
+31 CFR 1010.661	FinCEN	1 obligation(s)	3 rule(s)
+	Critical	1010.661 — Comply with the Section 311 special measure imposed on the Islamic Republic of Iran, prohibiting correspondent accounts and requiring due diligence against indirect access.	
+			[REGULATORY] Institution must not open or maintain a correspondent account involving Iran-linked banking activity subject to this special measure  · evidence: Correspondent banking due diligence system
+			[REGULATORY] Due diligence must be reasonably designed to identify and prevent indirect use of correspondent accounts on behalf of Iran-linked banks  · evidence: Correspondent banking due diligence system
+			[TECHNICAL] Screening system must incorporate this designation and update promptly on any changes  · evidence: Watchlist update log
+31 CFR 1010.663	FinCEN	1 obligation(s)	3 rule(s)
+	Critical	1010.663 — Comply with the Section 311 special measure imposed on Al-Huda Bank, prohibiting correspondent accounts and requiring due diligence against indirect access.	
+			[REGULATORY] Institution must not open or maintain a correspondent account for Al-Huda Bank  · evidence: Correspondent banking due diligence system
+			[REGULATORY] Due diligence must be reasonably designed to identify and prevent indirect use of correspondent accounts by Al-Huda Bank  · evidence: Correspondent banking due diligence system
+			[BUSINESS] Existing correspondent relationships must be screened against this designation at onboarding and periodically thereafter  · evidence: Sanctions/311 screening list
+31 CFR 1010.670	FinCEN	1 obligation(s)	3 rule(s)
+	High	1010.670 — Comply with FinCEN/Treasury summons or subpoena requests for records relating to a correspondent account maintained for a foreign bank, and terminate the correspondent relationship within the required timeframe if directed.	
+			[REGULATORY] Institution must produce records relating to a foreign correspondent account within 7 days of receiving a summons or subpoena  · evidence: Legal/subpoena response tracker
+			[REGULATORY] Correspondent relationship must be terminated within 10 business days of receiving written notice from FinCEN/Treasury of failure to comply  · evidence: Correspondent banking offboarding procedure
+			[BUSINESS] Escalation path for a failure-to-terminate scenario must be defined and periodically tested  · evidence: Escalation procedure documentation
+31 CFR 1020.210	FinCEN	7 obligation(s)	20 rule(s)
+	Critical	1020.210 — Maintain a written AML compliance program approved by the board of directors and noted in the board minutes.	
+			[REGULATORY] A current written AML program document must exist  · evidence: Policy repository
+			[REGULATORY] Board approval of the AML program must be evidenced in minutes within the last 12 months  · evidence: Board minutes
+			[BUSINESS] Program must be reviewed by the BSA officer at least annually  · evidence: Review log
+			[TECHNICAL] Policy document version and approval date must be machine-readable  · evidence: Policy metadata
+	Critical	1020.210 — Establish a system of internal controls to assure ongoing BSA compliance.	
+			[REGULATORY] Documented internal controls must exist for each BSA reporting obligation  · evidence: Control library
+			[BUSINESS] Each control must have a named owner and test frequency  · evidence: Control library
+	Critical	1020.210 — Provide for independent testing of BSA compliance by qualified internal or external personnel.	
+			[REGULATORY] Independent BSA testing must have been performed within the last 12 months  · evidence: Audit reports
+			[REGULATORY] Tester must be independent of the BSA function being tested  · evidence: Engagement record
+			[BUSINESS] Findings from independent testing must be tracked to closure  · evidence: Issue tracker
+	Critical	1020.210 — Designate an individual responsible for coordinating and monitoring day-to-day BSA compliance.	
+			[REGULATORY] A designated BSA officer must be named and board-appointed  · evidence: Board minutes
+			[BUSINESS] BSA officer designation must be re-confirmed on personnel change  · evidence: HR record
+	High	1020.210 — Provide training for appropriate personnel on BSA requirements.	
+			[REGULATORY] BSA training must be completed by all applicable staff within the last 12 months  · evidence: LMS records
+			[REGULATORY] Training content must be role-appropriate for the functions performed  · evidence: Curriculum record
+			[BUSINESS] New hires in covered roles must complete BSA training within 30 days  · evidence: LMS records
+			[TECHNICAL] Completion rate metric = completed / assigned * 100  · evidence: LMS export
+	Critical	1020.210 — Maintain appropriate risk-based procedures for ongoing customer due diligence.	
+			[REGULATORY] Risk-based CDD procedures must be documented in the AML program  · evidence: Policy repository
+			[REGULATORY] Each customer must carry a risk rating assigned at onboarding  · evidence: CIF / core system
+			[BUSINESS] Risk rating must be refreshed at defined trigger events  · evidence: CIF change log
+	High	1020.210 — Conduct and document a BSA/AML risk assessment covering products, services, customers, and geographies.	
+			[REGULATORY] A documented BSA/AML risk assessment must exist and be current  · evidence: Risk assessment doc
+			[BUSINESS] Risk assessment must be refreshed at least annually or on material change  · evidence: Version history
+31 CFR 1020.220	FinCEN	7 obligation(s)	15 rule(s)
+	Critical	1020.220(a)(2) — Implement a written Customer Identification Program appropriate for the institution's size and type of business.	
+			[REGULATORY] A written CIP must exist and be incorporated into the AML program  · evidence: Policy repository
+	Critical	1020.220(a)(2)(i) — Collect name, date of birth (individuals), address, and identification number before opening an account.	
+			[REGULATORY] IF account_opened THEN customer_name must be non-null  · evidence: Core / CIF
+			[REGULATORY] IF customer_type = individual THEN date_of_birth must be non-null  · evidence: Core / CIF
+			[REGULATORY] Physical address must be non-null; a PO box alone is insufficient for individuals  · evidence: Core / CIF
+			[REGULATORY] Identification number (TIN/SSN/ITIN, or passport for non-US persons) must be non-null  · evidence: Core / CIF
+			[BUSINESS] Account may not be activated until all four CIP elements are captured  · evidence: Account workflow
+	Critical	1020.220(a)(2)(ii) — Verify the identity of each customer within a reasonable time using documentary or non-documentary methods.	
+			[REGULATORY] A verification method (documentary or non-documentary) must be recorded per customer  · evidence: CIP system
+			[REGULATORY] Verification must be completed within the institution's defined reasonable time  · evidence: CIP system
+			[BUSINESS] Unverified accounts must be escalated after the defined ageing threshold  · evidence: Exception queue
+	High	1020.220(a)(3) — Retain CIP identifying information for five years after the account is closed, and verification records for five years after the record is made.	
+			[REGULATORY] CIP identifying information retained 5 years after account closure  · evidence: Archive index
+			[REGULATORY] Verification records retained 5 years after the record was made  · evidence: Archive index
+			[TECHNICAL] Retention clock field must differ for identifying vs verification records  · evidence: Archive schema
+	High	1020.220(a)(4) — Compare each new customer against any federal list of known or suspected terrorists designated for CIP purposes.	
+			[REGULATORY] Each new customer must be compared against designated government lists  · evidence: Screening log
+	Medium	1020.220(a)(5) — Provide customers with adequate notice that information is being requested to verify their identity.	
+			[REGULATORY] CIP notice must be provided and evidence of delivery retained  · evidence: Disclosure system
+	Medium	1020.220(b) — Where relying on another financial institution for CIP, obtain the required contract and annual certification.	
+			[REGULATORY] IF relying on another FI THEN contract and annual certification must be on file  · evidence: Vendor repository
+31 CFR 1020.315	FinCEN	3 obligation(s)	3 rule(s)
+	Medium	1020.315(b) — Apply CTR exemptions only to eligible exempt persons under Phase I or Phase II.	
+			[REGULATORY] Each exemption must map to a qualifying Phase I or Phase II exempt person category  · evidence: Exemption register
+	Medium	1020.315(c) — File a Designation of Exempt Person (DOEP) for each exempted non-listed business or payroll customer.	
+			[REGULATORY] A DOEP filing must exist for each Phase II exempt person  · evidence: Filing record
+	Medium	1020.315(h) — Review the eligibility of each exempt person at least once each year.	
+			[REGULATORY] Each exempt person must have an annual eligibility review within the last 12 months  · evidence: Exemption register
+31 CFR 1020.320	FinCEN	9 obligation(s)	20 rule(s)
+	Critical	1020.320(b)(3) — File a SAR within 30 calendar days of initial detection of facts constituting a basis for filing.	
+			[REGULATORY] IF suspicious_activity_detected THEN SAR_filed_date minus detection_date is 30 calendar days or fewer  · evidence: BSA case system
+			[REGULATORY] IF no suspect identified THEN the deadline extends to 60 calendar days  · evidence: BSA case system
+			[BUSINESS] Escalate to the BSA officer when a case reaches day 25 unfiled  · evidence: Alerting service
+			[TECHNICAL] Detection date must be system-captured, not user-entered  · evidence: Case schema
+			[TECHNICAL] IF case query returns zero rows THEN INDETERMINATE, never PASS  · evidence: Evidence connector
+			[TECHNICAL] BSA case records retained 5 years and retrievable by subject name  · evidence: Archive index
+	Critical	1020.320(a)(2)(i) — File a SAR for insider abuse involving any amount.	
+			[REGULATORY] IF insider_abuse_identified THEN SAR required regardless of amount  · evidence: BSA case system
+			[TECHNICAL] Insider abuse rule must carry no dollar threshold parameter  · evidence: Rule config
+			[BUSINESS] Alert BSA officer at day 100 of the 120-day window  · evidence: Alerting service
+	Critical	1020.320(a)(2)(ii) — File a SAR for transactions aggregating $5,000 or more where a suspect can be identified.	
+			[REGULATORY] IF aggregate 5000 or more AND suspect identified THEN SAR required  · evidence: BSA case system
+	Critical	1020.320(a)(2)(iii) — File a SAR for transactions aggregating $25,000 or more regardless of whether a suspect can be identified.	
+			[REGULATORY] IF aggregate 25000 or more THEN SAR required even with no identified suspect  · evidence: BSA case system
+	High	1020.320 — File a continuing-activity SAR by the 120-day deadline where suspicious activity persists.	
+			[REGULATORY] IF activity continues THEN next SAR filed on or before prior SAR date plus 120 calendar days  · evidence: BSA case system
+			[REGULATORY] Review period parameter equals 90 days and filing window equals 30 days  · evidence: Rule config
+			[BUSINESS] Alert the BSA team at day 100 of the 120-day window  · evidence: Alerting service
+	Critical	1020.320(e) — Do not notify any person involved in the transaction that a SAR has been filed.	
+			[REGULATORY] SAR existence must not be disclosed outside permitted recipients  · evidence: Access control log
+			[TECHNICAL] SAR records must be access-restricted by role with logged reads  · evidence: IAM / audit log
+	High	1020.320(d) — Retain a copy of each SAR and its supporting documentation for five years from the filing date.	
+			[REGULATORY] SAR copies and supporting documentation retained 5 years from filing  · evidence: Archive index
+	Medium	1020.320(c) — Promptly notify the board of directors, or a committee thereof, of SARs filed.	
+			[REGULATORY] Board or committee notification of SAR filings must be evidenced  · evidence: Board minutes
+	High	1020.320(b)(2) — Complete all mandatory SAR fields including subject identifiers, activity dates, amounts, and narrative.	
+			[REGULATORY] SAR narrative must be non-empty at submission  · evidence: Filing record
+			[REGULATORY] Subject identifiers, activity date range, and amount must be populated where known  · evidence: Filing record
+31 CFR 1020.410	FinCEN	1 obligation(s)	2 rule(s)
+	High	1020.410(a) — Retain funds-transfer records retrievable by originator name and, for established customers, by account number.	
+			[REGULATORY] Funds transfer records must be retrievable by originator name  · evidence: Archive search
+			[TECHNICAL] Retrieval index must exist on originator name and account number  · evidence: Database index
+31 CFR 501.601	OFAC	1 obligation(s)	1 rule(s)
+	High	501.601 — Retain records of blocked and rejected transactions for at least five years.	
+			[REGULATORY] Blocked and rejected transaction records retained at least 5 years  · evidence: Archive index
+31 CFR 501.603	OFAC	3 obligation(s)	5 rule(s)
+	Critical	501.603(b) — Block property in which a designated person has an interest and hold it in a blocked interest-bearing account.	
+			[REGULATORY] Blocked property must be held in a blocked interest-bearing account  · evidence: Core ledger
+	High	501.603(b)(2) — File the annual report of blocked property held as of June 30 by September 30 each year.	
+			[REGULATORY] Annual blocked property report filed by September 30 for holdings as of June 30  · evidence: Filing record
+			[BUSINESS] Compliance calendar must carry the September 30 deadline  · evidence: Compliance calendar
+	Critical	501.603(b)(1) — Report blocked property to OFAC within 10 business days of the blocking.	
+			[REGULATORY] Blocking report filed within 10 business days of the blocking action  · evidence: Filing record
+			[BUSINESS] Alert compliance at business day 7 for any unreported blocking  · evidence: Alerting service
+31 CFR 501.604	OFAC	1 obligation(s)	1 rule(s)
+	High	501.604 — Report rejected transactions to OFAC within 10 business days.	
+			[REGULATORY] Rejected transaction report filed within 10 business days  · evidence: Filing record
+31 CFR 501.801	OFAC	1 obligation(s)	1 rule(s)
+	High	501.801 — Obtain a specific or general license before engaging in an otherwise prohibited transaction.	
+			[REGULATORY] A license reference must exist for any transaction executed under a licence  · evidence: Licence register
+Ch. V	OFAC	3 obligation(s)	13 rule(s)
+	Critical	Ch. V — Screen customers and members against the SDN and Consolidated sanctions lists at onboarding.	
+			[REGULATORY] Every new customer or member must be screened before account activation  · evidence: Screening log
+			[REGULATORY] Screening must cover both the SDN list and the Consolidated non-SDN lists  · evidence: List registry
+			[REGULATORY] All known aliases must be included in the match set  · evidence: Screening config
+			[TECHNICAL] List version and SHA-256 of the source file must be recorded per screening event  · evidence: Screening audit record
+			[BUSINESS] Potential matches must be adjudicated by a second reviewer before release  · evidence: Case system
+			[TECHNICAL] List version and SHA-256 of the source file must be recorded per screening event  · evidence: Screening audit record
+			[TECHNICAL] IF list_version stale beyond internal SLA THEN raise platform health alert (NOT a regulatory violation)  · evidence: Ingestion monitor
+	Critical	Ch. V — Screen transactions, including wire beneficiaries and originators, before release.	
+			[REGULATORY] Every wire beneficiary must be screened before release  · evidence: Screening log
+			[REGULATORY] Screening must occur before value transfer, not after settlement  · evidence: Wire event sequence
+			[BUSINESS] Potential matches must be adjudicated by a reviewer before release  · evidence: Case system
+			[TECHNICAL] Fuzzy match threshold must be configured and its value recorded  · evidence: Screening config
+	High	Ch. V — Re-screen the existing customer base when sanctions lists are updated.	
+			[REGULATORY] Customer base must be re-screened following each sanctions list update  · evidence: Batch screening log
+			[TECHNICAL] IF list ingestion stale beyond internal SLA THEN platform health alert, NOT a regulatory violation  · evidence: Ingestion monitor
+Guidance	OFAC	1 obligation(s)	2 rule(s)
+	Critical	Guidance — Treat any entity owned 50 percent or more, directly or indirectly, individually or in the aggregate, by blocked persons as itself blocked.	
+			[REGULATORY] Entities owned 50 percent or more in aggregate by blocked persons must be treated as blocked  · evidence: Ownership screening
+			[TECHNICAL] Aggregate ownership must sum across multiple blocked persons, not evaluate each separately  · evidence: Ownership graph
+12 CFR 748.0	NCUA	1 obligation(s)	3 rule(s)
+	High	748.0 — Maintain a written security program addressing robbery, burglary, larceny, and member safety.	
+			[REGULATORY] A written security program must exist and be board approved  · evidence: Policy repository
+			[REGULATORY] A security officer must be designated  · evidence: Board minutes
+			[TECHNICAL] Bank citation 12 CFR 21 or 326 must not be bound for a CU tenant  · evidence: Tenant config
+12 CFR 748.1	NCUA	2 obligation(s)	2 rule(s)
+	Critical	748.1(a) — File required suspicious activity reports with FinCEN as an NCUA-supervised institution.	
+			[REGULATORY] SAR filings must be evidenced through FinCEN for the credit union  · evidence: Filing record
+	Medium	748.1(b) — Report any catastrophic act to the NCUA within five business days.	
+			[REGULATORY] IF catastrophic act occurs THEN NCUA notified within 5 business days  · evidence: Incident record
+12 CFR 748.2	NCUA	1 obligation(s)	1 rule(s)
+	Critical	748.2 — Maintain a BSA compliance program that complies with 31 CFR Chapter X.	
+			[REGULATORY] BSA compliance program must be documented and reference 31 CFR Chapter X  · evidence: Policy repository

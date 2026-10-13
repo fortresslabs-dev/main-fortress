@@ -1,0 +1,31 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.git/
+.env
+.env.*
+logs/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+tests/
+# Keep the LLM-eval golden datasets — `scripts.eval_extraction` reads
+# them from this path at runtime against live Bedrock to measure
+# extraction quality. Test fixtures stay excluded; only `tests/golden/`
+# is whitelisted.
+!tests/golden/
+docs/
+analysis/
+data/
+chunks/
+build.log
+*.md
+!CLAUDE.md
+infra/
+docker-compose*.yml
+Dockerfile.pipeline2
+Dockerfile
+.github/

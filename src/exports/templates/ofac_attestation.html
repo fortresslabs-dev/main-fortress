@@ -1,0 +1,35 @@
+{% extends "_base.html" %}
+{% block sections %}
+
+<section>
+  <h2>1. OFAC list version</h2>
+  {% if list_version %}
+  <div class="metabox">
+    <dt>List</dt>           <dd>{{ list_version.list_name }}</dd>
+    <dt>Version ID</dt>     <dd>{{ list_version.version_id }}</dd>
+    <dt>Published at</dt>   <dd>{{ list_version.published_at or "(not parsed)" }}</dd>
+    <dt>Ingested at</dt>    <dd>{{ list_version.ingested_at }}</dd>
+    <dt>SHA-256 of XML</dt> <dd>{{ list_version.sha256_of_xml }}</dd>
+  </div>
+  {% else %}
+    <p><em>No OFAC list version recorded — sync may be cold-starting.</em></p>
+  {% endif %}
+</section>
+
+<section>
+  <h2>2. Independent validation (Pillar 4)</h2>
+  {% if validation %}
+  <div class="metabox">
+    <dt>Performed on</dt>    <dd>{{ validation.performed_on }}</dd>
+    <dt>Validator</dt>       <dd>{{ validation.validator }}</dd>
+    <dt>Scope</dt>           <dd>{{ validation.scope }}</dd>
+    <dt>Methodology</dt>     <dd>{{ validation.methodology or "—" }}</dd>
+    <dt>Findings summary</dt><dd>{{ validation.findings_summary or "(no findings)" }}</dd>
+    <dt>Next due</dt>        <dd>{{ validation.next_due or "TBD" }}</dd>
+  </div>
+  {% else %}
+    <p><em>No independent validation on file — schedule one before next examination cycle.</em></p>
+  {% endif %}
+</section>
+
+{% endblock %}

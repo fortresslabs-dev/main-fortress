@@ -1,0 +1,61 @@
+# ─────────────────────────────────────────────────────────────────
+# PIPELINE 1 — Fortress Cloud Infrastructure
+# Compliance rules DB + scraper agents + read-only API
+# Deploy: docker compose -f docker-compose.pipeline1.yml up -d
+# ─────────────────────────────────────────────────────────────────
+services:
+  postgres-rules:
+    image: postgres:15-alpine
+    container_name: fortress-rules-db
+    environment:
+      POSTGRES_USER: fortress
+      POSTGRES_PASSWORD: ${RULES_DB_PASSWORD:-fortress_rules_pwd}
+      POSTGRES_DB: compliance_rules
+    ports:
+      - "5432:5432"
+    volumes:
+      - rules_db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis-rules:
+    image: redis:7-alpine
+    container_name: fortress-rules-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - rules_redis_data:/data
+    restart: unless-stopped
+
+  pipeline1:
+    build:
+      context: .
+      dockerfile: Dockerfile.pipeline1
+    container_name: fortress-pipeline1
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://fortress:${RULES_DB_PASSWORD:-fortress_rules_pwd}@postgres-rules:5432/compliance_rules
+      - REDIS_URL=redis://redis-rules:6379/0
+      - FORTRESS_INTERNAL_SECRET=${FORTRESS_INTERNAL_SECRET:-}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - SCRAPER_RUN_ON_STARTUP=${SCRAPER_RUN_ON_STARTUP:-false}
+      - SCRAPER_STARTUP_DELAY=${SCRAPER_STARTUP_DELAY:-300}
+      - SCRAPER_REQUEST_DELAY=${SCRAPER_REQUEST_DELAY:-1.0}
+      - SCRAPER_CONNECTOR_DELAY=${SCRAPER_CONNECTOR_DELAY:-10}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./logs/pipeline1:/var/log/textmind
+      - ./chunks:/app/chunks
+    depends_on:
+      - postgres-rules
+      - redis-rules
+    mem_limit: 2g
+    cpus: 2
+    restart: unless-stopped
+
+volumes:
+  rules_db_data:
+  rules_redis_data:

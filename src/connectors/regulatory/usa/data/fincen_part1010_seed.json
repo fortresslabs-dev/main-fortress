@@ -1,0 +1,1341 @@
+{
+  "source": "bsa.aml.latest.xlsx (curated FinCEN Part 1010 obligation map)",
+  "regulator": "FinCEN",
+  "part": "1010",
+  "sections": [
+    {
+      "section": "1010.205",
+      "cfr_citation": "31 C.F.R. § 1010.205",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.205",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-205",
+          "sub_citation": "1010.205",
+          "cfr_citation": "31 C.F.R. § 1010.205",
+          "severity": "Medium",
+          "text": "Determine whether the financial institution qualifies for an exemption from the general anti-money laundering program requirement and, if not exempt, ensure the standard program requirement applies.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Exemption eligibility for AML program requirements must be assessed and documented for each in-scope entity",
+              "evidence": "Policy repository"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Entities that do not meet exemption criteria must be enrolled in the standard AML program requirement without gap",
+              "evidence": "Compliance risk assessment"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Exemption determinations must be re-assessed when business lines, licensing status, or ownership structure change",
+              "evidence": "Change management log"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.210",
+      "cfr_citation": "31 C.F.R. § 1010.210",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.210",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-210-b",
+          "sub_citation": "1010.210(b)",
+          "cfr_citation": "31 C.F.R. § 1010.210(b)",
+          "severity": "Critical",
+          "text": "Establish, implement, and maintain an effective, risk-based anti-money laundering program reasonably designed to prevent the institution from being used to facilitate money laundering or terrorist financing.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "A written AML program covering internal controls, independent testing, a designated compliance officer, ongoing training, and risk-based customer due diligence procedures must exist",
+              "evidence": "Policy repository"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "AML program must be commensurate with the institution's money laundering/terrorist financing risk profile across products, services, customers, and geographies",
+              "evidence": "Enterprise risk assessment"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "AML program must be approved by the board of directors or an equivalent senior committee, with approval evidenced and dated",
+              "evidence": "Board minutes"
+            },
+            {
+              "category": "TECHNICAL",
+              "text": "AML program effectiveness must be independently tested on a risk-based cycle defined by policy",
+              "evidence": "Independent testing/audit tracker"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.220",
+      "cfr_citation": "31 C.F.R. § 1010.220",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.220",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-220-a",
+          "sub_citation": "1010.220(a)",
+          "cfr_citation": "31 C.F.R. § 1010.220(a)",
+          "severity": "Critical",
+          "text": "Implement a written Customer Identification Program (CIP), appropriate for the institution's size and type of business, enabling formation of a reasonable belief that it knows the true identity of each customer.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Written CIP must be part of, and consistent with, the institution's AML program",
+              "evidence": "Policy repository"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "CIP must collect at minimum name, date of birth (for individuals), address, and identification number prior to account opening",
+              "evidence": "Account opening system"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "CIP must include risk-based procedures for verifying identity within a reasonable time after account opening",
+              "evidence": "CIP/CDD system"
+            },
+            {
+              "category": "TECHNICAL",
+              "text": "Customer records must be checked against government lists of known or suspected terrorists or terrorist organizations",
+              "evidence": "Watchlist screening system"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "CIP must define recordkeeping requirements and the customer notice provided at account opening",
+              "evidence": "Account opening workflow"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.230",
+      "cfr_citation": "31 C.F.R. § 1010.230",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.230",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-230-b",
+          "sub_citation": "1010.230(b)",
+          "cfr_citation": "31 C.F.R. § 1010.230(b)",
+          "severity": "Critical",
+          "text": "Establish written procedures to identify and verify beneficial owners of legal entity customers at account opening.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Written beneficial ownership procedures must exist",
+              "evidence": "Policy repository"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Exactly one control-prong individual must be identified per legal entity customer",
+              "evidence": "CIP/CDD system"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Ownership threshold parameter must equal 25 percent",
+              "evidence": "Rule config"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Identity of each beneficial owner must be verified per CIP procedures",
+              "evidence": "CIP/CDD system"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Account may not be activated until beneficial ownership is complete",
+              "evidence": "Account opening workflow"
+            },
+            {
+              "category": "TECHNICAL",
+              "text": "Beneficial ownership record must link to the legal entity by immutable customer ID",
+              "evidence": "Database schema"
+            }
+          ]
+        },
+        {
+          "rule_id": "FINCEN-1010-230-d-1",
+          "sub_citation": "1010.230(d)(1)",
+          "cfr_citation": "31 C.F.R. § 1010.230(d)(1)",
+          "severity": "Critical",
+          "text": "Identify each individual who directly or indirectly owns 25 percent or more of the equity interests of a legal entity customer.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "IF legal_entity_account THEN beneficial_owner records exist for each owner at or above 25 percent",
+              "evidence": "CDD system"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Ownership threshold parameter must equal 25 percent",
+              "evidence": "Rule config"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Count of ownership-prong individuals must not exceed four",
+              "evidence": "CDD system"
+            },
+            {
+              "category": "TECHNICAL",
+              "text": "Indirect ownership must be computed through intermediate entities, not only direct holdings",
+              "evidence": "Ownership graph"
+            }
+          ]
+        },
+        {
+          "rule_id": "FINCEN-1010-230-d-2",
+          "sub_citation": "1010.230(d)(2)",
+          "cfr_citation": "31 C.F.R. § 1010.230(d)(2)",
+          "severity": "Critical",
+          "text": "Identify one individual with significant responsibility to control, manage, or direct the legal entity customer.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Exactly one control-prong individual must be recorded per legal entity customer",
+              "evidence": "CDD system"
+            },
+            {
+              "category": "TECHNICAL",
+              "text": "Control prong must be required even when no owner reaches 25 percent",
+              "evidence": "CDD system"
+            }
+          ]
+        },
+        {
+          "rule_id": "FINCEN-1010-230-b-2",
+          "sub_citation": "1010.230(b)(2)",
+          "cfr_citation": "31 C.F.R. § 1010.230(b)(2)",
+          "severity": "Critical",
+          "text": "Verify the identity of each beneficial owner using CIP-equivalent procedures.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Identity of each beneficial owner must be verified using CIP-equivalent methods",
+              "evidence": "CDD system"
+            }
+          ]
+        },
+        {
+          "rule_id": "FINCEN-1010-230-e",
+          "sub_citation": "1010.230(e)",
+          "cfr_citation": "31 C.F.R. § 1010.230(e)",
+          "severity": "High",
+          "text": "Obtain a certification of beneficial ownership from the individual opening the account, or equivalent information.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "A signed beneficial ownership certification or equivalent must be on file",
+              "evidence": "Document repository"
+            }
+          ]
+        },
+        {
+          "rule_id": "FINCEN-1010-230-b-1",
+          "sub_citation": "1010.230(b)(1)",
+          "cfr_citation": "31 C.F.R. § 1010.230(b)(1)",
+          "severity": "High",
+          "text": "Conduct ongoing monitoring to update customer information and reassess the risk profile on a risk basis.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Customer risk profile must be reassessed when monitoring identifies material change",
+              "evidence": "CDD system"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Negative news hits must trigger a risk-rating review within the defined SLA",
+              "evidence": "Monitoring queue"
+            }
+          ]
+        },
+        {
+          "rule_id": "FINCEN-1010-230-h",
+          "sub_citation": "1010.230(h)",
+          "cfr_citation": "31 C.F.R. § 1010.230(h)",
+          "severity": "High",
+          "text": "Retain beneficial ownership records for five years after the account is closed.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Beneficial ownership records retained 5 years after account closure",
+              "evidence": "Archive index"
+            }
+          ]
+        },
+        {
+          "rule_id": "FINCEN-1010-230-g",
+          "sub_citation": "1010.230(g)",
+          "cfr_citation": "31 C.F.R. § 1010.230(g)",
+          "severity": "Medium",
+          "text": "Apply the listed exclusions and exemptions correctly when determining whether an entity is a legal entity customer.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Excluded entity types must not be flagged as requiring beneficial ownership",
+              "evidence": "CDD rules engine"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.306",
+      "cfr_citation": "31 C.F.R. § 1010.306",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.306",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-306-a-1",
+          "sub_citation": "1010.306(a)(1)",
+          "cfr_citation": "31 C.F.R. § 1010.306(a)(1)",
+          "severity": "Critical",
+          "text": "File the CTR within 15 calendar days following the date of the reportable transaction.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "CTR filed date minus transaction date must be 15 calendar days or fewer",
+              "evidence": "Filing record"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Alert at day 10 for any unfiled CTR",
+              "evidence": "Alerting service"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.310",
+      "cfr_citation": "31 C.F.R. § 1010.310",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.310",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-310",
+          "sub_citation": "1010.310",
+          "cfr_citation": "31 C.F.R. § 1010.310",
+          "severity": "Critical",
+          "text": "Identify all transactions in currency subject to reporting under the general Reports of Transactions in Currency framework (§§ 1010.310-1010.314), as distinct from institution-type-specific mirror provisions.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Institution must identify all currency transactions subject to the general CTR reporting framework",
+              "evidence": "CTR system rules"
+            },
+            {
+              "category": "TECHNICAL",
+              "text": "CTR rule engine must reference the reporting form and threshold applicable to the institution's chapter X part",
+              "evidence": "Transaction monitoring system config"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Front-line and operations staff must be trained to recognize reportable currency transactions at the time of the transaction",
+              "evidence": "Training records"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.311",
+      "cfr_citation": "31 C.F.R. § 1010.311",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.311",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-311",
+          "sub_citation": "1010.311",
+          "cfr_citation": "31 C.F.R. § 1010.311",
+          "severity": "Critical",
+          "text": "File a Currency Transaction Report for each transaction in currency of more than $10,000.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "IF currency transaction exceeds 10000 THEN CTR must be filed",
+              "evidence": "Teller / core log"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Threshold parameter must be strictly greater than 10000, not equal to",
+              "evidence": "Rule config"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Aggregation must be by same person and same business day",
+              "evidence": "Aggregation engine"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Teller system must prompt for CTR data capture at the point of transaction",
+              "evidence": "Teller UI logs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.312",
+      "cfr_citation": "31 C.F.R. § 1010.312",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.312",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-312",
+          "sub_citation": "1010.312",
+          "cfr_citation": "31 C.F.R. § 1010.312",
+          "severity": "High",
+          "text": "Verify and record the identity of the person presenting a reportable currency transaction.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Identity of the presenter must be verified and recorded for reportable transactions",
+              "evidence": "Teller record"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.313",
+      "cfr_citation": "31 C.F.R. § 1010.313",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.313",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-313-b",
+          "sub_citation": "1010.313(b)",
+          "cfr_citation": "31 C.F.R. § 1010.313(b)",
+          "severity": "Critical",
+          "text": "Aggregate multiple currency transactions totalling more than $10,000 by or on behalf of the same person in one business day.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Aggregate all currency transactions by the same person within one business day",
+              "evidence": "Aggregation engine"
+            },
+            {
+              "category": "TECHNICAL",
+              "text": "Aggregation must span channels and branches, not a single teller session",
+              "evidence": "Aggregation engine"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.314",
+      "cfr_citation": "31 C.F.R. § 1010.314",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.314",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-314",
+          "sub_citation": "1010.314",
+          "cfr_citation": "31 C.F.R. § 1010.314",
+          "severity": "Critical",
+          "text": "Detect and report structuring — the breaking of currency transactions to evade the reporting threshold.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Detect multiple sub-threshold currency transactions aggregating above 10000 in one day",
+              "evidence": "Monitoring engine"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Structuring detections must generate a SAR referral",
+              "evidence": "Case system"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Detection window must also cover multi-day patterns per institution policy",
+              "evidence": "Monitoring config"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.315",
+      "cfr_citation": "31 C.F.R. § 1010.315",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.315",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-315",
+          "sub_citation": "1010.315",
+          "cfr_citation": "31 C.F.R. § 1010.315",
+          "severity": "Medium",
+          "text": "Apply currency transaction reporting exemptions correctly for eligible non-bank financial institution customers where the institution chooses to exempt them.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Exemption eligibility criteria for non-bank financial institution customers must be documented and reassessed periodically",
+              "evidence": "CDD/exemption system"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Underlying transaction records must still be retained for exempted customers even where CTR filing is waived",
+              "evidence": "Recordkeeping system"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Exemption list must be reviewed at least annually for continued eligibility",
+              "evidence": "Periodic review log"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.320",
+      "cfr_citation": "31 C.F.R. § 1010.320",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.320",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-320",
+          "sub_citation": "1010.320",
+          "cfr_citation": "31 C.F.R. § 1010.320",
+          "severity": "Critical",
+          "text": "Maintain a chapter-wide suspicious activity reporting program that identifies, investigates, and reports known or suspected violations of law and suspicious transactions via a FinCEN Suspicious Activity Report (SAR).",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "SAR must be filed no later than 30 calendar days after initial detection of facts constituting a basis for filing (extendable to 60 days absent an identified suspect)",
+              "evidence": "SAR case management system"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "SAR confidentiality and safe-harbor protections (no disclosure of a SAR or its existence, including in response to a subpoena) must be enforced institution-wide",
+              "evidence": "Legal hold / disclosure control procedure"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Supporting documentation for each SAR decision (including decisions not to file) must be retained and available to regulators/law enforcement on request",
+              "evidence": "SAR supporting-documentation archive"
+            },
+            {
+              "category": "TECHNICAL",
+              "text": "Suspicious activity alerts must escalate through a documented case management workflow to a filing/no-filing decision with rationale",
+              "evidence": "Case management system"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.330",
+      "cfr_citation": "31 C.F.R. § 1010.330",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.330",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-330",
+          "sub_citation": "1010.330",
+          "cfr_citation": "31 C.F.R. § 1010.330",
+          "severity": "Medium",
+          "text": "File FinCEN Form 8300 for each receipt of more than $10,000 in currency in the course of a trade or business, including related transactions.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Form 8300 must be filed within 15 days of receiving reportable currency",
+              "evidence": "Form 8300 filing log"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Related transactions must be aggregated for purposes of the $10,000 threshold determination",
+              "evidence": "Transaction aggregation logic"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Required annual customer notice for reported transactions must be issued where applicable",
+              "evidence": "Customer notice records"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.331",
+      "cfr_citation": "31 C.F.R. § 1010.331",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.331",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-331",
+          "sub_citation": "1010.331",
+          "cfr_citation": "31 C.F.R. § 1010.331",
+          "severity": "Low",
+          "text": "Where the institution (or an affiliated function) acts as, or processes payments on behalf of, a court clerk receiving bail in currency exceeding $10,000, file the report required by this section.",
+          "rules": [
+            {
+              "category": "BUSINESS",
+              "text": "Applicability assessment must confirm whether the institution has any court-clerk bail-processing exposure",
+              "evidence": "Applicability assessment"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "If applicable, reporting procedures equivalent to the Form 8300 filing obligation must be established for bail receipts",
+              "evidence": "Policy repository"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.340",
+      "cfr_citation": "31 C.F.R. § 1010.340",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.340",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-340",
+          "sub_citation": "1010.340",
+          "cfr_citation": "31 C.F.R. § 1010.340",
+          "severity": "Medium",
+          "text": "File a CMIR for the physical transport of currency or monetary instruments exceeding $10,000 into or out of the United States.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "IF physical transport of over 10000 in currency or instruments across the border THEN CMIR filed",
+              "evidence": "Filing record"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.350",
+      "cfr_citation": "31 C.F.R. § 1010.350",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.350",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-350",
+          "sub_citation": "1010.350",
+          "cfr_citation": "31 C.F.R. § 1010.350",
+          "severity": "High",
+          "text": "Determine Report of Foreign Bank and Financial Accounts (FBAR) filing obligations for United States persons with a financial interest in, or signature authority over, foreign financial accounts exceeding the aggregate $10,000 threshold.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "FinCEN Form 114 (FBAR) must be filed annually by the applicable deadline for all in-scope U.S. persons and accounts",
+              "evidence": "FBAR filing tracker"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Employees or officers with signature authority over company-owned foreign accounts must be identified and included in the FBAR filing determination",
+              "evidence": "Signatory authority register"
+            },
+            {
+              "category": "TECHNICAL",
+              "text": "Foreign account balances must be aggregated across all accounts to test the $10,000 threshold",
+              "evidence": "Account aggregation system"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "FBAR-related records must be retained for five years",
+              "evidence": "Archive index"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.360",
+      "cfr_citation": "31 C.F.R. § 1010.360",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.360",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-360",
+          "sub_citation": "1010.360",
+          "cfr_citation": "31 C.F.R. § 1010.360",
+          "severity": "Low",
+          "text": "Maintain readiness to comply with reporting requirements on transactions with foreign financial agencies if and when the Secretary issues an implementing regulation under this section.",
+          "rules": [
+            {
+              "category": "BUSINESS",
+              "text": "Institution must monitor for a Secretary determination or implementing regulation under this section and update procedures accordingly",
+              "evidence": "Regulatory change management log"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "No standalone reporting obligation is currently active under this section; retain as a monitored/contingent citation rather than a live control",
+              "evidence": "Regulatory horizon-scanning register"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.370",
+      "cfr_citation": "31 C.F.R. § 1010.370",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.370",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-370",
+          "sub_citation": "1010.370",
+          "cfr_citation": "31 C.F.R. § 1010.370",
+          "severity": "Low",
+          "text": "Maintain readiness to comply with reporting requirements on certain domestic transactions if and when the Secretary issues an implementing regulation under this section.",
+          "rules": [
+            {
+              "category": "BUSINESS",
+              "text": "Institution must monitor for a Secretary determination triggering domestic-transaction reporting under this section",
+              "evidence": "Regulatory horizon-scanning register"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "No standalone reporting obligation is currently active under this section; retain as a monitored/contingent citation rather than a live control",
+              "evidence": "Regulatory change management log"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.380",
+      "cfr_citation": "31 C.F.R. § 1010.380",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.380",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-380",
+          "sub_citation": "1010.380",
+          "cfr_citation": "31 C.F.R. § 1010.380",
+          "severity": "Critical",
+          "text": "Where the institution, or a reporting-company client for which it provides formation/registered-agent-type services, is a reporting company under the Corporate Transparency Act, file and keep current beneficial ownership information (BOI) reports with FinCEN.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Initial BOI report must be filed within the statutory/regulatory deadline applicable to the reporting company's formation or registration date",
+              "evidence": "BOI filing tracker"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Updated BOI report must be filed within 30 days of any change to previously reported beneficial ownership information",
+              "evidence": "BOI change log"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "This entity-level FinCEN BOI reporting obligation must be tracked separately from, and not conflated with, the account-opening beneficial-ownership collection obligation under § 1010.230",
+              "evidence": "Policy repository"
+            },
+            {
+              "category": "TECHNICAL",
+              "text": "Access controls and confidentiality safeguards for BOI data retrieved via FinCEN identifier must meet this section's security requirements",
+              "evidence": "BOI system access controls"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.410",
+      "cfr_citation": "31 C.F.R. § 1010.410",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.410",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-410-f",
+          "sub_citation": "1010.410(f)",
+          "cfr_citation": "31 C.F.R. § 1010.410(f)",
+          "severity": "Critical",
+          "text": "Include required originator and beneficiary information in transmittal orders of $3,000 or more.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "IF transmittal amount is 3000 or more THEN originator name and address must be present",
+              "evidence": "Wire message"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "IF transmittal amount is 3000 or more THEN amount and execution date must be present",
+              "evidence": "Wire message"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Beneficiary institution identifier must be present on covered transmittals",
+              "evidence": "Wire message"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Originator account number must be present where the order is made from an account",
+              "evidence": "Wire message"
+            },
+            {
+              "category": "TECHNICAL",
+              "text": "Threshold parameter must equal 3000 — assert it is not set to 10000",
+              "evidence": "Rule config"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Wires failing Travel Rule validation must be queued for repair, not released",
+              "evidence": "Wire queue"
+            }
+          ]
+        },
+        {
+          "rule_id": "FINCEN-1010-410-f-2",
+          "sub_citation": "1010.410(f)(2)",
+          "cfr_citation": "31 C.F.R. § 1010.410(f)(2)",
+          "severity": "Critical",
+          "text": "As an intermediary institution, pass on all Travel Rule information received to the next institution.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "IF acting as intermediary THEN all received originator information must be forwarded unchanged",
+              "evidence": "Wire message"
+            }
+          ]
+        },
+        {
+          "rule_id": "FINCEN-1010-410-e",
+          "sub_citation": "1010.410(e)",
+          "cfr_citation": "31 C.F.R. § 1010.410(e)",
+          "severity": "High",
+          "text": "Retain records for each funds transfer of $3,000 or more as originator's, intermediary, or beneficiary bank.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Funds transfer records of 3000 or more retained for 5 years",
+              "evidence": "Archive index"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.415",
+      "cfr_citation": "31 C.F.R. § 1010.415",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.415",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-415",
+          "sub_citation": "1010.415",
+          "cfr_citation": "31 C.F.R. § 1010.415",
+          "severity": "High",
+          "text": "Record required information for sales of monetary instruments for currency between $3,000 and $10,000.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "IF monetary instrument sold for currency between 3000 and 10000 THEN log entry required",
+              "evidence": "MIL system"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Monetary instrument log must capture purchaser identity and instrument details",
+              "evidence": "MIL system"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.420",
+      "cfr_citation": "31 C.F.R. § 1010.420",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.420",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-420",
+          "sub_citation": "1010.420",
+          "cfr_citation": "31 C.F.R. § 1010.420",
+          "severity": "Medium",
+          "text": "Make and retain records for persons having a financial interest in, or signature authority over, a foreign financial account, regardless of whether that account ultimately triggers an FBAR filing.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Records identifying each foreign financial account (institution name, account number, and maximum value during the year) must be retained for five years",
+              "evidence": "Archive index"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Recordkeeping obligation applies independently of whether the account value requires FBAR filing",
+              "evidence": "Records retention policy"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.430",
+      "cfr_citation": "31 C.F.R. § 1010.430",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.430",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-430-d",
+          "sub_citation": "1010.430(d)",
+          "cfr_citation": "31 C.F.R. § 1010.430(d)",
+          "severity": "High",
+          "text": "Retain all BSA records for a period of five years.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "All BSA record classes must have a retention period of at least 5 years",
+              "evidence": "Retention schedule"
+            },
+            {
+              "category": "TECHNICAL",
+              "text": "Deletion jobs must be blocked for records under the 5-year clock",
+              "evidence": "Archive policy"
+            }
+          ]
+        },
+        {
+          "rule_id": "FINCEN-1010-430-a",
+          "sub_citation": "1010.430(a)",
+          "cfr_citation": "31 C.F.R. § 1010.430(a)",
+          "severity": "Medium",
+          "text": "Maintain records in a manner that makes them accessible within a reasonable period of time.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "BSA records must be retrievable within a reasonable period on request",
+              "evidence": "Archive search"
+            },
+            {
+              "category": "TECHNICAL",
+              "text": "Restore test must be performed on the BSA archive at defined intervals",
+              "evidence": "Restore test log"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.440",
+      "cfr_citation": "31 C.F.R. § 1010.440",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.440",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-440",
+          "sub_citation": "1010.440",
+          "cfr_citation": "31 C.F.R. § 1010.440",
+          "severity": "Low",
+          "text": "Assess the extraterritorial application of Subpart D recordkeeping requirements to persons located outside the United States.",
+          "rules": [
+            {
+              "category": "BUSINESS",
+              "text": "Applicability of Subpart D recordkeeping requirements to overseas branches, subsidiaries, and persons must be assessed during global program scoping",
+              "evidence": "Global program scoping documentation"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Scoping determination must be documented and refreshed when the institution's overseas footprint changes",
+              "evidence": "Applicability assessment"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.520",
+      "cfr_citation": "31 C.F.R. § 1010.520",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.520",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-520-b-3",
+          "sub_citation": "1010.520(b)(3)",
+          "cfr_citation": "31 C.F.R. § 1010.520(b)(3)",
+          "severity": "High",
+          "text": "Search records for subjects named in a FinCEN 314(a) request and respond within 14 days.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "IF 314(a) request received THEN search completed within 14 calendar days",
+              "evidence": "314 case log"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Positive matches must be reported to FinCEN",
+              "evidence": "Filing record"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Alert at day 10 for any incomplete 314(a) search",
+              "evidence": "Alerting service"
+            }
+          ]
+        },
+        {
+          "rule_id": "FINCEN-1010-520-b-3-iii",
+          "sub_citation": "1010.520(b)(3)(iii)",
+          "cfr_citation": "31 C.F.R. § 1010.520(b)(3)(iii)",
+          "severity": "Critical",
+          "text": "Do not disclose the existence or contents of a 314(a) request to any person other than as permitted.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "314(a) request contents must not be disclosed outside permitted recipients",
+              "evidence": "Access log"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.540",
+      "cfr_citation": "31 C.F.R. § 1010.540",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.540",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-540-b",
+          "sub_citation": "1010.540(b)",
+          "cfr_citation": "31 C.F.R. § 1010.540(b)",
+          "severity": "Medium",
+          "text": "File the required notice with FinCEN before sharing information with another financial institution under 314(b), and renew it annually.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "IF sharing under 314(b) THEN a current FinCEN notice must be on file",
+              "evidence": "Filing record"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "314(b) notice must be renewed annually",
+              "evidence": "Compliance calendar"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.610",
+      "cfr_citation": "31 C.F.R. § 1010.610",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.610",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-610-a",
+          "sub_citation": "1010.610(a)",
+          "cfr_citation": "31 C.F.R. § 1010.610(a)",
+          "severity": "High",
+          "text": "Apply risk-based due diligence to correspondent accounts maintained for foreign financial institutions.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Each foreign correspondent account must carry a documented risk assessment",
+              "evidence": "CDD system"
+            }
+          ]
+        },
+        {
+          "rule_id": "FINCEN-1010-610-b",
+          "sub_citation": "1010.610(b)",
+          "cfr_citation": "31 C.F.R. § 1010.610(b)",
+          "severity": "High",
+          "text": "Apply enhanced due diligence to correspondent accounts for higher-risk foreign financial institutions.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Higher-risk foreign correspondent accounts must have EDD documentation on file",
+              "evidence": "CDD system"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.620",
+      "cfr_citation": "31 C.F.R. § 1010.620",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.620",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-620-b",
+          "sub_citation": "1010.620(b)",
+          "cfr_citation": "31 C.F.R. § 1010.620(b)",
+          "severity": "High",
+          "text": "Apply enhanced scrutiny to private banking accounts held by senior foreign political figures.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "IF customer identified as senior foreign political figure THEN enhanced scrutiny applied",
+              "evidence": "CDD system"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "PEP determination must be re-run on periodic review",
+              "evidence": "Screening service"
+            }
+          ]
+        },
+        {
+          "rule_id": "FINCEN-1010-620-c",
+          "sub_citation": "1010.620(c)",
+          "cfr_citation": "31 C.F.R. § 1010.620(c)",
+          "severity": "High",
+          "text": "Ascertain the source of funds and identify the nominal and beneficial owners of private banking accounts.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Source of funds and beneficial owner identification must be documented for private banking accounts",
+              "evidence": "CDD system"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.630",
+      "cfr_citation": "31 C.F.R. § 1010.630",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.630",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-630",
+          "sub_citation": "1010.630",
+          "cfr_citation": "31 C.F.R. § 1010.630",
+          "severity": "Critical",
+          "text": "Do not establish or maintain a correspondent account for a foreign shell bank.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "No correspondent account may exist for an entity meeting the foreign shell bank definition",
+              "evidence": "Account inventory"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Certification of non-shell status must be obtained and refreshed",
+              "evidence": "Vendor repository"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.651",
+      "cfr_citation": "31 C.F.R. § 1010.651",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.651",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-651",
+          "sub_citation": "1010.651",
+          "cfr_citation": "31 C.F.R. § 1010.651",
+          "severity": "Critical",
+          "text": "Comply with the Section 311 special measure imposed on Burma, including the prohibition/restriction on correspondent account relationships and enhanced due diligence to detect indirect access.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Institution must apply the correspondent account prohibition/restriction applicable to Burma under this special measure",
+              "evidence": "Correspondent banking due diligence system"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Enhanced due diligence must be applied to identify and prevent indirect use of correspondent accounts on behalf of Burma-linked banking activity",
+              "evidence": "Correspondent banking due diligence system"
+            },
+            {
+              "category": "TECHNICAL",
+              "text": "Screening system must incorporate FinCEN's current Section 311 special measures list and update promptly on designation or rescission changes",
+              "evidence": "Watchlist update log"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.653",
+      "cfr_citation": "31 C.F.R. § 1010.653",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.653",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-653",
+          "sub_citation": "1010.653",
+          "cfr_citation": "31 C.F.R. § 1010.653",
+          "severity": "Critical",
+          "text": "Comply with the Section 311 special measure imposed on Commercial Bank of Syria (including Syrian Lebanese Commercial Bank), prohibiting correspondent accounts and requiring due diligence against indirect access.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Institution must not open or maintain a correspondent account for Commercial Bank of Syria or Syrian Lebanese Commercial Bank",
+              "evidence": "Correspondent banking due diligence system"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Due diligence must be reasonably designed to identify and prevent indirect use of correspondent accounts by the designated bank",
+              "evidence": "Correspondent banking due diligence system"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Existing correspondent relationships must be screened against this designation at onboarding and periodically thereafter",
+              "evidence": "Sanctions/311 screening list"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.658",
+      "cfr_citation": "31 C.F.R. § 1010.658",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.658",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-658",
+          "sub_citation": "1010.658",
+          "cfr_citation": "31 C.F.R. § 1010.658",
+          "severity": "Critical",
+          "text": "Comply with the Section 311 special measure imposed on FBME Bank, Ltd., prohibiting correspondent accounts and requiring due diligence against indirect access.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Institution must not open or maintain a correspondent account for FBME Bank, Ltd.",
+              "evidence": "Correspondent banking due diligence system"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Due diligence must be reasonably designed to identify and prevent indirect use of correspondent accounts by FBME Bank, Ltd.",
+              "evidence": "Correspondent banking due diligence system"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Existing correspondent relationships must be screened against this designation at onboarding and periodically thereafter",
+              "evidence": "Sanctions/311 screening list"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.659",
+      "cfr_citation": "31 C.F.R. § 1010.659",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.659",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-659",
+          "sub_citation": "1010.659",
+          "cfr_citation": "31 C.F.R. § 1010.659",
+          "severity": "Critical",
+          "text": "Comply with the Section 311 special measure imposed on North Korea (Democratic People's Republic of Korea), prohibiting correspondent accounts and requiring due diligence against indirect access.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Institution must not open or maintain a correspondent account involving North Korea-linked banking activity subject to this special measure",
+              "evidence": "Correspondent banking due diligence system"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Due diligence must be reasonably designed to identify and prevent indirect use of correspondent accounts on behalf of North Korea-linked banks",
+              "evidence": "Correspondent banking due diligence system"
+            },
+            {
+              "category": "TECHNICAL",
+              "text": "Screening system must incorporate this designation and update promptly on any changes",
+              "evidence": "Watchlist update log"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.660",
+      "cfr_citation": "31 C.F.R. § 1010.660",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.660",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-660",
+          "sub_citation": "1010.660",
+          "cfr_citation": "31 C.F.R. § 1010.660",
+          "severity": "Critical",
+          "text": "Comply with the Section 311 special measure imposed on Bank of Dandong, prohibiting correspondent accounts and requiring due diligence against indirect access.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Institution must not open or maintain a correspondent account for Bank of Dandong",
+              "evidence": "Correspondent banking due diligence system"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Due diligence must be reasonably designed to identify and prevent indirect use of correspondent accounts by Bank of Dandong",
+              "evidence": "Correspondent banking due diligence system"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Existing correspondent relationships must be screened against this designation at onboarding and periodically thereafter",
+              "evidence": "Sanctions/311 screening list"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.661",
+      "cfr_citation": "31 C.F.R. § 1010.661",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.661",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-661",
+          "sub_citation": "1010.661",
+          "cfr_citation": "31 C.F.R. § 1010.661",
+          "severity": "Critical",
+          "text": "Comply with the Section 311 special measure imposed on the Islamic Republic of Iran, prohibiting correspondent accounts and requiring due diligence against indirect access.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Institution must not open or maintain a correspondent account involving Iran-linked banking activity subject to this special measure",
+              "evidence": "Correspondent banking due diligence system"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Due diligence must be reasonably designed to identify and prevent indirect use of correspondent accounts on behalf of Iran-linked banks",
+              "evidence": "Correspondent banking due diligence system"
+            },
+            {
+              "category": "TECHNICAL",
+              "text": "Screening system must incorporate this designation and update promptly on any changes",
+              "evidence": "Watchlist update log"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.663",
+      "cfr_citation": "31 C.F.R. § 1010.663",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.663",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-663",
+          "sub_citation": "1010.663",
+          "cfr_citation": "31 C.F.R. § 1010.663",
+          "severity": "Critical",
+          "text": "Comply with the Section 311 special measure imposed on Al-Huda Bank, prohibiting correspondent accounts and requiring due diligence against indirect access.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Institution must not open or maintain a correspondent account for Al-Huda Bank",
+              "evidence": "Correspondent banking due diligence system"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Due diligence must be reasonably designed to identify and prevent indirect use of correspondent accounts by Al-Huda Bank",
+              "evidence": "Correspondent banking due diligence system"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Existing correspondent relationships must be screened against this designation at onboarding and periodically thereafter",
+              "evidence": "Sanctions/311 screening list"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "1010.670",
+      "cfr_citation": "31 C.F.R. § 1010.670",
+      "source_url": "https://www.ecfr.gov/current/title-31/section-1010.670",
+      "obligations": [
+        {
+          "rule_id": "FINCEN-1010-670",
+          "sub_citation": "1010.670",
+          "cfr_citation": "31 C.F.R. § 1010.670",
+          "severity": "High",
+          "text": "Comply with FinCEN/Treasury summons or subpoena requests for records relating to a correspondent account maintained for a foreign bank, and terminate the correspondent relationship within the required timeframe if directed.",
+          "rules": [
+            {
+              "category": "REGULATORY",
+              "text": "Institution must produce records relating to a foreign correspondent account within 7 days of receiving a summons or subpoena",
+              "evidence": "Legal/subpoena response tracker"
+            },
+            {
+              "category": "REGULATORY",
+              "text": "Correspondent relationship must be terminated within 10 business days of receiving written notice from FinCEN/Treasury of failure to comply",
+              "evidence": "Correspondent banking offboarding procedure"
+            },
+            {
+              "category": "BUSINESS",
+              "text": "Escalation path for a failure-to-terminate scenario must be defined and periodically tested",
+              "evidence": "Escalation procedure documentation"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

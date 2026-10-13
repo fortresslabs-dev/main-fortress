@@ -1,0 +1,123 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+<title>Board / Audit-Committee Report — Meridian Valley Bank</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>:root{
+  --ink:#1A1F26; --vault:#16212E; --vault2:#1E2D3D; --steel:#3C4A59; --mist:#6B7785; --faint:#97A1AC;
+  --paper:#FFFFFF; --surface:#FFFFFF; --surface2:#FBFBFA; --line:#E3E6EA; --line2:#CDD2D8;
+  --brass:#9A6E2A; --brass-soft:#C9A35A; --brass-wash:#F4EEE1;
+  --danger:#B23A2E; --danger-wash:#F7E9E7; --warn:#9A6E2A; --warn-wash:#F8F0DD; --ok:#2E7150; --ok-wash:#E4F0E9;
+  --slatechip:#41506180;
+}
+*{box-sizing:border-box}
+html,body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:13.5px;line-height:1.5}
+.mono{font-family:"IBM Plex Mono",monospace}
+.page{max-width:920px;margin:0 auto;padding:6px 0 40px}
+
+/* letterhead */
+.lh{display:flex;align-items:center;gap:14px;padding-bottom:12px}
+.lh .crest{width:30px;height:30px}
+.lh .crest svg{width:30px;height:30px;display:block}
+.lh .bn{font-family:"Spectral",serif;font-weight:600;font-size:18px;color:var(--vault);letter-spacing:.01em}
+.lh .ee{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass)}
+.lh .cls{margin-left:auto}
+.classchip{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:#fff;background:var(--vault);padding:5px 11px;border-radius:3px}
+.classchip.req{background:var(--brass)}
+.brassrule{height:3px;background:var(--brass);position:relative;margin-bottom:2px}
+.brassrule::before{content:"";position:absolute;left:0;top:0;height:3px;width:64px;
+  background:repeating-linear-gradient(90deg,var(--vault) 0 8px,transparent 8px 16px)}
+
+/* title */
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);margin:18px 0 6px}
+h1.doc{font-family:"Spectral",serif;font-weight:600;font-size:2rem;line-height:1.08;letter-spacing:-.01em;margin:0 0 6px}
+.subtitle{color:var(--mist);font-size:14px;margin:0 0 16px;max-width:70ch}
+
+/* metabox */
+.metabox{border:1px solid var(--line2);border-radius:6px;overflow:hidden;display:grid;grid-template-columns:1fr 1fr;margin:6px 0 10px}
+.metabox .cell{padding:9px 14px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.metabox .cell:nth-child(2n){border-right:none}
+.metabox .lab{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mist);margin-bottom:3px}
+.metabox .val{font-size:13px;color:var(--ink)}
+.metabox .val.mono{font-family:"IBM Plex Mono",monospace;font-size:12px}
+
+.sample-note{background:var(--warn-wash);border:1px solid #E7D6AE;border-radius:5px;padding:8px 14px;font-size:11.5px;color:#6E4E18;margin:6px 0 18px}
+.sample-note strong{color:#5A3F12}
+
+/* sections */
+section{margin-top:26px;break-inside:auto}
+.sec-eyebrow{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);margin:0 0 4px}
+h2.sec{font-family:"Spectral",serif;font-weight:600;font-size:1.25rem;margin:0 0 4px;break-after:avoid}
+.sec-line{height:1px;background:var(--line);margin:8px 0 12px}
+p{margin:0 0 10px}
+strong{font-weight:600}
+
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:12px 0}
+.tile{border:1px solid var(--line);border-radius:6px;padding:12px 14px;background:var(--surface2);break-inside:avoid}
+.tile .t-lab{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mist);margin-bottom:6px}
+.tile .t-val{font-family:"Spectral",serif;font-weight:600;font-size:1.5rem;line-height:1;color:var(--vault)}
+.tile .t-sub{font-size:11px;color:var(--mist);margin-top:5px}
+
+/* tables */
+.tbl{width:100%;border-collapse:collapse;font-size:11.5px;margin:10px 0;border:1px solid var(--line)}
+.tbl thead th{background:var(--surface2);text-align:left;font-family:"IBM Plex Mono",monospace;font-size:9.5px;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--steel);padding:8px 9px;border-bottom:1px solid var(--line2);vertical-align:bottom}
+.tbl tbody td{padding:7px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl tbody tr:last-child td{border-bottom:none}
+.tbl tbody tr:nth-child(even){background:#FCFCFB}
+.tbl .mono{font-family:"IBM Plex Mono",monospace;font-size:10.5px}
+.tbl .c{text-align:center}.tbl .r{text-align:right}
+thead{display:table-header-group}
+tr{break-inside:avoid}
+
+/* chips */
+.chip{display:inline-block;font-family:"IBM Plex Mono",monospace;font-size:9.5px;font-weight:600;letter-spacing:.03em;
+  padding:2px 7px;border-radius:20px;white-space:nowrap}
+.chip.ok{background:var(--ok-wash);color:var(--ok)}
+.chip.bad{background:var(--danger-wash);color:var(--danger)}
+.chip.warn{background:var(--warn-wash);color:#7A5616}
+.chip.neu{background:#EEF1F4;color:var(--steel)}
+
+/* callout */
+.note{border-left:3px solid var(--brass);background:var(--brass-wash);padding:11px 15px;border-radius:0 5px 5px 0;font-size:12.5px;margin:12px 0;break-inside:avoid}
+.note .h{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#6E4E18;font-weight:600;margin-bottom:4px}
+
+/* finding cards (5 Cs) */
+.fcard{border:1px solid var(--line);border-radius:6px;padding:14px 16px;margin:12px 0;break-inside:avoid}
+.fcard .fhd{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.fcard .fid{font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:12px;color:var(--vault)}
+.fcard .ftitle{font-weight:600;font-size:13.5px}
+.fcard dl{display:grid;grid-template-columns:120px 1fr;gap:5px 14px;margin:8px 0 0;font-size:12px}
+.fcard dt{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--mist);padding-top:2px}
+.fcard dd{margin:0}
+
+/* signoff */
+.signoff{margin-top:24px;border-top:1px solid var(--line2);padding-top:16px;break-inside:avoid}
+.signoff h3{font-family:"Spectral",serif;font-weight:600;font-size:1.05rem;margin:0 0 12px}
+.sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 28px}
+.sig{font-size:12px}
+.sig .line{height:30px;border-bottom:1.5px solid var(--ink);margin-bottom:5px}
+.sig .who{font-weight:600}
+.sig .role{color:var(--mist);font-size:11px}
+
+@media print{
+  .page{max-width:100%;padding:0}
+  section,.fcard,.note,.tile,.signoff,.metabox{break-inside:avoid}
+  .tbl{break-inside:auto}
+}
+</style></head><body>
+<div class="page">
+  <div class="lh"><span class="crest"><svg viewBox="0 0 34 34" fill="none">
+<path d="M5 9h3.5V6h4.5v3h8V6h4.5v3H29v5.5c0 8.2-6 12.8-12 15.3C11 27.3 5 22.7 5 14.5V9z" stroke="#9A6E2A" stroke-width="1.4" fill="#F4EEE1"/>
+<path d="M17 12v9M12.5 16.5h9" stroke="#9A6E2A" stroke-width="1.4"/></svg></span><span class="bn">Fortress</span><span class="ee">Examination Evidence</span>
+    <span class="cls"><span class="classchip ">GOVERNANCE</span></span></div>
+  <div class="brassrule"></div>
+  <p class="eyebrow">type &middot; board_report</p>
+  <h1 class="doc">Board / Audit-Committee Report</h1>
+  <p class="subtitle">Quarterly governance view &mdash; coverage trend, sanctions health, BSA reporting, regulatory changes signed off, open findings, and audit/exam status.</p>
+  <div class="metabox"><div class="cell"><div class="lab">Institution</div><div class="val ">Meridian Valley Bank, N.A.</div></div><div class="cell"><div class="lab">Charter &middot; Primary regulator</div><div class="val ">OCC Charter No. 24317 &middot; OCC</div></div><div class="cell"><div class="lab">Total assets</div><div class="val ">$3.21B (as of 2026-03-31)</div></div><div class="cell"><div class="lab">Report type</div><div class="val mono">board_report</div></div><div class="cell"><div class="lab">As of</div><div class="val ">June 17, 2026</div></div><div class="cell"><div class="lab">Version</div><div class="val mono">v.F8A0F39</div></div><div class="cell"><div class="lab">Document ID</div><div class="val mono">FTX-BRD-2026-Q2-007</div></div><div class="cell"><div class="lab">Period covered</div><div class="val ">Q2 2026 (2026-04-01 to 2026-06-30)</div></div><div class="cell"><div class="lab">Prepared by</div><div class="val ">Priya N. Anand &mdash; Chief Risk Officer</div></div><div class="cell"><div class="lab">Reviewed by</div><div class="val ">Audit Committee (review of record)</div></div></div>
+  <div class="sample-note"><strong>SAMPLE &mdash; illustrative data for demonstration only.</strong> Meridian Valley Bank, N.A. is a fictional institution; all figures, names, findings, and citations are synthetic. This template shows the structure and data an examiner-grade export should contain &mdash; it is not a regulatory filing.</div>
+  <section><p class="sec-eyebrow">Section 01 &middot; Executive summary</p><h2 class="sec">Program health for the quarter</h2><div class="sec-line"></div><div class="tiles"><div class="tile"><div class="t-lab">Readiness score</div><div class="t-val">86</div><div class="t-sub">&#9650; from 79 last qtr</div></div><div class="tile"><div class="t-lab">Coverage</div><div class="t-val">93.3%</div><div class="t-sub">+4.1 pts QoQ</div></div><div class="tile"><div class="t-lab">Open findings</div><div class="t-val">6</div><div class="t-sub">1 past due</div></div><div class="tile"><div class="t-lab">OFAC SLA</div><div class="t-val">within 24h</div><div class="t-sub">100% of refreshes</div></div></div><p>The BSA/AML and OFAC program strengthened this quarter: control coverage rose to 93.3% and the readiness score improved to 86. Three matters need board attention: (1) an MRIA on the SAR alert backlog is past due and escalated; (2) the NY-DFS Part 504 annual certification control remains unmapped; and (3) staffing in the analyst function is below plan by one FTE.</p></section><section><p class="sec-eyebrow">Section 02 &middot; Sanctions / OFAC health</p><h2 class="sec">Screening posture</h2><div class="sec-line"></div><div class="tiles"><div class="tile"><div class="t-lab">SDN list freshness</div><div class="t-val">16h ago</div><div class="t-sub">within 24h SLA</div></div><div class="tile"><div class="t-lab">Screening alerts (qtr)</div><div class="t-val">14</div><div class="t-sub">11 cleared / 3 escalated</div></div><div class="tile"><div class="t-lab">Confirmed true positives</div><div class="t-val">0</div><div class="t-sub"></div></div><div class="tile"><div class="t-lab">Blocked / rejected</div><div class="t-val">0 / 1</div><div class="t-sub"></div></div></div></section><section><p class="sec-eyebrow">Section 03 &middot; BSA reporting metrics</p><h2 class="sec">SAR / CTR and higher-risk customers</h2><div class="sec-line"></div><table class="tbl"><thead><tr><th class="">Metric</th><th class="r">This quarter</th><th class="r">Prior quarter</th><th class="c">Trend</th></tr></thead><tbody><tr><td class="">SARs filed</td><td class="r">23</td><td class="r">19</td><td class="c">&#9650;</td></tr><tr><td class="">CTRs filed</td><td class="r">412</td><td class="r">398</td><td class="c">&#9650;</td></tr><tr><td class="">CTR exemptions</td><td class="r">18</td><td class="r">18</td><td class="c">&mdash;</td></tr><tr><td class="">314(a) matches</td><td class="r">0</td><td class="r">0</td><td class="c">&mdash;</td></tr><tr><td class="">Higher-risk customers</td><td class="r">1,204</td><td class="r">1,151</td><td class="c">&#9650;</td></tr></tbody></table></section><section><p class="sec-eyebrow">Section 04 &middot; Regulatory changes</p><h2 class="sec">Change-management activity (quarter)</h2><div class="sec-line"></div><p>41 regulatory changes detected; 36 dispositioned and signed off; <strong>5 outstanding</strong> (none past their effective date). Detail in the Regulatory change log export.</p></section><section><p class="sec-eyebrow">Section 05 &middot; Open findings &amp; MRAs</p><h2 class="sec">Summary by severity (detail in MRA tracker)</h2><div class="sec-line"></div><table class="tbl"><thead><tr><th class="">Severity</th><th class="c">Count</th><th class="c">Overdue</th></tr></thead><tbody><tr><td class=""><span class="chip bad">VIOLATION</span></td><td class="c">1</td><td class="c">0</td></tr><tr><td class=""><span class="chip warn">MRA</span></td><td class="c">3</td><td class="c">1</td></tr><tr><td class=""><span class="chip bad">MRIA</span></td><td class="c">1</td><td class="c">1</td></tr><tr><td class=""><span class="chip neu">OBSERVATION</span></td><td class="c">1</td><td class="c">0</td></tr></tbody></table></section><section><p class="sec-eyebrow">Section 06 &middot; Audits, exams &amp; model validations</p><h2 class="sec">Status</h2><div class="sec-line"></div><p>OFAC screening model independently validated 2026-02-19. Annual BSA/AML independent test in progress (fieldwork complete; report to audit committee due 2026-07). No open regulatory examination. Training completion: <strong>98.4%</strong> of required staff; board/senior-management training completed 2026-05.</p></section><div class="signoff"><h3>Attestation &amp; sign-off</h3><div class="sig-grid"><div class="sig"><div class="line"></div><div class="who">Priya N. Anand</div><div class="role">Chief Risk Officer &middot; presented to Audit Committee 2026-06-24</div></div><div class="sig"><div class="line"></div><div class="who">Audit Committee Chair</div><div class="role">Reviewed &amp; accepted &middot; Date: __________</div></div></div></div>
+</div></body></html>

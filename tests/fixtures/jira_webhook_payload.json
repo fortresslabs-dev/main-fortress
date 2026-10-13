@@ -1,0 +1,10 @@
+{
+  "issue": {
+    "key": "BANK-123",
+    "fields": {
+      "summary": "Implement daily transfer limit",
+      "description": "As a customer, I want daily transfer limits enforced",
+      "issuetype": {"name": "Story"}
+    }
+  }
+}

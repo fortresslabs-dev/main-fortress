@@ -1,0 +1,15 @@
+# Development Dependencies
+-r requirements.txt
+
+# Testing
+pytest-watch==4.2.0
+pytest-xdist==3.5.0
+faker==22.5.0
+
+# Documentation
+mkdocs==1.5.3
+mkdocs-material==9.5.3
+
+# Debugging
+ipython==8.20.0
+ipdb==0.13.13

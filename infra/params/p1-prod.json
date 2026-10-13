@@ -1,0 +1,14 @@
+{
+  "Parameters": {
+    "Environment": "production",
+    "AuroraInstanceClass": "db.serverless",
+    "AuroraServerlessMinAcu": "0.5",
+    "AuroraServerlessMaxAcu": "2",
+    "RedisNodeType": "cache.t4g.micro",
+    "DbName": "fortress_p1",
+    "DomainName": "fortresslabs.dev",
+    "AlertEmail": "ops@fortresslabs.dev",
+    "ImageTag": "v5.3",
+    "ApiDesiredCount": "2"
+  }
+}

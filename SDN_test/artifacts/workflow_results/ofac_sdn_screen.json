@@ -1,0 +1,322 @@
+{
+  "workflow_id": "c789de22-ad72-4428-bed6-29cbc2914a98",
+  "jira_key": "SDNTEST-0001",
+  "status": "success",
+  "discovery": {
+    "discovered_apis": [
+      "sdn"
+    ],
+    "banking_patterns": {
+      "ofac": true
+    },
+    "compliance_requirements": [
+      "ofac_fuzzy_name_matching",
+      "ofac_sdn_screening",
+      "explicit_compliance",
+      "ofac_real_time_blocking",
+      "explicit_audit"
+    ],
+    "dependencies": [
+      "sanctions_screening_service",
+      "ofac_sdn_service"
+    ],
+    "related_code": [
+      {
+        "type": "function",
+        "name": "screen_ofac_sdn",
+        "signature": "screen_ofac_sdn(name: str, country: str) -> ScreeningResult",
+        "description": "Screens beneficiary against OFAC SDN list with fuzzy matching"
+      }
+    ],
+    "summary": "OFAC sanctions screening with 5 US regulatory compliance requirements involving: ofac."
+  },
+  "understanding": {
+    "requirements": [
+      {
+        "type": "compliance",
+        "requirement": "OFAC sanctions screening",
+        "acceptance_criteria": [
+          "Real-time SDN list screening",
+          "Fuzzy name matching with configurable threshold",
+          "Blocked transactions reported within 10 days",
+          "False positive review workflow"
+        ]
+      }
+    ],
+    "test_scenarios_outline": [
+      {
+        "category": "happy_path",
+        "name": "successful_transaction",
+        "priority": "P0",
+        "covers": [
+          "basic_functionality",
+          "successful_flow"
+        ]
+      },
+      {
+        "category": "compliance",
+        "name": "ofac_sdn_exact_match",
+        "priority": "P0",
+        "covers": [
+          "ofac_screening",
+          "exact_match_block"
+        ]
+      },
+      {
+        "category": "compliance",
+        "name": "ofac_fuzzy_match_review",
+        "priority": "P0",
+        "covers": [
+          "ofac_screening",
+          "fuzzy_match",
+          "manual_review"
+        ]
+      },
+      {
+        "category": "edge_cases",
+        "name": "boundary_values",
+        "priority": "P1",
+        "covers": [
+          "min_amount",
+          "max_amount",
+          "zero_amount"
+        ]
+      },
+      {
+        "category": "edge_cases",
+        "name": "null_and_empty_values",
+        "priority": "P1",
+        "covers": [
+          "null_handling",
+          "input_validation"
+        ]
+      },
+      {
+        "category": "error_handling",
+        "name": "insufficient_balance",
+        "priority": "P0",
+        "covers": [
+          "balance_check",
+          "error_messages"
+        ]
+      },
+      {
+        "category": "error_handling",
+        "name": "network_failure",
+        "priority": "P1",
+        "covers": [
+          "timeout_handling",
+          "retry_logic"
+        ]
+      }
+    ],
+    "banking_rules": {
+      "ofac": {
+        "sdn_screening": true,
+        "fuzzy_match_threshold": 85,
+        "blocking_required": true,
+        "reporting_deadline_days": 10,
+        "list_update_frequency": "daily"
+      }
+    },
+    "compliance_context": {
+      "regulations": [
+        {
+          "name": "OFAC_Sanctions",
+          "regulator": "OFAC / Treasury",
+          "requirements": [
+            "Real-time SDN list screening",
+            "Fuzzy name matching (85% threshold)",
+            "Block and report within 10 days"
+          ]
+        }
+      ],
+      "audit_requirements": [
+        "Record all transactions with timestamp",
+        "Store user ID, IP address, device info",
+        "Maintain immutable audit log",
+        "Retain BSA records for 5 years (31 CFR 1010.430)",
+        "SOX compliance for financial reporting"
+      ],
+      "data_handling": [
+        "Encrypt data in transit (TLS 1.3)",
+        "Encrypt data at rest (AES-256)",
+        "GLBA Safeguards Rule \u2014 protect consumer NPI",
+        "Mask SSN/TIN in logs and UI (show last 4 only)",
+        "PCI-DSS for card data"
+      ]
+    },
+    "edge_cases": [
+      {
+        "type": "matching",
+        "case": "name = exact SDN match",
+        "description": "Exact match \u2014 must block"
+      },
+      {
+        "type": "matching",
+        "case": "name = SDN spelling variant",
+        "description": "Fuzzy match at 85% \u2014 review"
+      },
+      {
+        "type": "matching",
+        "case": "name = common name",
+        "description": "Below threshold \u2014 false positive"
+      }
+    ],
+    "rag_context": [
+      {
+        "type": "banking_knowledge",
+        "topic": "ofac_screening",
+        "content": "OFAC SDN list must be checked before any funds transfer. Fuzzy name matching required. Blocked transactions must be reported within 10 days."
+      },
+      {
+        "type": "compliance_knowledge",
+        "regulation": "BSA_AML_KYC",
+        "content": "BSA/AML compliance requires CIP, CDD, ongoing monitoring, and SAR/CTR filing per FinCEN regulations."
+      }
+    ],
+    "rag_used": true
+  },
+  "scenarios": [
+    {
+      "name": "successful_transaction",
+      "given": "User has sufficient balance and valid account",
+      "when": "User initiates valid transaction",
+      "then": "Transaction succeeds, balance updated, audit trail recorded",
+      "priority": "P0",
+      "tags": [
+        "happy_path",
+        "smoke"
+      ]
+    },
+    {
+      "name": "ofac_sdn_exact_match_blocked",
+      "given": "Customer name exactly matches OFAC SDN entry",
+      "when": "Wire transfer or account opening attempted",
+      "then": "Transaction blocked, blocking report filed within 10 days",
+      "priority": "P0",
+      "tags": [
+        "ofac",
+        "sanctions",
+        "sdn"
+      ]
+    },
+    {
+      "name": "ofac_fuzzy_match_review",
+      "given": "Customer name is a close variant of SDN entry",
+      "when": "Fuzzy match score >= 85%",
+      "then": "Transaction held for manual compliance review",
+      "priority": "P0",
+      "tags": [
+        "ofac",
+        "fuzzy_match",
+        "review"
+      ]
+    },
+    {
+      "name": "ofac_false_positive_release",
+      "given": "Compliance officer reviews fuzzy match",
+      "when": "Determination is false positive",
+      "then": "Transaction released, false positive documented",
+      "priority": "P1",
+      "tags": [
+        "ofac",
+        "false_positive"
+      ]
+    },
+    {
+      "name": "zero_amount_transfer",
+      "given": "User initiates transfer",
+      "when": "User enters amount $0",
+      "then": "Transaction rejected 'Amount must be greater than 0'",
+      "priority": "P1",
+      "tags": [
+        "edge_case",
+        "validation"
+      ]
+    },
+    {
+      "name": "negative_amount_transfer",
+      "given": "User initiates transfer",
+      "when": "User enters amount -$100",
+      "then": "Transaction rejected 'Invalid amount'",
+      "priority": "P1",
+      "tags": [
+        "edge_case",
+        "negative"
+      ]
+    },
+    {
+      "name": "insufficient_balance",
+      "given": "User has balance $1,000",
+      "when": "User transfers $5,000",
+      "then": "Transaction rejected 'Insufficient balance'",
+      "priority": "P0",
+      "tags": [
+        "error_handling",
+        "balance"
+      ]
+    },
+    {
+      "name": "invalid_beneficiary",
+      "given": "User initiates transfer",
+      "when": "User enters invalid routing/account number",
+      "then": "Transaction rejected 'Invalid beneficiary account'",
+      "priority": "P0",
+      "tags": [
+        "error_handling",
+        "validation"
+      ]
+    }
+  ],
+  "test_code": "import pytest\nfrom decimal import Decimal\nfrom datetime import datetime, timezone, timedelta\nfrom typing import Dict, Optional, List, Any\nfrom dataclasses import dataclass\nfrom enum import Enum\nfrom unittest.mock import Mock, MagicMock, patch\nimport uuid\n\n\n# ============================================================================\n# Domain Models\n# ============================================================================\n\nclass TransactionStatus(Enum):\n    SUCCESS = \"success\"\n    BLOCKED = \"blocked\"\n    HELD_FOR_REVIEW = \"held_for_review\"\n    REJECTED = \"rejected\"\n    RELEASED = \"released\"\n\n\nclass OFACMatchType(Enum):\n    EXACT = \"exact\"\n    FUZZY = \"fuzzy\"\n    NO_MATCH = \"no_match\"\n\n\n@dataclass\nclass Account:\n    account_id: str\n    balance: Decimal\n    routing_number: str\n    account_number: str\n    customer_name: str\n    status: str = \"active\"\n\n\n@dataclass\nclass OFACScreeningResult:\n    match_type: OFACMatchType\n    match_score: int\n    matched_entry: Optional[str]\n    screening_timestamp: datetime\n\n\n@dataclass\nclass TransactionRequest:\n    transaction_id: str\n    from_account: str\n    to_account: str\n    routing_number: str\n    amount: Decimal\n    customer_name: str\n    user_id: str\n    ip_address: str\n    device_info: str\n    timestamp: datetime\n\n\n@dataclass\nclass TransactionResult:\n    transaction_id: str\n    status: TransactionStatus\n    message: str\n    balance_after: Optional[Decimal]\n    audit_id: str\n    timestamp: datetime\n    blocking_report_id: Optional[str] = None\n    review_id: Optional[str] = None\n\n\n@dataclass\nclass AuditRecord:\n    audit_id: str\n    transaction_id: str\n    user_id: str\n    ip_address: str\n    device_info: str\n    action: str\n    status: str\n    timestamp: datetime\n    encrypted: bool = True\n    pii_masked: bool = True\n\n\n@dataclass\nclass BlockingReport:\n    report_id: str\n    transaction_id: str\n    customer_name: str\n    matched_sdn_entry: str\n    filing_deadline: datetime\n    filed_at: Optional[datetime]\n    status: str\n\n\n@dataclass\nclass ComplianceReview:\n    review_id: str\n    transaction_id: str\n    match_score: int\n    reviewer_id: Optional[str]\n    decision: Optional[str]\n    decision_timestamp: Optional[datetime]\n    false_positive_documented: bool = False\n\n\n# ============================================================================\n# Constants (U.S. Banking Compliance Thresholds)\n# ============================================================================\n\nCTR_THRESHOLD = Decimal(\"10000\")\nSAR_THRESHOLD = Decimal(\"5000\")\nTRAVEL_RULE_THRESHOLD = Decimal(\"3000\")\nWIRE_DUAL_APPROVAL_THRESHOLD = Decimal(\"10000\")\nOFAC_FUZZY_THRESHOLD = 85\nBENEFICIAL_OWNERSHIP_PCT = 20\nOFAC_BLOCKING_REPORT_DEADLINE_DAYS = 10\nBSA_RECORD_RETENTION_YEARS = 5\n\n\n# ============================================================================\n# Service Interfaces (Mocked)\n# ============================================================================\n\nclass OFACService:\n    def screen_customer(self, customer_name: str) -> OFACScreeningResult:\n        raise NotImplementedError\n\n    def get_sdn_list_version(self) -> str:\n        raise NotImplementedError\n\n\nclass RuleResolver:\n    def get_ofac_fuzzy_threshold(self) -> int:\n        return OFAC_FUZZY_THRESHOLD\n\n    def get_blocking_report_deadline_days(self) -> int:\n        return OFAC_BLOCKING_REPORT_DEADLINE_DAYS\n\n\nclass AuditLogger:\n    def log_transaction(self, record: AuditRecord) -> str:\n        raise NotImplementedError\n\n    def get_audit_record(self, audit_id: str) -> Optional[AuditRecord]:\n        raise NotImplementedError\n\n\nclass AccountRepository:\n    def get_account(self, account_id: str) -> Optional[Account]:\n        raise NotImplementedError\n\n    def update_balance(self, account_id: str, new_balance: Decimal) -> bool:\n        raise NotImplementedError\n\n    def validate_routing_account(self, routing: str, account: str) -> bool:\n        raise NotImplementedError\n\n\nclass ComplianceRepository:\n    def file_blocking_report(self, report: BlockingReport) -> str:\n        raise NotImplementedError\n\n    def create_review(self, review: ComplianceReview) -> str:\n        raise NotImplementedError\n\n    def update_review_decision(\n        self, review_id: str, decision: str, reviewer_id: str\n    ) -> ComplianceReview:\n        raise NotImplementedError\n\n    def document_false_positive(self, review_id: str) -> bool:\n        raise NotImplementedError\n\n\n# ============================================================================\n# Transaction Service (System Under Test)\n# ============================================================================\n\nclass TransactionService:\n    def __init__(\n        self,\n        ofac_service: OFACService,\n        rule_resolver: RuleResolver,\n        audit_logger: AuditLogger,\n        account_repo: AccountRepository,\n        compliance_repo: ComplianceRepository,\n    ):\n        self.ofac_service = ofac_service\n        self.rule_resolver = rule_resolver\n        self.audit_logger = audit_logger\n        self.account_repo = account_repo\n        self.compliance_repo = compliance_repo\n\n    def process_transaction(self, request: TransactionRequest) -> TransactionResult:\n        transaction_id = request.transaction_id\n        timestamp = datetime.now(timezone.utc)\n\n        # Validate amount\n        if request.amount <= Decimal(\"0\"):\n            message = (\n                \"Amount must be greater than 0\"\n                if request.amount == Decimal(\"0\")\n                else \"Invalid amount\"\n            )\n            audit_id = self._log_audit(request, \"rejected\", message)\n            return TransactionResult(\n                transaction_id=transaction_id,\n                status=TransactionStatus.REJECTED,\n                message=message,\n                balance_after=None,\n                audit_id=audit_id,\n                timestamp=timestamp,\n            )\n\n        # Validate beneficiary account\n        if not self.account_repo.validate_routing_account(\n            request.routing_number, request.to_account\n        ):\n            message = \"Invalid beneficiary account\"\n            audit_id = self._log_audit(request, \"rejected\", message)\n            return TransactionResult(\n                transaction_id=transaction_id,\n                status=TransactionStatus.REJECTED,\n                message=message,\n                balance_after=None,\n                audit_id=audit_id,\n                timestamp=timestamp,\n            )\n\n        # Get account and check balance\n        account = self.account_repo.get_account(request.from_account)\n        if not account:\n            message = \"Account not found\"\n            audit_id = self._log_audit(request, \"rejected\", message)\n            return TransactionResult(\n                transaction_id=transaction_id,\n                status=TransactionStatus.REJECTED,\n                message=message,\n                balance_after=None,\n                audit_id=audit_id,\n                timestamp=timestamp,\n            )\n\n        if account.balance < request.amount:\n            message = \"Insufficient balance\"\n            audit_id = self._log_audit(request, \"rejected\", message)\n            return TransactionResult(\n                transaction_id=transaction_id,\n                status=TransactionStatus.REJECTED,\n                message=message,\n                balance_after=account.balance,\n                audit_id=audit_id,\n                timestamp=timestamp,\n            )\n\n        # OFAC screening\n        screening_result = self.ofac_service.screen_customer(request.customer_name)\n\n        # Exact match - block transaction\n        if screening_result.match_type == OFACMatchType.EXACT:\n            audit_id = self._log_audit(request, \"blocked\", \"OFAC exact match\")\n            blocking_report = self._file_blocking_report(\n                transaction_id, request.customer_name, screening_result.matched_entry\n            )\n            return TransactionResult(\n                transaction_id=transaction_id,\n                status=TransactionStatus.BLOCKED,\n                message=\"Transaction blocked due to OFAC match\",\n                balance_after=account.balance,\n                audit_id=audit_id,\n                timestamp=timestamp,\n                blocking_report_id=blocking_report.report_id,\n            )\n\n        # Fuzzy match above threshold - hold for review\n        fuzzy_threshold = self.rule_resolver.get_ofac_fuzzy_threshold()\n        if (\n            screening_result.match_type == OFACMatchType.FUZZY\n            and screening_result.match_score >= fuzzy_threshold\n        ):\n            audit_id = self._log_audit(request, \"held_for_review\", \"OFAC fuzzy match\")\n            review = self._create_compliance_review(\n                transaction_id, screening_result.match_score\n            )\n            return TransactionResult(\n                transaction_id=transaction_id,\n                status=TransactionStatus.HELD_FOR_REVIEW,\n                message=\"Transaction held for manual compliance review\",\n                balance_after=account.balance,\n                audit_id=audit_id,\n                timestamp=timestamp,\n                review_id=review.review_id,\n            )\n\n        # Process successful transaction\n        new_balance = account.balance - request.amount\n        self.account_repo.update_balance(request.from_account, new_balance)\n        audit_id = self._log_audit(request, \"success\", \"Transaction completed\")\n\n        return TransactionResult(\n            transaction_id=transaction_id,\n            status=TransactionStatus.SUCCESS,\n            message=\"Transaction completed successfully\",\n            balance_after=new_balance,\n            audit_id=audit_id,\n            timestamp=timestamp,\n        )\n\n    def release_transaction_after_review(\n        self, review_id: str, reviewer_id: str, is_false_positive: bool\n    ) -> TransactionResult:\n        review = self.compliance_repo.update_review_decision(\n            review_id, \"approved\", reviewer_id\n        )\n        if is_false_positive:\n            self.compliance_repo.document_false_positive(review_id)\n\n        timestamp = datetime.now(timezone.utc)\n        audit_id = str(uuid.uuid4())\n\n        return TransactionResult(\n            transaction_id=review.transaction_id,\n            status=TransactionStatus.RELEASED,\n            message=\"Transaction released after compliance review\",\n            balance_after=None,\n            audit_id=audit_id,\n            timestamp=timestamp,\n        )\n\n    def _log_audit(\n        self, request: TransactionRequest, status: str, message: str\n    ) -> str:\n        audit_record = AuditRecord(\n            audit_id=str(uuid.uuid4()),\n            transaction_id=request.transaction_id,\n            user_id=request.user_id,\n            ip_address=request.ip_address,\n            device_info=request.device_info,\n            action=\"transaction\",\n            status=status,\n            timestamp=datetime.now(timezone.utc),\n            encrypted=True,\n            pii_masked=True,\n        )\n        return self.audit_logger.log_transaction(audit_record)\n\n    def _file_blocking_report(\n        self, transaction_id: str, customer_name: str, matched_entry: str\n    ) -> BlockingReport:\n        deadline_days = self.rule_resolver.get_blocking_report_deadline_days()\n        report = BlockingReport(\n            report_id=str(uuid.uuid4()),\n            transaction_id=transaction_id,\n            customer_name=customer_name,\n            matched_sdn_entry=matched_entry,\n            filing_deadline=datetime.now(timezone.utc)\n            + timedelta(days=deadline_days),\n            filed_at=datetime.now(timezone.utc),\n            status=\"filed\",\n        )\n        self.compliance_repo.file_blocking_report(report)\n        return report\n\n    def _create_compliance_review(\n        self, transaction_id: str, match_score: int\n    ) -> ComplianceReview:\n        review = ComplianceReview(\n            review_id=str(uuid.uuid4()),\n            transaction_id=transaction_id,\n            match_score=match_score,\n            reviewer_id=None,\n            decision=None,\n            decision_timestamp=None,\n            false_positive_documented=False,\n        )\n        self.compliance_repo.create_review(review)\n        return review\n\n\n# ============================================================================\n# Pytest Fixtures\n# ============================================================================\n\n\n@pytest.fixture\ndef mock_ofac_service() -> Mock:\n    return Mock(spec=OFACService)\n\n\n@pytest.fixture\ndef mock_rule_resolver() -> Mock:\n    resolver = Mock(spec=RuleResolver)\n    resolver.get_ofac_fuzzy_threshold.return_value = OFAC_FUZZY_THRESHOLD\n    resolver.get_blocking_report_deadline_days.return_value = (\n        OFAC_BLOCKING_REPORT_DEADLINE_DAYS\n    )\n    return resolver\n\n\n@pytest.fixture\ndef mock_audit_logger() -> Mock:\n    logger = Mock(spec=AuditLogger)\n    logger.log_transaction.return_value = str(uuid.uuid4())\n    return logger\n\n\n@pytest.fixture\ndef mock_account_repo() -> Mock:\n    return Mock(spec=AccountRepository)\n\n\n@pytest.fixture\ndef mock_compliance_repo() -> Mock:\n    return Mock(spec=ComplianceRepository)\n\n\n@pytest.fixture\ndef transaction_service(\n    mock_ofac_service: Mock,\n    mock_rule_resolver: Mock,\n    mock_audit_logger: Mock,\n    mock_account_repo: Mock,\n    mock_compliance_repo: Mock,\n) -> TransactionService:\n    return TransactionService(\n        ofac_service=mock_ofac_service,\n        rule_resolver=mock_rule_resolver,\n        audit_logger=mock_audit_logger,\n        account_repo=mock_account_repo,\n        compliance_repo=mock_compliance_repo,\n    )\n\n\n@pytest.fixture\ndef valid_account() -> Account:\n    return Account(\n        account_id=\"ACC123456\",\n        balance=Decimal(\"10000.00\"),\n        routing_number=\"021000021\",\n        account_number=\"1234567890\",\n        customer_name=\"John Doe\",\n        status=\"active\",\n    )\n\n\n@pytest.fixture\ndef valid_transaction_request(valid_account: Account) -> TransactionRequest:\n    return TransactionRequest(\n        transaction_id=str(uuid.uuid4()),\n        from_account=valid_account.account_id,\n        to_account=\"9876543210\",\n        routing_number=\"021000022\",\n        amount=Decimal(\"500.00\"),\n        customer_name=valid_account.customer_name,\n        user_id=\"USER001\",\n        ip_address=\"192.168.1.100\",\n        device_info=\"Mozilla/5.0\",\n        timestamp=datetime.now(timezone.utc),\n    )\n\n\n# ============================================================================\n# Test Cases\n# ============================================================================\n\n\nclass TestSuccessfulTransaction:\n    def test_successful_transaction(\n        self,\n        transaction_service: TransactionService,\n        mock_ofac_service: Mock,\n        mock_account_repo: Mock,\n        mock_audit_logger: Mock,\n        valid_account: Account,\n        valid_transaction_request: TransactionRequest,\n    ):\n        \"\"\"\n        Scenario: successful_transaction\n        Given User has sufficient balance and valid account\n        When User initiates valid transaction\n        Then Transaction succeeds, balance updated, audit trail recorded\n        \"\"\"\n        # Arrange\n        mock_account_repo.get_account.return_value = valid_account\n        mock_account_repo.validate_routing_account.return_value = True\n        mock_account_repo.update_balance.return_value = True\n        mock_ofac_service.screen_customer.return_value = OFACScreeningResult(\n            match_type=OFACMatchType.NO_MATCH,\n            match_score=0,\n            matched_entry=None,\n            screening_timestamp=datetime.now(timezone.utc),\n        )\n        audit_id = str(uuid.uuid4())\n        mock_audit_logger.log_transaction.return_value = audit_id\n\n        # Act\n        result = transaction_service.process_transaction(valid_transaction_request)\n\n        # Assert\n        assert result.status == TransactionStatus.SUCCESS\n        assert result.message == \"Transaction completed successfully\"\n        assert result.balance_after == Decimal(\"9500.00\")\n        assert result.audit_id == audit_id\n        mock_account_repo.update_balance.assert_called_once_with(\n            valid_account.account_id, Decimal(\"9500.00\")\n        )\n        mock_audit_logger.log_transaction.assert_called_once()\n        audit_call_args = mock_audit_logger.log_transaction.call_args[0][0]\n        assert audit_call_args.user_id == \"USER001\"\n        assert audit_call_args.ip_address == \"192.168.1.100\"\n        assert audit_call_args.encrypted is True\n        assert audit_call_args.pii_masked is True\n\n\nclass TestOFACSDNExactMatchBlocked:\n    def test_ofac_sdn_exact_match_blocked(\n        self,\n        transaction_service: TransactionService,\n        mock_ofac_service: Mock,\n        mock_account_repo: Mock,\n        mock_compliance_repo: Mock,\n        valid_account: Account,\n        valid_transaction_request: TransactionRequest,\n    ):\n        \"\"\"\n        Scenario: ofac_sdn_exact_match_blocked\n        Given Customer name exactly matches OFAC SDN entry\n        When Wire transfer or account opening attempted\n        Then Transaction blocked, blocking report filed within 10 days\n        \"\"\"\n        # Arrange\n        mock_account_repo.get_account.return_value = valid_account\n        mock_account_repo.validate_routing_account.return_value = True\n        mock_ofac_service.screen_customer.return_value = OFACScreeningResult(\n            match_type=OFACMatchType.EXACT,\n            match_score=100,\n            matched_entry=\"JOHN DOE (SDN #12345)\",\n            screening_timestamp=datetime.now(timezone.utc),\n        )\n\n        # Act\n        result = transaction_service.process_transaction(valid_transaction_request)\n\n        # Assert\n        assert result.status == TransactionStatus.BLOCKED\n        assert \"OFAC match\" in result.message\n        assert result.blocking_report_id is not None\n        assert result.balance_after == valid_account.balance\n        mock_compliance_repo.file_blocking_report.assert_called_once()\n        blocking_report = mock_compliance_repo.file_blocking_report.call_args[0][0]\n        assert blocking_report.customer_name == valid_account.customer_name\n        assert blocking_report.matched_sdn_entry == \"JOHN DOE (SDN #12345)\"\n        assert blocking_report.status == \"filed\"\n        deadline_delta = (\n            blocking_report.filing_deadline - blocking_report.filed_at\n        ).days\n        assert deadline_delta == OFAC_BLOCKING_REPORT_DEADLINE_DAYS\n\n    def test_ofac_exact_match_does_not_update_balance(\n        self,\n        transaction_service: TransactionService,\n        mock_ofac_service: Mock,\n        mock_account_repo: Mock,\n        valid_account: Account,\n        valid_transaction_request: TransactionRequest,\n    ):\n        \"\"\"\n        Verify that exact OFAC match does not deduct balance.\n        \"\"\"\n        # Arrange\n        mock_account_repo.get_account.return_value = valid_account\n        mock_account_repo.validate_routing_account.return_value = True\n        mock_ofac_service.screen_customer.return_value = OFACScreeningResult(\n            match_type=OFACMatchType.EXACT,\n            match_score=100,\n            matched_entry=\"JOHN DOE (SDN #12345)\",\n            screening_timestamp=datetime.now(timezone.utc),\n        )\n\n        # Act\n        result = transaction_service.process_transaction(valid_transaction_request)\n\n        # Assert\n        mock_account_repo.update_balance.assert_not_called()\n        assert result.balance_after == valid_account.balance\n\n\nclass TestOFACFuzzyMatchReview:\n    def test_ofac_fuzzy_match_review(\n        self,\n        transaction_service: TransactionService,\n        mock_ofac_service: Mock,\n        mock_account_repo: Mock,\n        mock_compliance_repo: Mock,\n        valid_account: Account,\n        valid_transaction_request: TransactionRequest,\n    ):\n        \"\"\"\n        Scenario: ofac_fuzzy_match_review\n        Given Customer name is a close variant of SDN entry\n        When Fuzzy match score >= 85%\n        Then Transaction held for manual compliance review\n        \"\"\"\n        # Arrange\n        mock_account_repo.get_account.return_value = valid_account\n        mock_account_repo.validate_routing_account.return_value = True\n        mock_ofac_service.screen_customer.return_value = OFACScreeningResult(\n            match_type=OFACMatchType.FUZZY,\n            match_score=85,\n            matched_entry=\"Jon Doe (SDN #67890)\",\n            screening_timestamp=datetime.now(timezone.utc),\n        )\n\n        # Act\n        result = transaction_service.process_transaction(valid_transaction_request)\n\n        # Assert\n        assert result.status == TransactionStatus.HELD_FOR_REVIEW\n        assert \"manual compliance review\" in result.message\n        assert result.review_id is not None\n        assert result.balance_after == valid_account.balance\n        mock_compliance_repo.create_review.assert_called_once()\n        review = mock_compliance_repo.create_review.call_args[0][0]\n        assert review.match_score == 85\n        assert review.decision is None\n        assert review.reviewer_id is None\n\n    def test_ofac_fuzzy_match_at_threshold_boundary(\n        self,\n        transaction_service: TransactionService,\n        mock_ofac_service: Mock,\n        mock_account_repo: Mock,\n        mock_compliance_repo: Mock,\n        valid_account: Account,\n        valid_transaction_request: TransactionRequest,\n    ):\n        \"\"\"\n        Boundary test: fuzzy match score exactly at 85% threshold.\n        \"\"\"\n        # Arrange\n        mock_account_repo.get_account.return_value = valid_account\n        mock_account_repo.validate_routing_account.return_value = True\n        mock_ofac_service.screen_customer.return_value = OFACScreeningResult(\n            match_type=OFACMatchType.FUZZY,\n            match_score=OFAC_FUZZY_THRESHOLD,\n            matched_entry=\"Jon Doe (SDN #67890)\",\n            screening_timestamp=datetime.now(timezone.utc),\n        )\n\n        # Act\n        result = transaction_service.process_transaction(valid_transaction_request)\n\n        # Assert\n        assert result.status == TransactionStatus.HELD_FOR_REVIEW\n        mock_compliance_repo.create_review.assert_called_once()\n\n    def test_ofac_fuzzy_match_below_threshold_passes(\n        self,\n        transaction_service: TransactionService,\n        mock_ofac_service: Mock,\n        mock_account_repo: Mock,\n        mock_compliance_repo: Mock,\n        valid_account: Account,\n        valid_transaction_request: TransactionRequest,\n    ):\n        \"\"\"\n        Boundary test: fuzzy match score below 85% threshold should pass.\n        \"\"\"\n        # Arrange\n        mock_account_repo.get_account.return_value = valid_account\n        mock_account_repo.validate_routing_account.return_value = True\n        mock_ofac_service.screen_customer.return_value = OFACScreeningResult(\n            match_type=OFACMatchType.FUZZY,\n            match_score=84,\n            matched_entry=\"Jon Doe (SDN #67890)\",\n            screening_timestamp=datetime.now(timezone.utc),\n        )\n\n        # Act\n        result = transaction_service.process_transaction(valid_transaction_request)\n\n        # Assert\n        assert result.status == TransactionStatus.SUCCESS\n        mock_compliance_repo.create_review.assert_not_called()\n\n\nclass TestOFACFalsePositiveRelease:\n    def test_ofac_false_positive_release(\n        self,\n        transaction_service: TransactionService,\n        mock_compliance_repo: Mock,\n    ):\n        \"\"\"\n        Scenario: ofac_false_positive_release\n        Given Compliance officer reviews fuzzy match\n        When Determination is false positive\n        Then Transaction released, false positive documented\n        \"\"\"\n        # Arrange\n        review_id = str(uuid.uuid4())\n        transaction_id = str(uuid.uuid4())\n        reviewer_id = \"REVIEWER001\"\n        mock_compliance_repo.update_review_decision.return_value = ComplianceReview(\n            review_id=review_id,\n            transaction_id=transaction_id,\n            match_score=87,\n            reviewer_id=reviewer_id,\n            decision=\"approved\",\n            decision_timestamp=datetime.now(timezone.utc),\n            false_positive_documented=False,\n        )\n        mock_compliance_repo.document_false_positive.return_value = True\n\n        # Act\n        result = transaction_service.release_transaction_after_review(\n            review_id=review_id, reviewer_id=reviewer_id, is_false_positive=True\n        )\n\n        # Assert\n        assert result.status == TransactionStatus.RELEASED\n        assert \"released after compliance review\" in result.message\n        mock_compliance_repo.update_review_decision.assert_called_once_with(\n            review_id, \"approved\", reviewer_id\n        )\n        mock_compliance_repo.document_false_positive.assert_called_once_with(review_id)\n\n    def test_ofac_review_release_without_false_positive(\n        self,\n        transaction_service: TransactionService,\n        mock_compliance_repo: Mock,\n    ):\n        \"\"\"\n        Test release after review when it's not a false positive.\n        \"\"\"\n        # Arrange\n        review_id = str(uuid.uuid4())\n        transaction_id = str(uuid.uuid4())\n        reviewer_id = \"REVIEWER002\"\n        mock_compliance_repo.update_review_decision.return_value = ComplianceReview(\n            review_id=review_id,\n            transaction_id=transaction_id,\n            match_score=86,\n            reviewer_id=reviewer_id,\n            decision=\"approved\",\n            decision_timestamp=datetime.now(timezone.utc),\n            false_positive_documented=False,\n        )\n\n        # Act\n        result = transaction_service.release_transaction_after_review(\n            review_id=review_id, reviewer_id=reviewer_id, is_false_positive=False\n        )\n\n        # Assert\n        assert result.status == TransactionStatus.RELEASED\n        mock_compliance_repo.document_false_positive.assert_not_called()\n\n\nclass TestZeroAmountTransfer:\n    def test_zero_amount_transfer(\n        self,\n        transaction_service: TransactionService,\n        valid_transaction_request: TransactionRequest,\n    ):\n        \"\"\"\n        Scenario: zero_amount_transfer\n        Given User initiates transfer\n        When User enters amount $0\n        Then Transaction rejected 'Amount must be greater than 0'\n        \"\"\"\n        # Arrange\n        valid_transaction_request.amount = Decimal(\"0\")\n\n        # Act\n        result = transaction_service.process_transaction(valid_transaction_request)\n\n        # Assert\n        assert result.status == TransactionStatus.REJECTED\n        assert result.message == \"Amount must be greater than 0\"\n        assert result.balance_after is None\n\n\nclass TestNegativeAmountTransfer:\n    def test_negative_amount_transfer(\n        self,\n        transaction_service: TransactionService,\n        valid_transaction_request: TransactionRequest,\n    ):\n        \"\"\"\n        Scenario: negative_amount_transfer\n        Given User initiates transfer\n        When User enters amount -$100\n        Then Transaction rejected 'Invalid amount'\n        \"\"\"\n        # Arrange\n        valid_transaction_request.amount = Decimal(\"-100\")\n\n        # Act\n        result = transaction_service.process_transaction(valid_transaction_request)\n\n        # Assert\n        assert result.status == TransactionStatus.REJECTED\n        assert result.message == \"Invalid amount\"\n        assert result.balance_after is None\n\n    def test_negative_amount_large_value(\n        self,\n        transaction_service: TransactionService,\n        valid_transaction_request: TransactionRequest,\n    ):\n        \"\"\"\n        Boundary test: large negative amount.\n        \"\"\"\n        # Arrange\n        valid_transaction_request.amount = Decimal(\"-999999.99\")\n\n        # Act\n        result = transaction_service.process_transaction(valid_transaction_request)\n\n        # Assert\n        assert result.status == TransactionStatus.REJECTED\n        assert result.message == \"Invalid amount\"\n\n\nclass TestInsufficientBalance:\n    def test_insufficient_balance(\n        self,\n        transaction_service: TransactionService,\n        mock_account_repo: Mock,\n        valid_account: Account,\n        valid_transaction_request: TransactionRequest,\n    ):\n        \"\"\"\n        Scenario: insufficient_balance\n        Given User has balance $1,000\n        When User transfers $5,000\n        Then Transaction rejected 'Insufficient balance'\n        \"\"\"\n        # Arrange\n        valid_account.balance = Decimal(\"1000.00\")\n        valid_transaction_request.amount = Decimal(\"5000.00\")\n        mock_account_repo.get_account.return_value = valid_account\n        mock_account_repo.validate_routing_account.return_value = True\n\n        # Act\n        result = transaction_service.process_transaction(valid_transaction_request)\n\n        # Assert\n        assert result.status == TransactionStatus.REJECTED\n        assert result.message == \"Insufficient balance\"\n        assert result.balance_after == Decimal(\"1000.00\")\n        mock_account_repo.update_balance.assert_not_called()\n\n    def test_insufficient_balance_exact_boundary(\n        self,\n        transaction_service: TransactionService,\n        mock_account_repo: Mock,\n        valid_account: Account,\n        valid_transaction_request: TransactionRequest,\n    ):\n        \"\"\"\n        Boundary test: transfer amount exactly equals balance + 0.01.\n        \"\"\"\n        # Arrange\n        valid_account.balance = Decimal(\"1000.00\")\n        valid_transaction_request.amount = Decimal(\"1000.01\")\n        mock_account_repo.get_account.return_value = valid_account\n        mock_account_repo.validate_routing_account.return_value = True\n\n        # Act\n        result = transaction_service.process_transaction(valid_transaction_request)\n\n        # Assert\n        assert result.status == TransactionStatus.REJECTED\n        assert result.message == \"Insufficient balance\"\n\n    def test_sufficient_balance_exact_match(\n        self,\n        transaction_service: TransactionService,\n        mock_ofac_service: Mock,\n        mock_account_repo: Mock,\n        valid_account: Account,\n        valid_transaction_request: TransactionRequest,\n    ):\n        \"\"\"\n        Boundary test: transfer amount exactly equals balance (should succeed).\n        \"\"\"\n        # Arrange\n        valid_account.balance = Decimal(\"1000.00\")\n        valid_transaction_request.amount = Decimal(\"1000.00\")\n        mock_account_repo.get_account.return_value = valid_account\n        mock_account_repo.validate_routing_account.return_value = True\n        mock_ofac_service.screen_customer.return_value = OFACScreeningResult(\n            match_type=OFACMatchType.NO_MATCH,\n            match_score=0,",
+  "validation": {
+    "is_valid": true,
+    "quality_score": 100,
+    "syntax_valid": true,
+    "syntax_errors": [],
+    "compliance_score": 100,
+    "compliance_issues": [],
+    "coverage": {
+      "tests_generated": 14,
+      "scenarios_total": 8,
+      "scenarios_covered": 7,
+      "coverage_percentage": 87
+    },
+    "recommendation": "approved"
+  },
+  "execution": {
+    "workflow_id": "c789de22-ad72-4428-bed6-29cbc2914a98",
+    "jira_key": "SDNTEST-0001",
+    "status": "completed",
+    "quality_score": 0,
+    "is_approved": false,
+    "compliance_score": 100,
+    "pr_url": null,
+    "artifacts": {
+      "test_code_generated": true,
+      "scenarios_generated": true,
+      "compliance_validated": true,
+      "audit_trail_created": true,
+      "pr_opened": false,
+      "pr_url": null
+    },
+    "next_steps": [
+      "Needs revision \u2014 quality score below threshold",
+      "Regenerate tests with additional context"
+    ]
+  },
+  "quality_score": 0,
+  "repair": {
+    "syntax_ok": true,
+    "syntax_error": null,
+    "meta": {
+      "strategy": "truncate_to_parse",
+      "repaired": true,
+      "removed_lines": 3,
+      "reason": "line 896: '(' was never closed"
+    },
+    "generation_retries_used": 0,
+    "generation_retry_errors": []
+  }
+}

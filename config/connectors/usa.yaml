@@ -1,0 +1,438 @@
+# USA Geography Configuration
+# Default settings for all USA banking customers
+
+geography: usa
+region: north_america
+country_code: US
+
+# Currency and locale
+currency: USD
+locale: en_US
+timezone: America/New_York
+
+# USA-specific connectors
+connectors:
+  # Core Banking Systems (USA banks typically use)
+  core_banking:
+    - flexcube      # Oracle FLEXCUBE (most common in USA)
+    - temenos_t24   # Temenos T24
+    - finacle       # Infosys Finacle (some USA banks)
+    
+  # USA Regulatory Authorities
+  regulatory:
+    - occ_bsa          # Office of the Comptroller of the Currency — BSA/AML
+    - fdic             # Federal Deposit Insurance Corporation
+    - cfpb             # Consumer Financial Protection Bureau
+    - fincen_sar       # Financial Crimes Enforcement Network — SAR
+    - fincen_part1010  # FinCEN 31 CFR Part 1010 general BSA/AML program provisions
+    - ofac_sdn         # OFAC SDN sanctions screening
+    # Phase 2 — Critical (REQ-001, REQ-002 + missing FFIEC BSA)
+    - cra              # Community Reinvestment Act (OCC/FRB/FDIC)
+    - ffiec_call_report  # FFIEC 031/041/051 Quarterly Call Reports
+    - ffiec_bsa        # FFIEC BSA/AML Joint Examination Manual
+    # Phase 3 — High priority (REQ-003, REQ-004, REQ-005)
+    - ffiec_cybersecurity  # FFIEC CAT + IT Examination Handbook
+    - irr              # Interest Rate Risk (OCC Bulletin 2010-1)
+    - cre_concentration   # CRE Concentration Risk (OCC/FRB/FDIC Joint Guidance)
+    # Phase 4 — Previously dead; wired up per docs/correction_smb.md item 11.
+    # All GUIDANCE (bulletins/handbooks, no CFR sections).
+    - cecl             # CECL / SR 11-7 model risk governance (REQ-006)
+    - liquidity_risk   # CFP / uninsured-deposit conc. / post-SVB (REQ-007)
+    - operational_risk # Op-risk framework (REQ-008)
+    - peer_benchmarks  # FFIEC peer benchmarks
+    # Phase 5 — State connectors (REQ-014)
+    - nydfs            # New York DFS (Part 500 Cyber, Part 504 BSA)
+    - ca_dfpi          # California DFPI (CFL, CCPA, DFAL)
+    - tx_dob           # Texas DOB (TX Finance Code, MSA)
+    - il_idfpr         # Illinois IDFPR (Banking Act, TOMA)
+    - fl_ofr           # Florida OFR (Chapter 560, Banking Code)
+    
+  # Requirements Management
+  requirements:
+    - jira
+    - azure_devops
+    - servicenow
+    - manual_csv
+    
+  # Additional USA-specific
+  additional:
+    - sox_controls      # Sarbanes-Oxley compliance
+    - dodd_frank       # Dodd-Frank Act
+    - glba             # Gramm-Leach-Bliley Act
+
+# Compliance frameworks (USA-specific)
+compliance_frameworks:
+  primary:
+    - occ_part_363          # Annual Independent Audits
+    - fdic_capital_rules    # Capital Adequacy
+    - sox_404               # Internal Controls
+    - pci_dss_4             # Payment Card Security
+    - glba_safeguards      # Customer Privacy
+    
+  risk_management:
+    - dodd_frank_stress_tests  # DFAST/CCAR
+    - basel_iii               # Capital Requirements
+    - liquidity_coverage_ratio  # LCR
+    
+  anti_money_laundering:
+    - bank_secrecy_act    # BSA/AML
+    - ofac_sanctions      # OFAC compliance
+    - kyc_cip             # Know Your Customer
+
+# Reporting requirements
+reporting:
+  frequency:
+    call_reports: quarterly      # FFIEC Call Reports
+    stress_tests: annual         # DFAST
+    sox_certification: annual    # SOX 404
+    pci_dss_audit: annual       # PCI-DSS AOC
+    
+  regulators:
+    - name: OCC
+      frequency: quarterly
+      forms: [Call Report, SAR]
+      
+    - name: FDIC
+      frequency: quarterly
+      forms: [Call Report, Deposit Insurance]
+      
+    - name: Federal Reserve
+      frequency: quarterly
+      forms: [FR Y-9C, FR Y-14]
+
+# Transaction limits (USA defaults)
+transaction_limits:
+  wire_transfer:
+    domestic:
+      minimum: 0
+      maximum: null  # No limit
+      settlement: same_day
+      hours: "business_hours"
+      
+    international:
+      minimum: 0
+      maximum: null
+      settlement: 1-2_business_days
+      requires_swift: true
+      
+  ach:
+    same_day:
+      minimum: 0
+      maximum: 1000000  # $1M for same-day ACH
+      settlement: same_day
+      
+    standard:
+      minimum: 0
+      maximum: null
+      settlement: 1-2_business_days
+      
+  mobile_banking:
+    per_transaction: 2500     # $2,500 typical mobile limit
+    daily_limit: 5000         # $5,000 daily
+    monthly_limit: 25000      # $25,000 monthly
+
+# KYC/AML requirements (USA)
+kyc_requirements:
+  beneficial_ownership:
+    enabled: true
+    threshold: 20_percent          # WAS: 25_percent
+    max_owners: 5                  # ADD (was implicit 4)
+    amendment_effective: 2026-04-11
+    prior_threshold: 25_percent    # ADD — audit trail
+    
+  customer_identification:
+    ssn_required: true        # SSN or ITIN required
+    id_verification: true     # Government-issued ID
+    address_verification: true
+    
+  transaction_monitoring:
+    threshold_sar: 5000       # $5K triggers SAR review
+    threshold_ctr: 10000      # $10K triggers CTR filing
+    monitoring_real_time: true
+
+# Audit trail requirements
+audit_requirements:
+  retention_period_years: 7   # SOX requires 7 years
+  immutable_logs: true
+  real_time_logging: true
+  
+  required_fields:
+    - user_id
+    - timestamp
+    - ip_address
+    - device_fingerprint
+    - transaction_details
+    - approval_chain
+    - regulatory_flags
+
+# Security requirements (USA banking)
+security:
+  encryption:
+    in_transit: TLS_1.3
+    at_rest: AES_256
+    
+  multi_factor_auth:
+    required: true
+    methods: [SMS, authenticator_app, hardware_token]
+    
+  pci_dss:
+    compliance_level: 1       # Level 1 (highest)
+    quarterly_scan: true
+    annual_assessment: true
+    
+  glba_safeguards:
+    risk_assessment: annual
+    security_program: required
+    vendor_management: required
+
+# Testing requirements (USA banking)
+testing_requirements:
+  coverage_minimum: 85_percent    # 85% code coverage
+  compliance_testing: mandatory
+  
+  test_types:
+    - unit_tests
+    - integration_tests
+    - security_tests
+    - compliance_tests
+    - sox_controls_tests
+    - disaster_recovery_tests
+    
+  automation:
+    required: true
+    ci_cd_integration: true
+    nightly_regression: true
+
+# Notification requirements
+notifications:
+  regulatory_changes:
+    sources: [occ.gov, fdic.gov, federalreserve.gov]
+    frequency: daily
+    alert_methods: [email, slack, dashboard]
+    
+  transaction_alerts:
+    large_transaction: 10000      # Alert for $10K+
+    suspicious_activity: true
+    failed_compliance_check: true
+
+# Cost tracking (USA pricing)
+cost_tracking:
+  enabled: true
+  currency: USD
+  
+  pricing:
+    bedrock_sonnet: 0.003_per_1k_tokens
+    bedrock_opus: 0.015_per_1k_tokens
+    
+  budget_alerts:
+    daily_threshold: 100
+    monthly_threshold: 2000
+
+# Partner integrations (USA banks commonly use)
+partner_integrations:
+  payment_processors:
+    - fiserv
+    - fis
+    - jack_henry
+    
+  compliance_vendors:
+    - actimize      # AML monitoring
+    - nice_actimize # Fraud detection
+    - lexisnexis    # Identity verification
+    
+  core_banking_vendors:
+    - oracle        # FLEXCUBE
+    - temenos       # T24
+    - thought_machine  # Vault
+
+# Feature flags (USA-specific features)
+features:
+  real_time_payments: true      # RTP network
+  zelle_integration: true       # Zelle P2P
+  same_day_ach: true           # Same-day ACH
+  fed_now: true                # FedNow instant payments
+  
+  compliance_automation:
+    sox_testing: true
+    occ_part_363: true
+    stress_testing: true
+    aml_screening: true
+
+# Deployment configuration
+deployment:
+  cloud_providers: [aws, azure, gcp]
+  regions: [us-east-1, us-west-2]
+  
+  compliance:
+    data_residency: us_only     # Data must stay in USA
+    vpc_deployment: required
+    private_endpoints: required
+    
+  disaster_recovery:
+    rpo_hours: 1                # 1-hour RPO
+    rto_hours: 4                # 4-hour RTO
+    backup_frequency: hourly
+
+# SLA requirements (USA banking standards)
+sla:
+  uptime: 99.95_percent         # "Four nines" uptime
+  response_time_ms: 200         # 200ms API response
+  error_rate: 0.01_percent      # 0.01% error rate
+  
+  support:
+    hours: 24x7
+    response_time_critical: 15_minutes
+    response_time_high: 1_hour
+    response_time_medium: 4_hours
+
+# Change management (SOX compliance)
+change_management:
+  approval_required: true
+  approvers: [cto, ciso, compliance_officer]
+  
+  testing_required:
+    staging: true
+    uat: true
+    production_smoke_test: true
+    
+  rollback_plan: required
+  audit_documentation: required
+
+# ─── Regulatory Source URLs (MVP1) ─────────────────────────────────
+# Centralised URLs used by the USA regulatory connectors.
+# Override per-customer via customer_overrides/{customer_id}.yaml.
+
+source_urls:
+  occ_bsa:
+    manual: "https://www.occ.gov/publications-and-resources/publications/comptrollers-handbook/files/bsa/index-bsa.html"
+    bsa_guidance: "https://www.occ.gov/topics/supervision-and-examination/bsa/index-bsa.html"
+    bulletins: "https://www.occ.gov/news-issuances/bulletins/index-bulletins.html"
+    laws_and_regulations: "https://www.occ.gov/topics/laws-and-regulations/index-laws-and-regulations.html"
+    comptrollers_handbook: "https://www.occ.gov/publications-and-resources/publications/comptrollers-handbook/index-comptrollers-handbook.html"
+    bank_supervision_pdf: "https://www.occ.gov/publications-and-resources/publications/comptrollers-handbook/files/bank-supervision-process/pub-ch-bank-supervision-process.pdf"
+    large_bank_supervision_pdf: "https://www.occ.gov/publications-and-resources/publications/comptrollers-handbook/files/large-bank-supervision/pub-ch-large-bank-supervision.pdf"
+    sitemap_url: "https://www.occ.gov/sitemap.xml"
+
+  cfpb:
+    section_1071: "https://www.consumerfinance.gov/rules-policy/final-rules/small-business-lending-under-the-equal-credit-opportunity-act-regulation-b/"
+    hmda: "https://www.consumerfinance.gov/data-research/hmda/"
+    regulation_e: "https://www.consumerfinance.gov/rules-policy/regulations/1005/"
+    regulation_b: "https://www.consumerfinance.gov/rules-policy/regulations/1002/"
+    regulation_e_commentary: "https://www.consumerfinance.gov/rules-policy/regulations/1005/interp/"
+    final_rules: "https://www.consumerfinance.gov/rules-policy/final-rules/"
+    supervisory_highlights: "https://www.consumerfinance.gov/compliance/supervisory-highlights/"
+    compliance_resources: "https://www.consumerfinance.gov/compliance/compliance-resources/"
+    hmda_filing_guide_pdf: "https://ffiec.cfpb.gov/resources/HMDA_Filing_Instructions_Guide_2024_v1.pdf"
+    hmda_fig_html_2026: "https://ffiec.cfpb.gov/documentation/fig/2026/overview"
+    hmda_fig_html_2025: "https://ffiec.cfpb.gov/documentation/fig/2025/overview"
+    rss_feed: "https://www.consumerfinance.gov/feed/"
+    sitemap_url: "https://www.consumerfinance.gov/sitemap.xml"
+
+  fdic:
+    base_url: "https://www.fdic.gov"
+    compliance_manual: "https://www.fdic.gov/consumer-compliance-examination-manual"
+    capital_markets: "https://www.fdic.gov/capital-markets"
+    financial_institution_letters: "https://www.fdic.gov/news/financial-institution-letters"
+    laws_and_regulations: "https://www.fdic.gov/laws-and-regulations"
+    deposit_insurance: "https://www.fdic.gov/resources/deposit-insurance/"
+    risk_management_manual_pdf: "https://www.fdic.gov/resources/supervision-and-examinations/examination-policies-manual/risk-management-manual-complete.pdf"
+    risk_management_manual_toc: "https://www.fdic.gov/risk-management-manual-examination-policies"
+    sitemap_url: "https://www.fdic.gov/sitemap.xml"
+
+  fincen_sar:
+    filing_information: "https://www.fincen.gov/resources/filing-information"
+    legal_authorities: "https://www.fincen.gov/resources/fincens-legal-authorities"
+    beneficial_ownership: "https://www.fincen.gov/boi"
+    administrative_rulings: "https://www.fincen.gov/resources/statutes-regulations/administrative-rulings"
+    guidance: "https://www.fincen.gov/resources/statutes-regulations/guidance"
+    sar_activity_review_pdf: "https://www.fincen.gov/sites/default/files/shared/sar_tti_23.pdf"
+    sar_pdf_pattern: "https://www.fincen.gov/sites/default/files/shared/sar_tti_{yy}.pdf"
+    sar_pdf_fallback_pattern: "https://www.fincen.gov/system/files/shared/sar_tti_{yy}.pdf"
+    news_page: "https://www.fincen.gov/news"
+    sitemap_url: "https://www.fincen.gov/sitemap.xml"
+
+  ofac_sdn:
+    sdn_csv: "https://www.treasury.gov/ofac/downloads/sdn.csv"
+    sanctions_programs: "https://ofac.treasury.gov/sanctions-programs-and-country-information"
+    sdn_xml_api: "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN_ADVANCED.XML"
+    sitemap_url: "https://ofac.treasury.gov/sitemap.xml"
+
+  cra:
+    occ_cra: "https://www.occ.gov/topics/supervision-and-examination/cra/index-cra.html"
+    fdic_cra: "https://www.fdic.gov/banker-resource-center/community-reinvestment-act-cra"
+    ffiec_cra_ratings: "https://www.ffiec.gov/cra/ratings.htm"
+    occ_cra_guidance_pdf: "https://www.occ.gov/publications-and-resources/publications/comptrollers-handbook/files/cra/pub-ch-cra.pdf"
+    fdic_cra_manual: "https://www.fdic.gov/regulations/cra/index.html"
+
+  ffiec_call_report:
+    ffiec_forms: "https://www.ffiec.gov/nicpubweb/content/FFIEC_Forms_052_031.htm"
+    fdic_statistics: "https://www.fdic.gov/bank/statistical/"
+    ffiec_031_instructions: "https://www.ffiec.gov/PDF/FFIEC_forms/FFIEC031_20240630_i.pdf"
+    ffiec_041_instructions: "https://www.ffiec.gov/PDF/FFIEC_forms/FFIEC041_20240630_i.pdf"
+    ffiec_051_instructions: "https://www.ffiec.gov/PDF/FFIEC_forms/FFIEC051_20240630_i.pdf"
+
+  ffiec_bsa:
+    ffiec_bsa_main: "https://bsaaml.ffiec.gov/manual"
+    ffiec_bsa_overview: "https://bsaaml.ffiec.gov/manual/Introduction/01"
+    ffiec_bsa_cdd: "https://bsaaml.ffiec.gov/manual/CustomerIdentificationProgram/01"
+    ffiec_bsa_sar: "https://bsaaml.ffiec.gov/manual/SuspiciousActivityReporting/01"
+    ffiec_bsa_pdf: "https://bsaaml.ffiec.gov/docs/FFIEC_BSA_AML_ExamManual.pdf"
+
+  ffiec_cybersecurity:
+    ffiec_cyber_main: "https://www.ffiec.gov/cybersecurity.htm"
+    ffiec_cat_pdf: "https://www.ffiec.gov/pdf/cybersecurity/FFIEC_CAT_May_2017.pdf"
+    ffiec_it_information_security: "https://ithandbook.ffiec.gov/it-booklets/information-security.aspx"
+    ffiec_it_business_continuity: "https://ithandbook.ffiec.gov/it-booklets/business-continuity-management.aspx"
+    occ_cyber_bulletins: "https://www.occ.gov/topics/supervision-and-examination/bank-operations/cybersecurity/index-cybersecurity.html"
+
+  irr:
+    occ_irr_bulletin: "https://www.occ.gov/news-issuances/bulletins/2010/bulletin-2010-1.html"
+    occ_irr_handbook: "https://www.occ.gov/publications-and-resources/publications/comptrollers-handbook/files/interest-rate-risk/pub-ch-interest-rate-risk.pdf"
+    occ_irr_page: "https://www.occ.gov/topics/supervision-and-examination/capital-and-liquidity/interest-rate-risk/index-interest-rate-risk.html"
+    fdic_irr_guidance: "https://www.fdic.gov/capital-markets/interest-rate-risk"
+
+  cre_concentration:
+    joint_guidance_2006: "https://www.fdic.gov/news/financial-institution-letters/2007/fil07006.html"
+    occ_cre_guidance: "https://www.occ.gov/news-issuances/bulletins/2007/bulletin-2007-1.html"
+    fdic_cre_supervisory: "https://www.fdic.gov/credit/commercial-real-estate-lending"
+    occ_cre_page: "https://www.occ.gov/topics/supervision-and-examination/credit-and-market-risk/commercial-real-estate/index-commercial-real-estate.html"
+
+  nydfs:
+    # NYDFS migrated to underscore-style /industry_guidance/ paths.
+    # part_504_bsa has no confirmed replacement under the new scheme.
+    nydfs_main: "https://www.dfs.ny.gov/"
+    part_500_cyber: "https://www.dfs.ny.gov/industry_guidance/cybersecurity"
+    part_504_bsa: "https://www.dfs.ny.gov/industry-guidance/anti-money-laundering"
+    part_500_text: "https://www.dfs.ny.gov/docs/legal/regulations/adoptions/dfsrf500txt.pdf"
+    circulars: "https://www.dfs.ny.gov/industry_guidance/circular_letters"
+    industry_letters: "https://www.dfs.ny.gov/industry_guidance/industry_letters"
+
+  ca_dfpi:
+    dfpi_main: "https://dfpi.ca.gov/"
+    cfl_guidance: "https://dfpi.ca.gov/consumers-investors/loans/california-financing-law/"
+    bulletins: "https://dfpi.ca.gov/industry-guidance/bulletins-letters/"
+
+  tx_dob:
+    dob_main: "https://www.dob.texas.gov/"
+    bank_supervision: "https://www.dob.texas.gov/industry/banks/"
+    money_services: "https://www.dob.texas.gov/industry/money-services-businesses/"
+
+  il_idfpr:
+    # /banks/ no longer resolves; new path is /banking.html. ConsumerCredit
+    # and TransmittersofMoney sub-directories were folded into banking.html.
+    idfpr_main: "https://idfpr.illinois.gov/"
+    banking_division: "https://idfpr.illinois.gov/banking.html"
+    money_transmitters: "https://idfpr.illinois.gov/banks/TransmittersofMoney/"
+
+  fl_ofr:
+    # FL OFR replaced /sitePages/*.htm with /divisions-offices/* layout.
+    # MSB now lives inside Division of Consumer Finance.
+    ofr_main: "https://www.flofr.gov/"
+    banking: "https://flofr.gov/divisions-offices/division-of-financial-institutions"
+    money_services: "https://flofr.gov/divisions-offices/division-of-consumer-finance"
+
+# Metadata
+version: "1.1"
+last_updated: "2026-04-21"
+maintained_by: "fortress_labs_ai"
+contact: "compliance@fortresslabs.dev"

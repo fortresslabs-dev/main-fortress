@@ -1,0 +1,80 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.env.local
+*.env
+!.env.example
+# Bank-specific env files (filled-in copies of infra/setup/bank.env.template)
+infra/setup/bank.env.*
+!infra/setup/bank.env.template
+
+# FTR evidence pack — contains PII (phone numbers), subscription ARNs, MessageIds.
+# Lives separately from the repo (audit drive / S3). Runbook procedures may
+# write here during paging tests / dry-runs — do not commit.
+evidence/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Database
+*.db
+*.sqlite
+
+# Docker
+.docker/
+
+# Data
+data/weaviate/*
+data/logs/*
+data/uploads/*
+data/pdfs/*
+!data/.gitkeep
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Tree-sitter
+vendor/
+build/my-languages.so
+
+# Pipeline-specific local env files
+.env.p1
+.env.p2
+.env.p1.local
+.env.p2.local
+
+# Dependencies & local/generated artifacts
+node_modules/
+chunks/
+scratchpad/
+# Local-only dev stack override (contains the e2e-bypass dev token)
+docker-compose.override.yml
+
+# stray editor/sed backups
+*.bak

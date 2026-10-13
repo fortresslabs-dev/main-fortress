@@ -1,0 +1,812 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Fortress Labs — Pipeline 1 Compute Stack
+  ECS Fargate cluster, task definition, ECR, IAM roles,
+  ALB + WAF for sync API, EventBridge scheduler (starts paused).
+  Deploy AFTER pipeline1-data.yml and after pushing the Docker image to ECR.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+  ImageTag:
+    Type: String
+    Default: latest
+    Description: Docker image tag for the API + scraper + init tasks (e.g. v5.0, latest)
+  DigestImageTag:
+    Type: String
+    Description: >
+      Docker image tag for the daily-digest task only. Decoupled from
+      ImageTag so the digest can ship a new code path without rolling the
+      API container. No default — must be passed explicitly on every
+      update-stack so it can't silently drift to ImageTag.
+  DomainName:
+    Type: String
+    Default: fortresslabs.dev
+    Description: Route53 hosted zone domain
+  AlertEmail:
+    Type: String
+    Description: Email for CloudWatch alarm notifications
+  DigestEmail:
+    Type: String
+    Default: jamie@fortresslabs.dev
+    Description: Email for the daily P1 sync digest (separate from alarm channel)
+  ApiDesiredCount:
+    Type: Number
+    Default: 0
+    Description: >
+      ECS service desired count for the API. Default 0 so the first deploy does
+      not crash on an unbootstrapped database — Step 4 runs the schema init task
+      and then bumps this to 1 with `aws ecs update-service --desired-count 1`.
+  ApiCpu:
+    Type: String
+    Default: "512"
+    AllowedValues: ["256", "512", "1024", "2048", "4096"]
+    Description: >
+      Fargate CPU units for the P1 API task. Right-sized from 2048 → 512 on
+      2026-07-01 after 14d util showed avg 0.4% / peak 37% CPU (deploy-day
+      outlier); typical peak <6%. See MEMORY.md cost-audit-2026-07-01.
+  ApiMemory:
+    Type: String
+    Default: "1024"
+    AllowedValues: ["512", "1024", "2048", "3072", "4096", "8192"]
+    Description: >
+      Fargate memory (MB) for the P1 API task. Right-sized from 4096 → 1024;
+      14d peak memory was 7% of 4 GB (~290 MB). Valid CPU/mem combos: see
+      https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html
+
+Resources:
+
+  # NOTE: ECR repository fortress/pipeline1 is created outside this stack
+  # (DEPLOYMENT.md Step 5, before the image push). Keeping it out of CFN avoids
+  # ordering issues — the image must exist in ECR before this stack deploys.
+
+  # ── SNS Topic for alarms ────────────────────────────────────────────
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub fortress-p1-alarms-${Environment}
+      Subscription:
+        - Protocol: email
+          Endpoint: !Ref AlertEmail
+
+  # ── SNS Topic for the daily sync digest ────────────────────────────
+  # Separate from AlarmTopic so inbox rules / on-call routing on the
+  # alarm channel are not muddied by the daily "OK" digest stream.
+  DigestTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub fortress-p1-digest-${Environment}
+      Subscription:
+        - Protocol: email
+          Endpoint: !Ref DigestEmail
+
+  # ── IAM Roles ──────────────────────────────────────────────────────
+  EcsExecutionRoleP1:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub fortress-p1-ecs-exec-${Environment}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: SecretsAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                  - kms:Decrypt
+                Resource: "*"
+
+  EcsTaskRoleP1:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub fortress-p1-ecs-task-${Environment}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: P1TaskPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: BedrockAccess
+                Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                Resource:
+                  # Claude 4.x (Sonnet 4.5 + Haiku 4.5) are INFERENCE_PROFILE-only;
+                  # must allow the profile ARN AND the underlying foundation-model
+                  # ARNs in every region the `us.` prefix may route to
+                  # (us-east-1/us-east-2/us-west-2).
+                  - !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/us.anthropic.claude-sonnet-4-5-20250929-v1:0
+                  - !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/us.anthropic.claude-haiku-4-5-20251001-v1:0
+                  - !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/us.anthropic.claude-sonnet-4-20250514-v1:0
+                  - arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-4-5-20250929-v1:0
+                  - arn:aws:bedrock:us-east-2::foundation-model/anthropic.claude-sonnet-4-5-20250929-v1:0
+                  - arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-sonnet-4-5-20250929-v1:0
+                  - arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0
+                  - arn:aws:bedrock:us-east-2::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0
+                  - arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0
+                  - arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-4-20250514-v1:0
+                  - arn:aws:bedrock:us-east-2::foundation-model/anthropic.claude-sonnet-4-20250514-v1:0
+                  - arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-sonnet-4-20250514-v1:0
+                  - !Sub arn:aws:bedrock:${AWS::Region}::foundation-model/amazon.titan-embed-text-v2:0
+              # Bedrock auto-subscribes the invoking role to the Anthropic model
+              # entry in AWS Marketplace on first InvokeModel. Without these
+              # actions the call fails with "Model access is denied due to ...
+              # required AWS Marketplace actions (aws-marketplace:ViewSubscriptions,
+              # aws-marketplace:Subscribe)". aws-marketplace actions do not support
+              # resource-level scoping. See memory feedback_bedrock_marketplace_iam.
+              - Sid: BedrockMarketplaceSubscriptions
+                Effect: Allow
+                Action:
+                  - aws-marketplace:ViewSubscriptions
+                  - aws-marketplace:Subscribe
+                  - aws-marketplace:Unsubscribe
+                Resource: "*"
+              - Sid: S3Access
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub
+                    - arn:aws:s3:::${Bucket}
+                    - Bucket:
+                        Fn::ImportValue: !Sub FortressP1-${Environment}-S3Bucket
+                  - !Sub
+                    - arn:aws:s3:::${Bucket}/*
+                    - Bucket:
+                        Fn::ImportValue: !Sub FortressP1-${Environment}-S3Bucket
+              # OpenSearch (aoss:APIAccessAll) intentionally omitted — pilot uses
+              # Aurora pgvector + tsvector instead. Restore when OpenSearch returns
+              # to pipeline1-data.yml.
+              - Sid: SecretsAccess
+                Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  - !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:fortress/p1/*
+                  - !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:fortress/pipeline1/*
+              - Sid: SsmAccess
+                Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:GetParametersByPath
+                Resource:
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/fortress/pipeline1/*
+              - Sid: CloudWatchLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+              - Sid: CloudWatchMetrics
+                Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace: Fortress/Scraper
+              - Sid: KmsDecrypt
+                Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:GenerateDataKey
+                Resource:
+                  - Fn::ImportValue: !Sub FortressP1-${Environment}-KmsKeyRdsArn
+              # Daily digest task publishes to the digest SNS topic only.
+              - Sid: DigestSnsPublish
+                Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource:
+                  - !Ref DigestTopic
+
+  # ── ECS Cluster ────────────────────────────────────────────────────
+  EcsClusterP1:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub fortress-pipeline1-${Environment}
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+
+  # ── CloudWatch Log Group ───────────────────────────────────────────
+  # 365d retention (FFIEC IT Hdbk minimum 1y). FTR tracker #17.
+  LogGroupP1:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /fortress/pipeline1
+      RetentionInDays: 365
+
+  # ── ECS Task Definition ────────────────────────────────────────────
+  EcsTaskDefP1:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub fortress-pipeline1-${Environment}
+      Cpu: !Ref ApiCpu
+      Memory: !Ref ApiMemory
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      ExecutionRoleArn: !GetAtt EcsExecutionRoleP1.Arn
+      TaskRoleArn: !GetAtt EcsTaskRoleP1.Arn
+      ContainerDefinitions:
+        - Name: pipeline1
+          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/fortress/pipeline1:${ImageTag}
+          Essential: true
+          PortMappings:
+            - ContainerPort: 8000
+              Protocol: tcp
+          # All app config (DATABASE_URL, REDIS_URL, S3_BUCKET, etc.) is pulled
+          # at startup by config.py from Secrets Manager
+          # (fortress/pipeline1/app-config) when SECRETS_SOURCE=aws.
+          Environment:
+            - Name: PIPELINE_MODE
+              Value: pipeline1
+            - Name: SECRETS_SOURCE
+              Value: aws
+            - Name: APP_SECRET_NAME
+              Value: fortress/pipeline1/app-config
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+            - Name: ENVIRONMENT
+              Value: !Ref Environment
+            - Name: S3_BUCKET
+              Value:
+                Fn::ImportValue: !Sub FortressP1-${Environment}-S3Bucket
+            - Name: S3_CHUNK_PREFIX
+              Value: scraper-chunks
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /fortress/pipeline1
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+          HealthCheck:
+            Command: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+            Interval: 30
+            Timeout: 10
+            Retries: 3
+
+  # ── ECS Scraper Task Definition (one-shot regulatory scrape) ───────
+  # EventBridge fires this daily at 02:00 UTC. Runs scripts/run_scrape.py, which
+  # executes one full connector cycle and exits — no uvicorn, no long-running
+  # server. Higher CPU/memory than the API task because Bedrock embed calls
+  # batch through here and chunk export can be PDF-heavy.
+  EcsTaskDefScraperP1:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub fortress-pipeline1-scraper-${Environment}
+      Cpu: "2048"
+      Memory: "8192"
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      ExecutionRoleArn: !GetAtt EcsExecutionRoleP1.Arn
+      TaskRoleArn: !GetAtt EcsTaskRoleP1.Arn
+      ContainerDefinitions:
+        - Name: pipeline1-scraper
+          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/fortress/pipeline1:${ImageTag}
+          Essential: true
+          Command: ["python3", "-m", "scripts.run_scrape"]
+          Environment:
+            - Name: PYTHONPATH
+              Value: /app
+            - Name: PIPELINE_MODE
+              Value: pipeline1
+            - Name: SECRETS_SOURCE
+              Value: aws
+            - Name: APP_SECRET_NAME
+              Value: fortress/pipeline1/app-config
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+            - Name: ENVIRONMENT
+              Value: !Ref Environment
+            - Name: S3_BUCKET
+              Value:
+                Fn::ImportValue: !Sub FortressP1-${Environment}-S3Bucket
+            - Name: S3_CHUNK_PREFIX
+              Value: scraper-chunks
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /fortress/pipeline1
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: scraper
+
+  # ── ECS Init Task Definition (one-shot schema bootstrap) ───────────
+  # Same image + roles as the API task, but no HealthCheck and no port mapping
+  # so a non-server command (the schema bootstrap) can run to completion without
+  # being killed by ECS. Step 4 of PIPELINE1_SETUP.md runs this via `aws ecs
+  # run-task`. SgEcs is already in Aurora's allowlist (pipeline1-vpc.yml), so
+  # no extra network plumbing is required.
+  EcsTaskDefInitP1:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub fortress-pipeline1-init-${Environment}
+      Cpu: "512"
+      Memory: "1024"
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      ExecutionRoleArn: !GetAtt EcsExecutionRoleP1.Arn
+      TaskRoleArn: !GetAtt EcsTaskRoleP1.Arn
+      ContainerDefinitions:
+        - Name: pipeline1-init
+          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/fortress/pipeline1:${ImageTag}
+          Essential: true
+          Command: ["python3", "-m", "scripts.setup.init_p1_schema"]
+          Environment:
+            - Name: PYTHONPATH
+              Value: /app
+            - Name: PIPELINE_MODE
+              Value: pipeline1
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+            - Name: ENVIRONMENT
+              Value: !Ref Environment
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /fortress/pipeline1
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: init
+
+  # ── ALB Access Logs (FTR tracker #12) ──────────────────────────────
+  # Glacier transition @ 90d, expire @ 365d. SSE-S3, no public access,
+  # BucketOwnerEnforced (no ACLs). 127311923021 is the us-east-1 ELB
+  # service account — if region changes, update from the regional table at
+  # docs.aws.amazon.com/elasticloadbalancing/latest/application/enable-access-logging.html
+  AlbAccessLogsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub fortress-p1-alb-logs-${AWS::AccountId}-${Environment}
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: ArchiveThenExpire
+            Status: Enabled
+            Transitions:
+              - StorageClass: GLACIER
+                TransitionInDays: 90
+            ExpirationInDays: 365
+
+  AlbAccessLogsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AlbAccessLogsBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AlbAccessLogsWrite
+            Effect: Allow
+            Principal:
+              AWS: arn:aws:iam::127311923021:root
+            Action: s3:PutObject
+            Resource: !Sub ${AlbAccessLogsBucket.Arn}/AWSLogs/${AWS::AccountId}/*
+
+  # ── ALB (Sync API — serves P2 bank instances) ──────────────────────
+  AlbP1:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    DependsOn: AlbAccessLogsBucketPolicy
+    Properties:
+      Name: !Sub fortress-p1-alb-${Environment}
+      Type: application
+      Scheme: internet-facing
+      SecurityGroups:
+        - Fn::ImportValue: !Sub FortressP1-${Environment}-SgAlb
+      Subnets:
+        - Fn::ImportValue: !Sub FortressP1-${Environment}-PublicSubnetA
+        - Fn::ImportValue: !Sub FortressP1-${Environment}-PublicSubnetB
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: "60"
+        - Key: deletion_protection.enabled
+          Value: "true"
+        - Key: access_logs.s3.enabled
+          Value: "true"
+        - Key: access_logs.s3.bucket
+          Value: !Ref AlbAccessLogsBucket
+
+  TargetGroupP1:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub fortress-p1-tg-${Environment}
+      Port: 8000
+      Protocol: HTTP
+      VpcId:
+        Fn::ImportValue: !Sub FortressP1-${Environment}-VpcId
+      TargetType: ip
+      # Trailing slash matters — health router is mounted at prefix '/health' with
+      # route '/', so /health (no slash) returns 307 → unhealthy.
+      HealthCheckPath: /health/
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: "30"
+
+  AcmCertP1:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Sub api.${DomainName}
+      ValidationMethod: DNS
+      DomainValidationOptions:
+        - DomainName: !Sub api.${DomainName}
+          HostedZoneId: !Sub "{{resolve:ssm:/fortress/pipeline1/HOSTED_ZONE_ID}}"
+
+  ListenerHttps:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref AlbP1
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref AcmCertP1
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroupP1
+
+  ListenerHttp:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref AlbP1
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: "443"
+            StatusCode: HTTP_301
+
+  # ── WAF (IP allowlist + rate limiting for sync API) ────────────────
+  # H4 posture:
+  #  - Priority 0  AllowBankIps    — known bank NAT EIPs bypass the rate
+  #                                  limit entirely. A paginated initial
+  #                                  seed (/sync/initial × N + /sync/ofac-sdn
+  #                                  × M + /sync/sdn-vectors × ~26 + …)
+  #                                  can easily exceed 100 req / 5 min, so
+  #                                  legitimate banks must be allowlisted.
+  #                                  IPs are added via
+  #                                  infra/scripts/register-bank-ip.sh.
+  #  - Priority 1  RateLimitSyncApi — unknown / not-yet-allowlisted IPs are
+  #                                  capped at 100 req / 5 min on /api/sync*.
+  #                                  Strict because /api/sync requires HMAC;
+  #                                  a stranger has no business at 100+ rps.
+  #  - Priority 2  AWSManagedRulesCommonRuleSet
+  BankIpAllowSet:
+    Type: AWS::WAFv2::IPSet
+    Properties:
+      Name: !Sub fortress-p1-bank-ips-${Environment}
+      Description: NAT EIPs of registered pilot bank P2 stacks
+      Scope: REGIONAL
+      IPAddressVersion: IPV4
+      # Empty on first deploy; register-bank-ip.sh appends per-bank EIPs.
+      Addresses: []
+
+  WafWebAclP1:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      Name: !Sub fortress-p1-waf-${Environment}
+      Scope: REGIONAL
+      DefaultAction:
+        Allow: {}
+      Rules:
+        - Name: AllowBankIps
+          Priority: 0
+          Statement:
+            IPSetReferenceStatement:
+              Arn: !GetAtt BankIpAllowSet.Arn
+          Action:
+            Allow: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: AllowBankIps
+        - Name: RateLimitSyncApi
+          Priority: 1
+          Statement:
+            RateBasedStatement:
+              Limit: 100
+              EvaluationWindowSec: 300
+              AggregateKeyType: IP
+              ScopeDownStatement:
+                ByteMatchStatement:
+                  SearchString: /api/sync
+                  FieldToMatch:
+                    UriPath: {}
+                  TextTransformations:
+                    - Priority: 0
+                      Type: NONE
+                  PositionalConstraint: STARTS_WITH
+          Action:
+            Block: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: RateLimitSyncApi
+        - Name: AWSManagedRulesCommon
+          Priority: 2
+          OverrideAction:
+            None: {}
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesCommonRuleSet
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: AWSCommonRules
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName: !Sub FortressP1Waf${Environment}
+
+  WafAssociation:
+    Type: AWS::WAFv2::WebACLAssociation
+    Properties:
+      ResourceArn: !Ref AlbP1
+      WebACLArn: !GetAtt WafWebAclP1.Arn
+
+  # ── ECS Service (API server — always running) ───────────────────────
+  EcsServiceP1:
+    Type: AWS::ECS::Service
+    DependsOn: ListenerHttps
+    Properties:
+      ServiceName: !Sub fortress-pipeline1-api-${Environment}
+      Cluster: !Ref EcsClusterP1
+      TaskDefinition: !Ref EcsTaskDefP1
+      LaunchType: FARGATE
+      DesiredCount: !Ref ApiDesiredCount
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - Fn::ImportValue: !Sub FortressP1-${Environment}-SgEcs
+          Subnets:
+            - Fn::ImportValue: !Sub FortressP1-${Environment}-PrivateSubnetA
+            - Fn::ImportValue: !Sub FortressP1-${Environment}-PrivateSubnetB
+      LoadBalancers:
+        - ContainerName: pipeline1
+          ContainerPort: 8000
+          TargetGroupArn: !Ref TargetGroupP1
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+      HealthCheckGracePeriodSeconds: 60
+
+  # ── EventBridge Scheduler (scraper — runs daily, starts DISABLED) ──
+  EventBridgeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub fortress-p1-eventbridge-${Environment}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: scheduler.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: RunEcsTask
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecs:RunTask
+                # Wildcard the revision so each new CFN deploy that publishes
+                # a new task-def revision is immediately runnable without an
+                # IAM update lagging behind the EventBridge target.
+                Resource:
+                  - !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/fortress-pipeline1-scraper-${Environment}:*
+                  - !Sub arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/fortress-pipeline1-digest-${Environment}:*
+                Condition:
+                  ArnEquals:
+                    "ecs:cluster": !GetAtt EcsClusterP1.Arn
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource:
+                  - !GetAtt EcsTaskRoleP1.Arn
+                  - !GetAtt EcsExecutionRoleP1.Arn
+
+  ScraperSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Name: !Sub fortress-p1-daily-scrape-${Environment}
+      Description: Daily regulatory scrape — 02:00 UTC
+      ScheduleExpression: "cron(0 2 * * ? *)"
+      State: ENABLED
+      FlexibleTimeWindow:
+        Mode: "OFF"
+      Target:
+        Arn: !GetAtt EcsClusterP1.Arn
+        RoleArn: !GetAtt EventBridgeRole.Arn
+        EcsParameters:
+          TaskDefinitionArn: !Ref EcsTaskDefScraperP1
+          LaunchType: FARGATE
+          NetworkConfiguration:
+            AwsvpcConfiguration:
+              AssignPublicIp: DISABLED
+              SecurityGroups:
+                - Fn::ImportValue: !Sub FortressP1-${Environment}-SgEcs
+              Subnets:
+                - Fn::ImportValue: !Sub FortressP1-${Environment}-PrivateSubnetA
+                - Fn::ImportValue: !Sub FortressP1-${Environment}-PrivateSubnetB
+        RetryPolicy:
+          MaximumRetryAttempts: 2
+
+  # ── ECS Daily Digest Task Definition (one-shot — emails sync summary) ──
+  # Reuses the pipeline1 image: same DB + boto3 + asyncpg already shipped.
+  # EventBridge fires this daily at 06:00 UTC (4h after the 02:00 scraper
+  # window — enough buffer for slow connectors).
+  EcsTaskDefDigestP1:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub fortress-pipeline1-digest-${Environment}
+      Cpu: "512"
+      Memory: "1024"
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      ExecutionRoleArn: !GetAtt EcsExecutionRoleP1.Arn
+      TaskRoleArn: !GetAtt EcsTaskRoleP1.Arn
+      ContainerDefinitions:
+        - Name: pipeline1-digest
+          Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/fortress/pipeline1:${DigestImageTag}
+          Essential: true
+          Command: ["python3", "-m", "src.jobs.daily_digest"]
+          Environment:
+            - Name: PYTHONPATH
+              Value: /app
+            - Name: PIPELINE_MODE
+              Value: pipeline1
+            - Name: SECRETS_SOURCE
+              Value: aws
+            - Name: APP_SECRET_NAME
+              Value: fortress/pipeline1/app-config
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+            - Name: ENVIRONMENT
+              Value: !Ref Environment
+            - Name: DIGEST_SNS_TOPIC_ARN
+              Value: !Ref DigestTopic
+            - Name: DIGEST_WINDOW_HOURS
+              Value: "24"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /fortress/pipeline1
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: digest
+
+  DigestSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Name: !Sub fortress-p1-daily-digest-${Environment}
+      Description: Daily P1 sync digest — 06:00 UTC (4h after scrape window)
+      ScheduleExpression: "cron(0 6 * * ? *)"
+      State: ENABLED
+      FlexibleTimeWindow:
+        Mode: "OFF"
+      Target:
+        Arn: !GetAtt EcsClusterP1.Arn
+        RoleArn: !GetAtt EventBridgeRole.Arn
+        EcsParameters:
+          TaskDefinitionArn: !Ref EcsTaskDefDigestP1
+          LaunchType: FARGATE
+          NetworkConfiguration:
+            AwsvpcConfiguration:
+              AssignPublicIp: DISABLED
+              SecurityGroups:
+                - Fn::ImportValue: !Sub FortressP1-${Environment}-SgEcs
+              Subnets:
+                - Fn::ImportValue: !Sub FortressP1-${Environment}-PrivateSubnetA
+                - Fn::ImportValue: !Sub FortressP1-${Environment}-PrivateSubnetB
+        RetryPolicy:
+          MaximumRetryAttempts: 1
+
+  # ── CloudWatch Alarms ──────────────────────────────────────────────
+  AlarmEcsCpu:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub fortress-p1-ecs-cpu-high-${Environment}
+      AlarmDescription: ECS CPU > 80% for 5 minutes
+      MetricName: CPUUtilization
+      Namespace: AWS/ECS
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref EcsClusterP1
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions: [!Ref AlarmTopic]
+
+Outputs:
+  AlbDns:
+    Value: !GetAtt AlbP1.DNSName
+    Export:
+      Name: !Sub FortressP1-${Environment}-AlbDns
+
+  EcsClusterArn:
+    Value: !GetAtt EcsClusterP1.Arn
+    Export:
+      Name: !Sub FortressP1-${Environment}-EcsClusterArn
+
+  EcsTaskDefArn:
+    Value: !Ref EcsTaskDefP1
+    Export:
+      Name: !Sub FortressP1-${Environment}-EcsTaskDefArn
+
+  EcsTaskDefInitArn:
+    Value: !Ref EcsTaskDefInitP1
+    Description: One-shot schema bootstrap task (see PIPELINE1_SETUP.md Step 4)
+    Export:
+      Name: !Sub FortressP1-${Environment}-EcsTaskDefInitArn
+
+  EcsTaskDefScraperArn:
+    Value: !Ref EcsTaskDefScraperP1
+    Description: One-shot scraper task — fired by EventBridge daily at 02:00 UTC
+    Export:
+      Name: !Sub FortressP1-${Environment}-EcsTaskDefScraperArn
+
+  EcsApiServiceName:
+    Value: !Ref EcsServiceP1
+    Description: Bump desired count to 1 after Step 4 completes
+    Export:
+      Name: !Sub FortressP1-${Environment}-EcsApiServiceName
+
+  ScraperScheduleName:
+    Value: !Ref ScraperSchedule
+    Description: Enable this after first successful image push and DB migration
+
+  DigestTopicArn:
+    Value: !Ref DigestTopic
+    Description: SNS topic that receives the daily P1 sync digest email
+    Export:
+      Name: !Sub FortressP1-${Environment}-DigestTopicArn
+
+  AlbAccessLogsBucket:
+    Value: !Ref AlbAccessLogsBucket
+    Description: S3 bucket holding ALB access logs (lifecycle GLACIER @ 90d, expire @ 365d)
+    Export:
+      Name: !Sub FortressP1-${Environment}-AlbAccessLogsBucket
+
+  DigestScheduleName:
+    Value: !Ref DigestSchedule
+    Description: EventBridge schedule firing the daily digest at 06:00 UTC

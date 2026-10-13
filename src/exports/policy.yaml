@@ -1,0 +1,35 @@
+# Required-signer matrix per design doc §11.4 Q9.
+#
+# Each report type lists the officer roles that MUST sign before the
+# artifact becomes downloadable to external consumers. Dual-signer
+# artifacts need len(required_signers) rows in export_signoffs before
+# GET /download unlocks the un-watermarked PDF.
+#
+# Amending this file requires a CCO commit + co-sign by an Engineering
+# Director (see CODEOWNERS).
+version: v1.2026.06
+
+signers:
+  examiner_package:
+    required_signers: [cco, internal_audit]
+    signing_strength: strong   # typed full name + acknowledgement + JTI (ESIGN/UETA)
+
+  ofac_attestation:
+    required_signers: [bsa_officer, cro]
+    signing_strength: strong
+
+  board_report:
+    required_signers: [cco]
+    signing_strength: jti_only
+
+  mra_tracker:
+    required_signers: [cco]
+    signing_strength: jti_only
+
+  change_log:
+    required_signers: [cco]
+    signing_strength: jti_only
+
+  coverage:
+    required_signers: [cco]
+    signing_strength: jti_only

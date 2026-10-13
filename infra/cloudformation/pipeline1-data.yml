@@ -1,0 +1,371 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::SecretsManager-2020-07-23
+Description: >
+  Fortress Labs — Pipeline 1 Data Stack (pilot baseline)
+  Aurora PostgreSQL Serverless v2 (0.5–2 ACU) + pgvector,
+  ElastiCache Redis t4g.micro (single node, TLS),
+  S3, KMS CMKs, Secrets Manager.
+  OpenSearch Serverless intentionally omitted — pgvector + tsvector handle
+  hybrid search in Aurora. For full prod, restore OpenSearch resources and
+  switch Aurora to db.r6g.large + Redis r7g.medium.
+  Deploy AFTER pipeline1-vpc.yml.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+  AuroraInstanceClass:
+    Type: String
+    Default: db.serverless
+    Description: Aurora Serverless v2 (db.serverless). For full prod, switch to db.r6g.large.
+  # P1 pilot baseline — matches the deployed stack (0.5 min / 2 max ACU) so a
+  # stack update without explicit --parameters cannot silently raise the floor.
+  # 14d utilization (2026-07-04): avg 0.518 ACU, storage 0.78 GB. Cluster hits
+  # the 2 ACU ceiling ~18% of hours; raise MaxAcu (not the default) via
+  # --parameters when onboarding the next pilot bank.
+  AuroraServerlessMinAcu:
+    Type: Number
+    Default: 0.5
+    MinValue: 0.5
+    Description: Min ACUs for Aurora Serverless v2 (1 ACU ≈ 2 GB RAM)
+  AuroraServerlessMaxAcu:
+    Type: Number
+    Default: 2
+    MinValue: 1
+    Description: Max ACUs for Aurora Serverless v2 (pilot ceiling)
+  RedisNodeType:
+    Type: String
+    Default: cache.t4g.micro
+    Description: Graviton2 — pilot baseline (matches deployed cluster). For full prod, switch to cache.r7g.medium.
+  DbName:
+    Type: String
+    Default: fortress_p1
+
+Resources:
+
+  # ── KMS Customer Managed Keys ───────────────────────────────────────
+  KmsKeyRds:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Fortress P1 Aurora PostgreSQL encryption
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+  KmsKeyRdsAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: alias/fortress-rds-key
+      TargetKeyId: !Ref KmsKeyRds
+
+  KmsKeyRedis:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Fortress P1 ElastiCache Redis encryption
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+  KmsKeyRedisAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: alias/fortress-redis-key
+      TargetKeyId: !Ref KmsKeyRedis
+
+  KmsKeyS3:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Fortress P1 S3 bucket encryption
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+  KmsKeyS3Alias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: alias/fortress-s3-key
+      TargetKeyId: !Ref KmsKeyS3
+
+  # ── Secrets Manager ─────────────────────────────────────────────────
+  SecretDbPassword:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: fortress/p1/db-password
+      Description: Aurora master password — auto-rotated every 90 days
+      GenerateSecretString:
+        SecretStringTemplate: !Sub '{"username": "fortress_p1"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        # Exclude URL gen-/sub-delims so the raw password is safe to substitute
+        # into postgresql+asyncpg://user:PWD@host/db without URL-encoding.
+        ExcludeCharacters: '"@/\:?#+*&=%[]<> '
+      KmsKeyId: !Ref KmsKeyRds
+
+  SecretRedisToken:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: fortress/p1/redis-auth-token
+      Description: ElastiCache Redis AUTH token
+      GenerateSecretString:
+        PasswordLength: 32
+        # Same URL-safety rationale as SecretDbPassword — token is substituted
+        # raw into rediss://:TOKEN@host:6379/0 in SecretAppConfig below.
+        ExcludeCharacters: '"@/\:?#+*&=%[]<> '
+      KmsKeyId: !Ref KmsKeyRedis
+
+  # App config bundle — composed at deploy time using {{resolve:secretsmanager:...}}
+  # and !GetAtt on Aurora/Redis endpoints. SECRETS_SOURCE=aws in the ECS task
+  # definition tells config.py to pull this JSON into os.environ at startup.
+  SecretAppConfig:
+    Type: AWS::SecretsManager::Secret
+    DependsOn:
+      - AuroraInstanceWriter
+      - RedisCluster
+    Properties:
+      Name: fortress/pipeline1/app-config
+      Description: P1 app config bundle — injected via SECRETS_SOURCE=aws
+      SecretString: !Sub
+        - |
+          {
+            "PIPELINE_MODE": "pipeline1",
+            "ENVIRONMENT": "${Environment}",
+            "SECRETS_SOURCE": "aws",
+            "AWS_REGION": "${AWS::Region}",
+            "BEDROCK_MODEL": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+            "P1_OBLIGATION_EXTRACTION_MODEL": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+            "DATABASE_URL": "postgresql+asyncpg://fortress_p1:${DbPwd}@${AuroraHost}:${AuroraPort}/${DbName}?ssl=require",
+            "REDIS_URL": "rediss://:${RedisPwd}@${RedisHost}:6379/0",
+            "S3_BUCKET": "${S3Bucket}",
+            "S3_CHUNK_PREFIX": "scraper-chunks"
+          }
+        - DbPwd: !Sub "{{resolve:secretsmanager:${SecretDbPassword}:SecretString:password}}"
+          AuroraHost: !GetAtt AuroraCluster.Endpoint.Address
+          AuroraPort: !GetAtt AuroraCluster.Endpoint.Port
+          RedisPwd: !Sub "{{resolve:secretsmanager:${SecretRedisToken}}}"
+          RedisHost: !GetAtt RedisCluster.PrimaryEndPoint.Address
+          S3Bucket: !Ref S3BucketP1
+
+  # ── Aurora PostgreSQL (Provisioned, r6g.large, Graviton) ───────────
+  AuroraSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Fortress P1 Aurora subnet group
+      SubnetIds:
+        - Fn::ImportValue: !Sub FortressP1-${Environment}-PrivateSubnetA
+        - Fn::ImportValue: !Sub FortressP1-${Environment}-PrivateSubnetB
+
+  AuroraCluster:
+    Type: AWS::RDS::DBCluster
+    DeletionPolicy: Snapshot
+    Properties:
+      Engine: aurora-postgresql
+      EngineVersion: "15.10"
+      DatabaseName: !Ref DbName
+      DBSubnetGroupName: !Ref AuroraSubnetGroup
+      VpcSecurityGroupIds:
+        - Fn::ImportValue: !Sub FortressP1-${Environment}-SgAurora
+      MasterUsername: fortress_p1
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:${SecretDbPassword}:SecretString:password}}"
+      StorageEncrypted: true
+      KmsKeyId: !GetAtt KmsKeyRds.Arn
+      BackupRetentionPeriod: 7
+      DeletionProtection: true
+      EnableCloudwatchLogsExports: [postgresql]
+      ServerlessV2ScalingConfiguration:
+        MinCapacity: !Ref AuroraServerlessMinAcu
+        MaxCapacity: !Ref AuroraServerlessMaxAcu
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p1-aurora-${Environment}
+
+  # Single writer for the shared P1 cluster — Serverless v2 auto-scales within
+  # the ACU range set on the cluster (pilot default 0.5–2). For full prod, add
+  # an AuroraInstanceReader for HA + read scaling and raise the ceiling via
+  # --parameters at deploy time.
+  AuroraInstanceWriter:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBClusterIdentifier: !Ref AuroraCluster
+      DBInstanceClass: !Ref AuroraInstanceClass
+      Engine: aurora-postgresql
+      PubliclyAccessible: false
+      AutoMinorVersionUpgrade: true
+      DBInstanceIdentifier: !Sub fortress-p1-writer-${Environment}
+
+  # ── Secrets Manager rotation for Aurora ────────────────────────────
+  # DISABLED in pilot. The AWS-managed PostgreSQLSingleUser rotation strategy
+  # rewrites the master password via SQL ALTER USER, but RDS's master-password
+  # plane is the authoritative source and Aurora rejected the rotated value on
+  # 2026-05-13, leaving the secret + cluster out of sync. Re-enabling requires:
+  #   1. A rotation Lambda that calls `aws rds modify-db-cluster --master-user-password`
+  #   2. A trigger that re-renders SecretAppConfig (and runs encode-app-config-secret.sh)
+  #      with the new value, otherwise the API container boots with stale creds.
+  # Until both are in place, leave this resource removed so manual lifecycle owns
+  # password changes.
+  #
+  # SecretDbRotationSchedule:
+  #   Type: AWS::SecretsManager::RotationSchedule
+  #   ...
+
+  # ── ElastiCache Redis 7 (r7g.medium, Graviton, TLS, KMS) ──────────
+  RedisSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: Fortress P1 Redis subnet group
+      SubnetIds:
+        - Fn::ImportValue: !Sub FortressP1-${Environment}-PrivateSubnetA
+        - Fn::ImportValue: !Sub FortressP1-${Environment}-PrivateSubnetB
+
+  # Single-node pilot Redis. For full prod, set NumCacheClusters: 2,
+  # AutomaticFailoverEnabled: true, MultiAZEnabled: true on cache.r7g.medium.
+  RedisCluster:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupDescription: Fortress P1 Redis - scraper + LLM cache (pilot)
+      Engine: redis
+      EngineVersion: "7.1"
+      CacheNodeType: !Ref RedisNodeType
+      NumCacheClusters: 1
+      AutomaticFailoverEnabled: false
+      MultiAZEnabled: false
+      CacheSubnetGroupName: !Ref RedisSubnetGroup
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub FortressP1-${Environment}-SgRedis
+      AtRestEncryptionEnabled: true
+      TransitEncryptionEnabled: true
+      TransitEncryptionMode: required
+      AuthToken: !Sub "{{resolve:secretsmanager:${SecretRedisToken}}}"
+      KmsKeyId: !GetAtt KmsKeyRedis.Arn
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p1-redis-${Environment}
+
+  # OpenSearch Serverless intentionally omitted for pilot.
+  # Hybrid search runs in Aurora via pgvector (HNSW) + tsvector (GIN).
+  # To restore for full prod, re-add:
+  #   - OpenSearchEncryptionPolicy / OpenSearchNetworkPolicy
+  #   - OpenSearchVpcEndpoint (in private subnets, SgEcs)
+  #   - OpenSearchCollection (SEARCH type, name fortress-compliance-docs)
+  #   - OpenSearchDataAccessPolicy granting EcsTaskRoleP1 aoss:* on the collection
+  # …and re-add OPENSEARCH_ENDPOINT/OPENSEARCH_COLLECTION to SecretAppConfig
+  # and the aoss:APIAccessAll Sid in pipeline1-compute.yml EcsTaskRoleP1.
+
+  # ── S3 Bucket (scraper chunks, backups, CloudTrail) ────────────────
+  S3BucketP1:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Sub fortress-p1-data-${AWS::AccountId}-${Environment}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !GetAtt KmsKeyS3.Arn
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: GlacierArchive
+            Status: Enabled
+            Transitions:
+              - TransitionInDays: 365
+                StorageClass: GLACIER_IR
+          - Id: DeleteOldVersions
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 90
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p1-data-${Environment}
+
+  # ── SSM Parameters ─────────────────────────────────────────────────
+  SsmAuroraHost:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /fortress/pipeline1/AURORA_HOST
+      Type: String
+      Value: !GetAtt AuroraCluster.Endpoint.Address
+
+  SsmAuroraPort:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /fortress/pipeline1/AURORA_PORT
+      Type: String
+      Value: !Sub "${AuroraCluster.Endpoint.Port}"
+
+  SsmRedisHost:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /fortress/pipeline1/REDIS_HOST
+      Type: String
+      Value: !GetAtt RedisCluster.PrimaryEndPoint.Address
+
+  SsmDbName:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /fortress/pipeline1/DB_NAME
+      Type: String
+      Value: !Ref DbName
+
+  SsmS3Bucket:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /fortress/pipeline1/S3_BUCKET
+      Type: String
+      Value: !Ref S3BucketP1
+
+Outputs:
+  AuroraEndpoint:
+    Value: !GetAtt AuroraCluster.Endpoint.Address
+    Export:
+      Name: !Sub FortressP1-${Environment}-AuroraEndpoint
+
+  AuroraPort:
+    Value: !GetAtt AuroraCluster.Endpoint.Port
+    Export:
+      Name: !Sub FortressP1-${Environment}-AuroraPort
+
+  RedisEndpoint:
+    Value: !GetAtt RedisCluster.PrimaryEndPoint.Address
+    Export:
+      Name: !Sub FortressP1-${Environment}-RedisEndpoint
+
+  S3BucketName:
+    Value: !Ref S3BucketP1
+    Export:
+      Name: !Sub FortressP1-${Environment}-S3Bucket
+
+  KmsKeyRdsArn:
+    Value: !GetAtt KmsKeyRds.Arn
+    Export:
+      Name: !Sub FortressP1-${Environment}-KmsKeyRdsArn
+
+  SecretDbPasswordArn:
+    Value: !Ref SecretDbPassword
+    Export:
+      Name: !Sub FortressP1-${Environment}-SecretDbPasswordArn

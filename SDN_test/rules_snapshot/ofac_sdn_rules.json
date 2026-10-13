@@ -1,0 +1,22 @@
+[
+  {
+    "rule_id": "OFAC-SDN-SCREEN",
+    "regulator": "OFAC",
+    "cfr_citation": "31 CFR 501",
+    "category": "sanctions",
+    "domain": null,
+    "geography": "usa",
+    "enforcement_risk_score": 9.6,
+    "rule_text": "Screen all parties against the OFAC SDN list; block on 85%+ similarity."
+  },
+  {
+    "rule_id": "OFAC-RECORDKEEP",
+    "regulator": "OFAC",
+    "cfr_citation": "31 CFR 501.601",
+    "category": "sanctions",
+    "domain": null,
+    "geography": "usa",
+    "enforcement_risk_score": 6.3,
+    "rule_text": "Retain transaction records subject to OFAC programs for 5 years."
+  }
+]

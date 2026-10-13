@@ -1,0 +1,532 @@
+name: CI / CD
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - "p1-v*"          # e.g. p1-v5.1  → deploy P1 to Fortress ECS
+      - "bank-*-v*"      # e.g. bank-firstnational-v5.1 → deploy P2 to bank ECS
+  pull_request:
+    branches: [main, feature/dashboard-sdn]
+  schedule:
+    - cron: "0 6 * * *"  # 06:00 UTC daily — nightly Playwright vs staging
+
+env:
+  AWS_REGION: us-east-1
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+
+jobs:
+  # ── CI: lint + test on every PR and push ──────────────────────────
+  ci:
+    name: Lint and test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: fortress
+          POSTGRES_PASSWORD: fortress_dev
+          POSTGRES_DB: fortress_dev
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Lint
+        run: |
+          ruff check src/
+          black --check src/
+
+      - name: Syntax check entry points
+        run: |
+          python -m py_compile src/main_pipeline1.py
+          python -m py_compile src/main_pipeline2.py
+          python -m py_compile src/utils/config.py
+
+      - name: FTR invariants (Phase 4 #18 — DbMultiAz prod gate)
+        run: python scripts/verify_ftr_invariants.py
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: postgresql+asyncpg://fortress:fortress_dev@localhost:5432/fortress_dev
+        run: python -m alembic upgrade head
+
+      - name: Schema verification
+        env:
+          DATABASE_URL: postgresql+asyncpg://fortress:fortress_dev@localhost:5432/fortress_dev
+        run: python scripts/verify_schema.py
+
+      - name: Run tests (P1 mode)
+        env:
+          PIPELINE_MODE: pipeline1
+          DATABASE_URL: postgresql+asyncpg://fortress:fortress_dev@localhost:5432/fortress_dev
+          REDIS_URL: redis://localhost:6379
+          LLM_MOCK_MODE: "true"
+        run: pytest tests/pipeline1/ -v --tb=short
+
+      - name: Run tests (P2 mode)
+        env:
+          PIPELINE_MODE: pipeline2
+          CLIENT_NAME: devbank
+          DATABASE_URL: postgresql+asyncpg://fortress:fortress_dev@localhost:5432/fortress_dev
+          REDIS_URL: redis://localhost:6379
+          LLM_MOCK_MODE: "true"
+        run: pytest tests/pipeline2/ -v --tb=short
+
+  # ── Demo-readiness API contract suite — Phase 2 from demo-readiness.md ──
+  test-demo:
+    name: Demo API contracts (make test-demo)
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: fortress
+          POSTGRES_PASSWORD: fortress_dev
+          POSTGRES_DB: fortress_dev
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: postgresql+asyncpg://fortress:fortress_dev@localhost:5432/fortress_dev
+        run: python -m alembic upgrade head
+
+      - name: Run demo-readiness API contract suite
+        env:
+          PIPELINE_MODE: pipeline2
+          CLIENT_NAME: testbank-demo
+          ENVIRONMENT: test
+          DATABASE_URL: postgresql://fortress:fortress_dev@localhost:5432/fortress_dev
+          REDIS_URL: redis://localhost:6379/0
+          PIPELINE2_API_TOKEN: test-dev-token
+          JIRA_WEBHOOK_SECRET: test-webhook-secret
+          LLM_MOCK_MODE: "true"
+        run: pytest tests/integration/api/ -v --tb=short --maxfail=3
+
+  # ── Dashboard Vitest smoke — Phase 3a from demo-readiness.md ────────────
+  dashboard-tests:
+    name: Dashboard Vitest smoke
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install dashboard deps
+        run: npm ci
+
+      - name: Run Vitest smoke suite
+        run: npm run test
+
+  # ── Dashboard Playwright F1–F5 — Phase 3b from demo-readiness.md ────────
+  # Required on main (hard fail), warning on feature-branch PRs so a flaky
+  # local run can't block a WIP review.  Tag-deploy paths block on this via
+  # the demo-readiness aggregate below.
+  dashboard-e2e:
+    name: Dashboard Playwright F1–F5
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+    continue-on-error: ${{ github.event_name == 'pull_request' && github.base_ref != 'main' }}
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: fortress
+          POSTGRES_PASSWORD: fortress_dev
+          POSTGRES_DB: fortress_dev
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    env:
+      DATABASE_URL: postgresql+asyncpg://fortress:fortress_dev@localhost:5432/fortress_dev
+      DATABASE_URL_SYNC: postgresql://fortress:fortress_dev@localhost:5432/fortress_dev
+      REDIS_URL: redis://localhost:6379/0
+      JIRA_WEBHOOK_SECRET: test-webhook-secret
+      PIPELINE2_API_TOKEN: test-dev-token
+      LLM_MOCK_MODE: "true"
+      DEV_MODE: "true"
+      ENVIRONMENT: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install Python deps
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install dashboard deps
+        working-directory: dashboard
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: dashboard
+        run: npx playwright install --with-deps chromium
+
+      - name: Run migrations + seed demo data
+        run: |
+          python -m alembic upgrade head
+          DATABASE_URL="$DATABASE_URL_SYNC" python -m scripts.demo.seed
+
+      - name: Start P1 backend (background)
+        env:
+          PIPELINE_MODE: pipeline1
+        run: |
+          nohup python -m uvicorn src.main_pipeline1:app \
+            --host 0.0.0.0 --port 8001 > p1.log 2>&1 &
+          echo $! > p1.pid
+
+      - name: Start P2 backend (background)
+        env:
+          PIPELINE_MODE: pipeline2
+          CLIENT_NAME: testbank-demo
+          PIPELINE1_API_URL: http://localhost:8001
+        run: |
+          nohup python -m uvicorn src.main_pipeline2:app \
+            --host 0.0.0.0 --port 8002 > p2.log 2>&1 &
+          echo $! > p2.pid
+
+      - name: Wait for backends healthy
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8001/health && curl -sf http://localhost:8002/health; then
+              echo "✓ P1 + P2 healthy after $((i*2))s"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Backends never became healthy"
+          echo "--- P1 log ---"; cat p1.log
+          echo "--- P2 log ---"; cat p2.log
+          exit 1
+
+      - name: Run Playwright F1–F5
+        working-directory: dashboard
+        env:
+          E2E_API_BASE_URL: http://localhost:8002
+        run: npm run e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            dashboard/playwright-report/
+            dashboard/test-results/
+          retention-days: 7
+
+      - name: Upload backend logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-logs
+          path: |
+            p1.log
+            p2.log
+          retention-days: 7
+
+  # ── Aggregate green-check gating release tags + branch protection ───────
+  # Branch protection on `main` and `feature/dashboard-sdn` should require
+  # the `demo-readiness` check.  Tag-deploy paths (build-p1, deploy-p2,
+  # sync-p2-repo) also depend on this — every release runs the full battery.
+  demo-readiness:
+    name: demo-readiness
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule'
+    needs: [ci, test-demo, dashboard-tests, dashboard-e2e]
+    steps:
+      - name: All demo-readiness gates passed
+        run: echo "✓ ci + test-demo + dashboard-tests + dashboard-e2e all green"
+
+  # ── Nightly Playwright vs staging — alerts on Slack, never blocks ───────
+  nightly-staging-e2e:
+    name: Nightly Playwright vs staging
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install dashboard deps
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright against staging
+        env:
+          E2E_BASE_URL: https://dashboard.staging.fortresslabs.dev
+          E2E_API_BASE_URL: https://api.staging.fortresslabs.dev
+          JIRA_WEBHOOK_SECRET: ${{ secrets.STAGING_JIRA_WEBHOOK_SECRET }}
+        run: npm run e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-staging
+          path: dashboard/playwright-report/
+          retention-days: 14
+
+      - name: Slack alert on failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "::warning::SLACK_WEBHOOK_URL secret not set — skipping alert"
+            exit 0
+          fi
+          RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          curl -sS -X POST -H 'Content-type: application/json' \
+            -d "{\"text\":\":rotating_light: Nightly Playwright vs staging FAILED — $RUN_URL\"}" \
+            "$SLACK_WEBHOOK_URL"
+
+  # ── Build P1 image on push to main ────────────────────────────────
+  build-p1:
+    name: Build Pipeline 1 image
+    runs-on: ubuntu-latest
+    needs: demo-readiness
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/p1-')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS (Fortress account)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.FORTRESS_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.FORTRESS_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Fortress ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push P1
+        env:
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -f Dockerfile.pipeline1 \
+            -t $ECR_REGISTRY/fortress/pipeline1:$IMAGE_TAG \
+            -t $ECR_REGISTRY/fortress/pipeline1:latest .
+          docker push $ECR_REGISTRY/fortress/pipeline1:$IMAGE_TAG
+          docker push $ECR_REGISTRY/fortress/pipeline1:latest
+          echo "image=$ECR_REGISTRY/fortress/pipeline1:$IMAGE_TAG" >> $GITHUB_OUTPUT
+        id: build
+
+      - name: Save image tag to SSM
+        run: |
+          aws ssm put-parameter \
+            --name /fortress/pipeline1/LATEST_IMAGE_TAG \
+            --value ${{ github.sha }} \
+            --type String --overwrite
+
+  # ── Deploy P1 to ECS — only on p1-v* tags ─────────────────────────
+  deploy-p1:
+    name: Deploy Pipeline 1 to Fortress ECS
+    runs-on: ubuntu-latest
+    needs: build-p1
+    if: startsWith(github.ref, 'refs/tags/p1-')
+    environment: production-p1
+    steps:
+      - name: Configure AWS (Fortress account)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.FORTRESS_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.FORTRESS_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy P1 ECS rolling update
+        run: |
+          aws ecs update-service \
+            --cluster fortress-pipeline1-production \
+            --service fortress-pipeline1-api-production \
+            --force-new-deployment
+          aws ecs wait services-stable \
+            --cluster fortress-pipeline1-production \
+            --services fortress-pipeline1-api-production
+          echo "✓ Pipeline 1 deployed"
+
+      - name: Health check
+        run: |
+          sleep 30
+          curl -sf https://api.fortresslabs.dev/health || exit 1
+          echo "✓ P1 health check passed"
+
+  # ── Build + deploy P2 — only on bank-{id}-v* tags ─────────────────
+  deploy-p2:
+    name: Deploy Pipeline 2 to bank ECS
+    runs-on: ubuntu-latest
+    needs: demo-readiness
+    if: startsWith(github.ref, 'refs/tags/bank-')
+    environment: production-p2
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse bank ID from tag
+        id: parse
+        run: |
+          # Tag format: bank-{bankid}-v{version}
+          # e.g. bank-firstnational-v5.1
+          TAG="${GITHUB_REF#refs/tags/}"
+          BANK_ID=$(echo "$TAG" | sed 's/^bank-//' | sed 's/-v[0-9].*//')
+          VERSION=$(echo "$TAG" | grep -oP 'v[\d.]+')
+          echo "bank_id=$BANK_ID" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Deploying bank: $BANK_ID  version: $VERSION"
+
+      - name: Configure AWS (Fortress account — for ECR push source)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.FORTRESS_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.FORTRESS_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Build P2 image (P1 code stripped)
+        run: |
+          docker build -f Dockerfile.pipeline2 \
+            -t fortress/pipeline2:${{ steps.parse.outputs.version }} .
+
+      - name: Configure AWS (bank account — for push + ECS deploy)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.BANK_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.BANK_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to bank ECR and push
+        id: ecr-bank
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Push P2 image to bank ECR
+        env:
+          BANK_ID: ${{ steps.parse.outputs.bank_id }}
+          VERSION: ${{ steps.parse.outputs.version }}
+          ECR_REGISTRY: ${{ steps.ecr-bank.outputs.registry }}
+        run: |
+          docker tag fortress/pipeline2:$VERSION \
+            $ECR_REGISTRY/fortress/pipeline2-$BANK_ID:$VERSION
+          docker push $ECR_REGISTRY/fortress/pipeline2-$BANK_ID:$VERSION
+
+      - name: Deploy P2 to bank ECS (rolling update)
+        env:
+          BANK_ID: ${{ steps.parse.outputs.bank_id }}
+        run: |
+          aws ecs update-service \
+            --cluster fortress-pipeline2-$BANK_ID \
+            --service fortress-pipeline2-$BANK_ID \
+            --force-new-deployment
+          aws ecs wait services-stable \
+            --cluster fortress-pipeline2-$BANK_ID \
+            --services fortress-pipeline2-$BANK_ID
+          echo "✓ Pipeline 2 deployed for bank: $BANK_ID"
+
+  # ── Sync P2-only repo (no P1 code) — on every push to main ────────
+  sync-p2-repo:
+    name: Sync P2 public repo
+    runs-on: ubuntu-latest
+    needs: demo-readiness
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Strip P1 code and push to fortress-agent-p2
+        env:
+          P2_REPO_TOKEN: ${{ secrets.P2_REPO_DEPLOY_TOKEN }}
+        run: |
+          git clone \
+            https://x-access-token:${P2_REPO_TOKEN}@github.com/fortress-labs/fortress-agent-p2.git \
+            /tmp/p2
+
+          rsync -av --delete \
+            --exclude='.git' \
+            --exclude='src/connectors/' \
+            --exclude='src/services/scraper_scheduler.py' \
+            --exclude='src/services/obligation_extractor.py' \
+            --exclude='src/services/opensearch_client.py' \
+            --exclude='src/api/sync_api.py' \
+            --exclude='src/api/client_admin_api.py' \
+            --exclude='src/main_pipeline1.py' \
+            --exclude='Dockerfile.pipeline1' \
+            --exclude='docker-compose.pipeline1.yml' \
+            --exclude='requirements-pipeline1.txt' \
+            --exclude='infra/cloudformation/pipeline1-*.yml' \
+            --exclude='infra/scripts/deploy-p1.sh' \
+            --exclude='infra/scripts/register-bank-ip.sh' \
+            . /tmp/p2/
+
+          cd /tmp/p2
+          git config user.email "ci@fortresslabs.dev"
+          git config user.name "Fortress CI"
+          git add -A
+          git diff --cached --quiet || \
+            git commit -m "sync: ${{ github.sha }}" && git push
+          echo "✓ P2 repo synced (P1 code stripped)"

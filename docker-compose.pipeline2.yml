@@ -1,0 +1,57 @@
+# ─────────────────────────────────────────────────────────────────
+# PIPELINE 2 — Customer Docker Infrastructure
+# 6-agent pipeline + production validators + local compliance replica
+# Deployed INSIDE customer's VPC.  All data stays local.
+# Deploy: docker compose -f docker-compose.pipeline2.yml up -d
+# ─────────────────────────────────────────────────────────────────
+services:
+  postgres-customer:
+    image: postgres:15-alpine
+    container_name: customer-postgres
+    environment:
+      POSTGRES_USER: customer
+      POSTGRES_PASSWORD: ${CUSTOMER_DB_PASSWORD:-customer_secure_pwd}
+      POSTGRES_DB: customer_workflows
+    ports:
+      - "5432:5432"
+    volumes:
+      - customer_db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis-customer:
+    image: redis:7-alpine
+    container_name: customer-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - customer_redis_data:/data
+    restart: unless-stopped
+
+  pipeline2:
+    build:
+      context: .
+      dockerfile: Dockerfile.pipeline2
+    container_name: customer-pipeline2
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://customer:${CUSTOMER_DB_PASSWORD:-customer_secure_pwd}@postgres-customer:5432/customer_workflows
+      - REDIS_URL=redis://redis-customer:6379/0
+      - FORTRESS_API_URL=${FORTRESS_API_URL:-https://api.fortresslabs.dev}
+      - FORTRESS_API_KEY=${FORTRESS_API_KEY}
+      - CUSTOMER_ID=${CUSTOMER_ID}
+      - SYNC_INTERVAL_HOURS=${SYNC_INTERVAL_HOURS:-24}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - JIRA_URL=${JIRA_URL}
+      - JIRA_EMAIL=${JIRA_EMAIL}
+      - JIRA_API_TOKEN=${JIRA_API_TOKEN}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./logs/pipeline2:/var/log/textmind
+    depends_on:
+      - postgres-customer
+      - redis-customer
+    restart: unless-stopped
+
+volumes:
+  customer_db_data:
+  customer_redis_data:

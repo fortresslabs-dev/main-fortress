@@ -1,0 +1,147 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Fortress Labs - Pipeline 2 Billing Stack (bank account)
+  Monthly AWS Budget + Cost Anomaly Detection for a single bank's P2
+  account. Separate from pipeline2-security so budget noise does not
+  drown IAM/Access-Analyzer alerts on the security SNS topic.
+  Deploy us-east-1 only (Budgets + CE are global service endpoints).
+
+Parameters:
+  BankId:
+    Type: String
+    AllowedPattern: "[a-z0-9]+"
+  Environment:
+    Type: String
+    Default: production
+  MonthlyBudgetUsd:
+    Type: Number
+    Default: 1000
+    Description: Monthly cost budget in USD. Alerts fire at 80% actual + 100% forecasted.
+  AnomalyThresholdUsd:
+    Type: Number
+    Default: 100
+    Description: Cost Anomaly Detection absolute-dollar threshold for alerting.
+  AlertEmail:
+    Type: String
+    Default: ""
+    Description: Primary bank ops email for billing alerts. SNS subscription requires one-time confirmation.
+  AlertEmail2:
+    Type: String
+    Default: ""
+    Description: Optional second email subscriber (e.g. Fortress team alias). Same one-time confirmation flow.
+
+Conditions:
+  HasAlertEmail: !Not [!Equals [!Ref AlertEmail, ""]]
+  HasAlertEmail2: !Not [!Equals [!Ref AlertEmail2, ""]]
+
+Resources:
+
+  BillingAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub fortress-p2-billing-alerts-${BankId}
+      DisplayName: !Sub "Fortress P2 Billing Alerts (${BankId})"
+
+  BillingAlertsTopicSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlertEmail
+    Properties:
+      TopicArn: !Ref BillingAlertsTopic
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+
+  BillingAlertsTopicSubscription2:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlertEmail2
+    Properties:
+      TopicArn: !Ref BillingAlertsTopic
+      Protocol: email
+      Endpoint: !Ref AlertEmail2
+
+  BillingAlertsTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics: [!Ref BillingAlertsTopic]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: BudgetsPublish
+            Effect: Allow
+            Principal:
+              Service: budgets.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref BillingAlertsTopic
+          - Sid: CostAnomalyDetectionPublish
+            Effect: Allow
+            Principal:
+              Service: costalerts.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref BillingAlertsTopic
+
+  # -- Monthly AWS Budget ---------------------------------------------
+  P2MonthlyBudget:
+    Type: AWS::Budgets::Budget
+    DependsOn: BillingAlertsTopicPolicy
+    Properties:
+      Budget:
+        BudgetName: !Sub fortress-p2-monthly-${BankId}
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit:
+          Amount: !Ref MonthlyBudgetUsd
+          Unit: USD
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 80
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: SNS
+              Address: !Ref BillingAlertsTopic
+        - Notification:
+            NotificationType: FORECASTED
+            ComparisonOperator: GREATER_THAN
+            Threshold: 100
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: SNS
+              Address: !Ref BillingAlertsTopic
+
+  # -- Cost Anomaly Detection (custom-spec monitor) -------------------
+  # MonitorType: CUSTOM rather than DIMENSIONAL/SERVICE because AWS
+  # treats DIMENSIONAL/SERVICE as an account-singleton (the auto-
+  # provisioned Default-Services-Monitor already owns that slot). CUSTOM
+  # with a match-everything spec (LINKED_ACCOUNT=our account) gives us
+  # an independently-owned monitor that still observes all spend.
+  CostAnomalyMonitor:
+    Type: AWS::CE::AnomalyMonitor
+    Properties:
+      MonitorName: !Sub fortress-p2-cost-anomaly-${BankId}
+      MonitorType: CUSTOM
+      MonitorSpecification: !Sub '{"Dimensions":{"Key":"LINKED_ACCOUNT","Values":["${AWS::AccountId}"],"MatchOptions":["EQUALS"]}}'
+
+  CostAnomalySubscription:
+    Type: AWS::CE::AnomalySubscription
+    DependsOn: BillingAlertsTopicPolicy
+    Properties:
+      SubscriptionName: !Sub fortress-p2-cost-anomaly-sub-${BankId}
+      MonitorArnList: [!Ref CostAnomalyMonitor]
+      Frequency: IMMEDIATE
+      Subscribers:
+        - Type: SNS
+          Address: !Ref BillingAlertsTopic
+      # CFN expects ThresholdExpression as a string-serialized JSON Expression,
+      # not a structured object — schema differs from the cost-explorer SDK shape.
+      ThresholdExpression: !Sub '{"Dimensions":{"Key":"ANOMALY_TOTAL_IMPACT_ABSOLUTE","MatchOptions":["GREATER_THAN_OR_EQUAL"],"Values":["${AnomalyThresholdUsd}"]}}'
+
+Outputs:
+  BillingAlertsTopicArn:
+    Value: !Ref BillingAlertsTopic
+    Export:
+      Name: !Sub FortressP2-${BankId}-BillingAlertsTopicArn
+
+  CostAnomalyMonitorArn:
+    Value: !Ref CostAnomalyMonitor
+    Export:
+      Name: !Sub FortressP2-${BankId}-CostAnomalyMonitorArn

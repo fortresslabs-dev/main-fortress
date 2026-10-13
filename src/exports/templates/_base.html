@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ cover.legal_name }} — {{ report_type }} — {{ cover.as_of }}</title>
+<style>
+  /* Self-hosted fonts vendored by Dockerfile.exports-worker for offline-
+     deterministic rendering. */
+  @font-face { font-family: "Spectral"; src: local("Spectral"); font-weight: 400; }
+  @font-face { font-family: "IBM Plex Sans"; src: local("IBM Plex Sans"); }
+  @font-face { font-family: "IBM Plex Mono"; src: local("IBM Plex Mono"); }
+
+  html { font-family: "IBM Plex Sans", -apple-system, system-ui, sans-serif; font-size: 11pt; color: #111; }
+  h1, h2, h3 { font-family: "Spectral", Georgia, serif; font-weight: 500; margin: 0 0 0.4em 0; }
+  h1 { font-size: 22pt; }
+  h2 { font-size: 14pt; margin-top: 24pt; border-bottom: 1px solid #ccc; padding-bottom: 4pt; }
+  h3 { font-size: 11pt; text-transform: uppercase; letter-spacing: 0.04em; color: #444; }
+  table { border-collapse: collapse; width: 100%; font-size: 9.5pt; margin-top: 6pt; }
+  th, td { text-align: left; padding: 4pt 6pt; vertical-align: top; border-bottom: 1px solid #eee; }
+  th { background: #f6f6f6; font-weight: 600; }
+  .metabox { display: grid; grid-template-columns: max-content 1fr; gap: 4pt 16pt;
+             font-size: 10pt; border: 1px solid #ddd; padding: 10pt 14pt; margin: 12pt 0; }
+  .metabox dt { color: #555; }
+  .metabox dd { margin: 0; font-family: "IBM Plex Mono", monospace; }
+  .signoff { margin-top: 30pt; padding-top: 12pt; border-top: 1px solid #aaa; font-size: 9.5pt; }
+  .signoff .sig-block { display: flex; gap: 60pt; margin-top: 18pt; }
+  .signoff .sig { flex: 1; border-top: 1px solid #555; padding-top: 4pt; }
+  .draft-watermark { position: fixed; top: 40%; left: 25%; right: 25%;
+                      text-align: center; font-size: 56pt; color: rgba(180,0,0,0.18);
+                      transform: rotate(-25deg); font-weight: 700;
+                      pointer-events: none; z-index: 10; }
+</style>
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+{% if is_draft %}<div class="draft-watermark">DRAFT — UNSIGNED</div>{% endif %}
+
+<header>
+  <h1>{{ cover.legal_name }}</h1>
+  <div class="metabox">
+    <dt>Report type</dt>           <dd>{{ report_type }}</dd>
+    <dt>As of</dt>                 <dd>{{ cover.as_of }}</dd>
+    <dt>Primary regulator</dt>     <dd>{{ cover.primary_regulator }}</dd>
+    {% if cover.charter_number %}<dt>Charter number</dt><dd>{{ cover.charter_number }}</dd>{% endif %}
+    {% if cover.total_assets_usd %}
+      <dt>Total assets</dt><dd>${{ "{:,.0f}".format(cover.total_assets_usd) }} (as of {{ cover.total_assets_as_of }})</dd>
+    {% endif %}
+    <dt>Document ID</dt>           <dd>{{ document_id }}</dd>
+    <dt>Version</dt>               <dd>v.{{ version_hash }}</dd>
+    <dt>Vocab version</dt>         <dd>{{ vocab_version }}</dd>
+    <dt>Template version</dt>      <dd>{{ template_version }}</dd>
+  </div>
+</header>
+
+{% block sections %}{% endblock %}
+
+<section class="signoff">
+  <h3>Signoff</h3>
+  <p>This artifact requires sign-off from:
+    <strong>{{ required_signers|join(", ") }}</strong>.</p>
+  <div class="sig-block">
+    {% for role in required_signers %}
+      <div class="sig">
+        <div>{{ role|upper }}</div>
+        <div style="margin-top:24pt; font-size:8pt; color:#666;">
+          Signature on file (e-sig via Fortress dashboard)
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+</body>
+</html>

@@ -1,0 +1,47 @@
+# Fortress P2 exports worker — Playwright/Chromium renderer.
+#
+# Kept separate from Dockerfile.pipeline2 per design doc §11.1 Q3 — the
+# API image stays lean (Chromium adds ~400 MB) and the worker can scale
+# independently. The renderer is invoked by EventBridge on POST /exports
+# (Fargate scale-to-zero).
+#
+# Build:
+#   docker build -f Dockerfile.exports-worker -t fortress/p2-exports-worker:dev .
+#
+# Layers ordered hot→cold for cache efficiency: system deps → Python
+# deps → Playwright browser → fonts → application code.
+
+FROM mcr.microsoft.com/playwright/python:v1.49.1-jammy
+
+WORKDIR /app
+
+# Install only what the worker needs — narrower than Dockerfile.pipeline2
+# (no FastAPI, no embeddings, no scraper deps).
+COPY requirements-exports-worker.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+# Self-hosted fonts — vendored so renders stay deterministic offline.
+# Per design doc §4: Spectral + IBM Plex Sans + IBM Plex Mono.
+COPY dashboard/public/fonts/ /usr/share/fonts/fortress/
+RUN fc-cache -f -v
+
+# Application code (export package + templates + vocab + policy.yaml).
+COPY src/exports/ /app/src/exports/
+COPY src/models/ /app/src/models/
+COPY src/utils/ /app/src/utils/
+COPY src/services/database.py /app/src/services/database.py
+COPY alembic.ini /app/alembic.ini
+
+# Non-root execution per Fargate hardening guidance. Playwright base
+# image already has a `pwuser` defined.
+USER pwuser
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+    PIPELINE_MODE=pipeline2
+
+# Worker entrypoint — long-running consumer of EventBridge events. The
+# module exposes a CLI `--one-shot {artifact_id}` mode used by the
+# integration tests.
+CMD ["python", "-m", "src.exports.worker"]

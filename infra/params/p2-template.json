@@ -1,0 +1,16 @@
+{
+  "_comment": "Copy this file to p2-{bank-id}.json and fill in values",
+  "Parameters": {
+    "BankId": "REPLACE_WITH_BANK_SLUG",
+    "Environment": "production",
+    "VpcCidr": "10.2.0.0/16",
+    "AuroraMinAcu": "0.5",
+    "AuroraMaxAcu": "4",
+    "DbName": "fortress_p2",
+    "P1ApiUrl": "https://api.fortresslabs.dev",
+    "BankDomain": "REPLACE_WITH_BANK_DOMAIN",
+    "EcsMinTasks": "2",
+    "EcsMaxTasks": "10",
+    "AlertEmail": "REPLACE_WITH_BANK_ALERT_EMAIL"
+  }
+}

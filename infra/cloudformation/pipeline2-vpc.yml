@@ -1,0 +1,450 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Fortress Labs - Pipeline 2 VPC (bank account)
+  Creates VPC, subnets, NAT Gateway (for P1 sync outbound),
+  security groups, and VPC endpoints.
+  Deploy in the bank's own AWS account.
+
+Parameters:
+  BankId:
+    Type: String
+    Description: Bank identifier slug - used in all resource names (e.g. firstnational)
+    AllowedPattern: "[a-z0-9]+"
+  Environment:
+    Type: String
+    Default: production
+  VpcCidr:
+    Type: String
+    Default: "10.2.0.0/16"
+    Description: Adjust to avoid overlap with bank's existing networks
+  PublicSubnetACidr:
+    Type: String
+    Default: "10.2.0.0/24"
+  PublicSubnetBCidr:
+    Type: String
+    Default: "10.2.1.0/24"
+  PrivateSubnetACidr:
+    Type: String
+    Default: "10.2.10.0/24"
+  PrivateSubnetBCidr:
+    Type: String
+    Default: "10.2.11.0/24"
+
+Resources:
+
+  BankVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p2-vpc-${BankId}-${Environment}
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  GatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref BankVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref BankVPC
+      CidrBlock: !Ref PublicSubnetACidr
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p2-public-a-${BankId}
+
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref BankVPC
+      CidrBlock: !Ref PublicSubnetBCidr
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p2-public-b-${BankId}
+
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref BankVPC
+      CidrBlock: !Ref PrivateSubnetACidr
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p2-private-a-${BankId}
+
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref BankVPC
+      CidrBlock: !Ref PrivateSubnetBCidr
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p2-private-b-${BankId}
+
+  EipNat:
+    Type: AWS::EC2::EIP
+    DependsOn: GatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt EipNat.AllocationId
+      SubnetId: !Ref PublicSubnetA
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p2-nat-${BankId}
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref BankVPC
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: GatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetARouteAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetBRouteAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetB
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref BankVPC
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnetARouteAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetA
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnetBRouteAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetB
+      RouteTableId: !Ref PrivateRouteTable
+
+  # -- Security Groups ------------------------------------------------
+  SgAlb:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: P2 ALB - bank API inbound
+      VpcId: !Ref BankVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: "0.0.0.0/0"
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: "0.0.0.0/0"
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p2-sg-alb-${BankId}
+
+  SgEcs:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: P2 ECS tasks
+      VpcId: !Ref BankVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
+          SourceSecurityGroupId: !Ref SgAlb
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: "0.0.0.0/0"
+          Description: HTTPS - P1 sync API + Bedrock via endpoint
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p2-sg-ecs-${BankId}
+
+  SgAurora:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: P2 Aurora PostgreSQL
+      VpcId: !Ref BankVPC
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p2-sg-aurora-${BankId}
+
+  SgRedis:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: P2 ElastiCache Redis
+      VpcId: !Ref BankVPC
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p2-sg-redis-${BankId}
+
+  # Cross-SG rules pulled out to break circular dependency
+  # (SgEcs <-> SgAurora, SgEcs <-> SgRedis)
+  SgEcsEgressAurora:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref SgEcs
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      DestinationSecurityGroupId: !Ref SgAurora
+
+  SgEcsEgressRedis:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref SgEcs
+      IpProtocol: tcp
+      FromPort: 6379
+      ToPort: 6379
+      DestinationSecurityGroupId: !Ref SgRedis
+
+  SgAuroraIngressEcs:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref SgAurora
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      SourceSecurityGroupId: !Ref SgEcs
+
+  SgRedisIngressEcs:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref SgRedis
+      IpProtocol: tcp
+      FromPort: 6379
+      ToPort: 6379
+      SourceSecurityGroupId: !Ref SgEcs
+
+  SgVpcEndpoints:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: P2 VPC Interface Endpoints
+      VpcId: !Ref BankVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref SgEcs
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p2-sg-endpoints-${BankId}
+
+  # -- VPC Endpoints --------------------------------------------------
+  VpcEndpointS3:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      VpcEndpointType: Gateway
+      VpcId: !Ref BankVPC
+      RouteTableIds: [!Ref PrivateRouteTable]
+
+  VpcEndpointBedrock:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.bedrock-runtime
+      VpcEndpointType: Interface
+      VpcId: !Ref BankVPC
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref SgVpcEndpoints]
+      PrivateDnsEnabled: true
+
+  VpcEndpointSsm:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ssm
+      VpcEndpointType: Interface
+      VpcId: !Ref BankVPC
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref SgVpcEndpoints]
+      PrivateDnsEnabled: true
+
+  VpcEndpointSecrets:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.secretsmanager
+      VpcEndpointType: Interface
+      VpcId: !Ref BankVPC
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref SgVpcEndpoints]
+      PrivateDnsEnabled: true
+
+  VpcEndpointCwLogs:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.logs
+      VpcEndpointType: Interface
+      VpcId: !Ref BankVPC
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref SgVpcEndpoints]
+      PrivateDnsEnabled: true
+
+  VpcEndpointEcrDkr:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.dkr
+      VpcEndpointType: Interface
+      VpcId: !Ref BankVPC
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref SgVpcEndpoints]
+      PrivateDnsEnabled: true
+
+  VpcEndpointEcrApi:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.api
+      VpcEndpointType: Interface
+      VpcId: !Ref BankVPC
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref SgVpcEndpoints]
+      PrivateDnsEnabled: true
+
+  VpcEndpointSts:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.sts
+      VpcEndpointType: Interface
+      VpcId: !Ref BankVPC
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref SgVpcEndpoints]
+      PrivateDnsEnabled: true
+
+  # -- VPC Flow Logs (FTR §13.1 B1; tracker #11) ----------------------
+  # Captures ACCEPT + REJECT at 1-min aggregation. 365d retention matches
+  # the org-wide CW retention target (tracker Phase 3 #17). Default
+  # CW-managed encryption — switch to CMK if FTR reviewers ask.
+  FlowLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/vpc/flowlogs/fortress-p2-${BankId}-${Environment}
+      RetentionInDays: 365
+
+  FlowLogRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: vpc-flow-logs.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: vpc-flow-logs-cwl
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !GetAtt FlowLogGroup.Arn
+              - Effect: Allow
+                Action:
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                Resource: "*"
+
+  FlowLog:
+    Type: AWS::EC2::FlowLog
+    Properties:
+      ResourceType: VPC
+      ResourceId: !Ref BankVPC
+      TrafficType: ALL
+      LogDestinationType: cloud-watch-logs
+      LogGroupName: !Ref FlowLogGroup
+      DeliverLogsPermissionArn: !GetAtt FlowLogRole.Arn
+      MaxAggregationInterval: 60
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p2-flowlog-${BankId}-${Environment}
+
+Outputs:
+  VpcId:
+    Value: !Ref BankVPC
+    Export:
+      Name: !Sub FortressP2-${BankId}-VpcId
+  PublicSubnetA:
+    Value: !Ref PublicSubnetA
+    Export:
+      Name: !Sub FortressP2-${BankId}-PublicSubnetA
+  PublicSubnetB:
+    Value: !Ref PublicSubnetB
+    Export:
+      Name: !Sub FortressP2-${BankId}-PublicSubnetB
+  PrivateSubnetA:
+    Value: !Ref PrivateSubnetA
+    Export:
+      Name: !Sub FortressP2-${BankId}-PrivateSubnetA
+  PrivateSubnetB:
+    Value: !Ref PrivateSubnetB
+    Export:
+      Name: !Sub FortressP2-${BankId}-PrivateSubnetB
+  SgAlb:
+    Value: !Ref SgAlb
+    Export:
+      Name: !Sub FortressP2-${BankId}-SgAlb
+  SgEcs:
+    Value: !Ref SgEcs
+    Export:
+      Name: !Sub FortressP2-${BankId}-SgEcs
+  SgAurora:
+    Value: !Ref SgAurora
+    Export:
+      Name: !Sub FortressP2-${BankId}-SgAurora
+  SgRedis:
+    Value: !Ref SgRedis
+    Export:
+      Name: !Sub FortressP2-${BankId}-SgRedis
+  NatGatewayEip:
+    Value: !Ref EipNat
+    Description: Register this IP in P1 WAF allowlist for sync API access
+    Export:
+      Name: !Sub FortressP2-${BankId}-NatEip
+  FlowLogGroup:
+    Value: !Ref FlowLogGroup
+    Description: VPC Flow Logs CloudWatch log group
+    Export:
+      Name: !Sub FortressP2-${BankId}-FlowLogGroup
+  FlowLogGroupArn:
+    Value: !GetAtt FlowLogGroup.Arn
+    Export:
+      Name: !Sub FortressP2-${BankId}-FlowLogGroupArn

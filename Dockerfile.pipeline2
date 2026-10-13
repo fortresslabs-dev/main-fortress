@@ -1,0 +1,83 @@
+# ─────────────────────────────────────────────────────────────────
+# PIPELINE 2 — Customer Docker (Option 3: On-Premises / VPC)
+# 6-agent pipeline + production validators + local compliance replica.
+# Deployed INSIDE customer's VPC / on-premises.
+# All customer data stays within this container.
+#
+# SECURITY: Multi-stage build strips Fortress-proprietary code so the
+#           shipped image contains ONLY what the customer needs.
+# ─────────────────────────────────────────────────────────────────
+
+# Base image digest-pinned (B10). Refresh with:
+#   docker buildx imagetools inspect python:3.11-slim
+# and bump both digests below. Floating tags are rejected by the
+# test_dockerfile_digest_pin_b10 verifier in CI.
+
+# ── Stage 1: strip proprietary code ─────────────────────────────────
+FROM python:3.11-slim@sha256:a3ab0b966bc4e91546a033e22093cb840908979487a9fc0e6e38295747e49ac0 AS builder
+
+WORKDIR /app
+COPY . .
+
+# Remove Fortress-proprietary code that must NOT ship to customers
+RUN rm -rf \
+    src/main_pipeline1.py \
+    src/main.py \
+    src/main.py.backup \
+    src/api/agent_api.py \
+    src/api/compliance_rules_api.py \
+    src/api/sync_api.py \
+    src/api/admin.py \
+    src/agents/langgraph/ \
+    src/scrapers/ \
+    src/connectors/ \
+    src/services/scraper_scheduler.py \
+    src/services/pdf_pipeline.py \
+    src/services/pdf_extraction_agent.py \
+    src/services/document_processor.py \
+    src/services/document_pipeline_agent.py \
+    src/utils/chunk_exporter.py \
+    config/compliance_sources.yaml \
+    config/connectors/ \
+    config/clients/ \
+    scripts/run_compliance_agent.py \
+    docs/ \
+    Dockerfile.pipeline1 \
+    docker-compose.pipeline1.yml \
+    FORTRESS_OPTION3_TECHNICAL_IMPLEMENTATION.md
+
+# Patch agents __init__ — remove langgraph imports that would fail
+RUN echo '"""Customer agents package."""' > src/agents/__init__.py
+
+
+# ── Stage 2: production image ───────────────────────────────────────
+FROM python:3.11-slim@sha256:a3ab0b966bc4e91546a033e22093cb840908979487a9fc0e6e38295747e49ac0
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-pipeline2.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy only the sanitised source tree from Stage 1
+COPY --from=builder /app .
+
+RUN mkdir -p /var/log/textmind \
+    && chmod +x scripts/entrypoint_p2.sh \
+    && addgroup --system fortress \
+    && adduser --system --ingroup fortress --no-create-home --uid 1001 fortress \
+    && chown -R fortress:fortress /app /var/log/textmind
+
+USER fortress
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+CMD ["scripts/entrypoint_p2.sh"]

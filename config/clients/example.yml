@@ -1,0 +1,28 @@
+company:
+  name: "Example Bank"
+  environment: "production"
+
+automation:
+  level: "semi_autonomous"
+  learning_enabled: true
+
+checkpoints:
+  scenarios:
+    enabled: true
+    required: true
+    approvers:
+      - role: "qa_lead"
+        email: "qa@example.com"
+    auto_approve_conditions:
+      similar_patterns: 5
+      confidence_threshold: 0.92
+
+banking:
+  enabled_workflows:
+    - account_transfer
+    - payment_processing
+  core_banking_system: "FIS"
+
+compliance:
+  regulations: ["SOX", "PCI_DSS", "Reg_E"]
+  auto_tag_tests: true

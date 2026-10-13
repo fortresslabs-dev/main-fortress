@@ -1,0 +1,314 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Fortress P2 BA jump stack: on-demand Fargate task for read-only SQL via
+  SSM port-forward to private-subnet Postgres. fortress_ba_ro role is
+  SELECT-only. Separate micro-stack to avoid the compute-stack drift.
+
+# Per-session launcher: scripts/start_ba_session.sh
+# Role bootstrap:      scripts/setup/init_ba_readonly_role.sql
+# Operator guide:      docs/business_analyst_validation_guide.md §12.0
+#
+# Resources:
+#   BaJumpLogGroup        — CloudWatch destination for task stdout
+#   BaJumpExecutionRole   — pulls public ECR image, writes logs
+#   BaJumpTaskRole        — SSM channel + GetSecretValue + KMS Decrypt
+#   BaJumpTaskDef         — Fargate, alpine, sleep <SessionTimeoutSeconds>
+#   BaQueryReadOnlyPolicy — IAM managed policy: RunTask + StartSession +
+#                           GetSecretValue + KMS Decrypt + PassRole
+
+Parameters:
+  BankId:
+    Type: String
+    AllowedPattern: "[a-z0-9]+"
+  SessionTimeoutSeconds:
+    Type: Number
+    Default: 14400
+    MinValue: 600
+    MaxValue: 28800
+    Description: >
+      Self-destruct timer in seconds. The jump container sleeps for this
+      many seconds then exits, ending the port-forwarding session. Default
+      4h. Hard cap 8h — long-running BA sessions are not a use case;
+      restart the session if the audit window genuinely needs it.
+  JumpImage:
+    Type: String
+    Default: public.ecr.aws/docker/library/alpine:3.19
+    Description: >
+      Minimal busybox-providing image — only needs to run /bin/sleep. Pulled
+      via the ECR Docker Hub public mirror so the private subnet's ECR API
+      endpoint (pipeline2-vpc.yml VpcEndpointEcrApi/Dkr) can satisfy it
+      without internet egress.
+
+Resources:
+
+  # -- CloudWatch log group for jump-task stdout ----------------------
+  BaJumpLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/ecs/fortress-p2-ba-jump-${BankId}
+      RetentionInDays: 30
+
+  # -- Execution role: image pull + log write -------------------------
+  BaJumpExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub fortress-p2-ba-jump-exec-${BankId}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ecs-tasks.amazonaws.com}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  # -- Task role: minimum perms to host an SSM session + read the
+  #    BA read-only Postgres secret (the container itself never logs in;
+  #    the BA on their laptop does — but we keep the secret read on the
+  #    task side as a fallback if a future helper wants to print it from
+  #    inside the container). KMS Decrypt is scoped to the RDS CMK only.
+  BaJumpTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub fortress-p2-ba-jump-task-${BankId}
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ecs-tasks.amazonaws.com}
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: SsmSessionChannel
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # SSM Session Manager bidirectional channel — required for
+              # both `ecs:ExecuteCommand` (interactive shell) and
+              # AWS-StartPortForwardingSessionToRemoteHost.
+              - Effect: Allow
+                Action:
+                  - ssmmessages:CreateControlChannel
+                  - ssmmessages:CreateDataChannel
+                  - ssmmessages:OpenControlChannel
+                  - ssmmessages:OpenDataChannel
+                Resource: "*"
+        - PolicyName: ReadOnlySecretAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource:
+                  Fn::ImportValue: !Sub FortressP2-${BankId}-SecretDbPasswordReadOnlyArn
+              - Effect: Allow
+                Action: kms:Decrypt
+                Resource:
+                  Fn::ImportValue: !Sub FortressP2-${BankId}-KmsKeyRdsArn
+                Condition:
+                  StringEquals:
+                    kms:ViaService: !Sub secretsmanager.${AWS::Region}.amazonaws.com
+
+  # -- Task definition: alpine + sleep, no listening ports ------------
+  #    EnableExecuteCommand is set per-run via `aws ecs run-task
+  #    --enable-execute-command` (the TD itself has no equivalent field);
+  #    that's fine because the launcher script always passes the flag.
+  BaJumpTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub fortress-p2-ba-jump-${BankId}
+      RequiresCompatibilities: [FARGATE]
+      NetworkMode: awsvpc
+      Cpu: "256"
+      Memory: "512"
+      RuntimePlatform:
+        CpuArchitecture: ARM64
+        OperatingSystemFamily: LINUX
+      ExecutionRoleArn: !GetAtt BaJumpExecutionRole.Arn
+      TaskRoleArn: !GetAtt BaJumpTaskRole.Arn
+      ContainerDefinitions:
+        - Name: jump
+          Image: !Ref JumpImage
+          Essential: true
+          # sleep then exit — bounds the lifetime of any orphaned session.
+          Command: ["sh", "-c", !Sub "sleep ${SessionTimeoutSeconds}"]
+          ReadonlyRootFilesystem: true
+          LinuxParameters:
+            InitProcessEnabled: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref BaJumpLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ba-jump
+
+  # -- IAM managed policy for the BA principal (group or role) -------
+  #    Attach this to whatever IAM identity the bank uses for its BA
+  #    seat. The policy is intentionally narrow: BA can launch ONE
+  #    flavor of task in ONE cluster, stop only tasks they tagged
+  #    Purpose=ba-session, open SSM port-forwarding to that task, and
+  #    read only the read-only Postgres secret.
+  BaQueryReadOnlyPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub fortress-p2-ba-query-readonly-${BankId}
+      Description: >
+        Lets a Business Analyst launch the BA jump task, open an SSM
+        port-forwarding session to the P2 Postgres endpoint via that task,
+        and read the read-only Postgres credential. No data-plane DB perms;
+        SELECT-only access is enforced inside Postgres by the
+        fortress_ba_ro role.
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+
+          # 1. Launch the BA jump task — ONLY this task definition family
+          #    AND only into this cluster. Tag enforcement at launch time
+          #    pins the Purpose=ba-session tag so step 3 below can scope
+          #    StopTask to BA-launched tasks.
+          - Sid: RunBaJumpTask
+            Effect: Allow
+            Action: ecs:RunTask
+            Resource: !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:task-definition/fortress-p2-ba-jump-${BankId}:*
+            Condition:
+              StringEquals:
+                ecs:cluster: !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:cluster/fortress-pipeline2-${BankId}
+              # Forces the launcher to tag every task; without this the BA
+              # could RunTask without tags and then StopTask wouldn't apply
+              # (no matching tag), but they also couldn't be audited.
+              "Null":
+                aws:RequestTag/Purpose: "false"
+              StringEqualsIfExists:
+                aws:RequestTag/Purpose: ba-session
+
+          # 2. PassRole — required for RunTask. Scoped to ONLY the two
+          #    BA-jump roles created by this stack.
+          - Sid: PassBaJumpRoles
+            Effect: Allow
+            Action: iam:PassRole
+            Resource:
+              - !GetAtt BaJumpExecutionRole.Arn
+              - !GetAtt BaJumpTaskRole.Arn
+            Condition:
+              StringEquals:
+                iam:PassedToService: ecs-tasks.amazonaws.com
+
+          # 3. Inspect + clean up. StopTask is gated on the Purpose tag so
+          #    a BA can never accidentally stop a P2 API or sync task.
+          - Sid: InspectAndStop
+            Effect: Allow
+            Action:
+              - ecs:DescribeTasks
+              - ecs:ListTasks
+              - ecs:DescribeTaskDefinition
+            Resource: "*"
+            Condition:
+              StringEquals:
+                ecs:cluster: !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:cluster/fortress-pipeline2-${BankId}
+          - Sid: StopOnlyBaSessions
+            Effect: Allow
+            Action: ecs:StopTask
+            Resource: !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:task/fortress-pipeline2-${BankId}/*
+            Condition:
+              StringEquals:
+                ecs:ResourceTag/Purpose: ba-session
+
+          # 4. SSM Session Manager — start, describe (lookup own session),
+          #    terminate. Document is pinned to AWS-StartPortForwarding* so
+          #    the BA cannot start an interactive shell document and pivot
+          #    into the container's filesystem.
+          - Sid: StartPortForwardingSession
+            Effect: Allow
+            Action: ssm:StartSession
+            Resource:
+              - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}::document/AWS-StartPortForwardingSessionToRemoteHost
+              - !Sub arn:${AWS::Partition}:ecs:${AWS::Region}:${AWS::AccountId}:task/fortress-pipeline2-${BankId}/*
+          - Sid: ManageOwnSession
+            Effect: Allow
+            Action:
+              - ssm:DescribeSessions
+              - ssm:GetConnectionStatus
+              - ssm:TerminateSession
+              - ssm:ResumeSession
+            Resource: "*"
+
+          # 5. Read the read-only secret. The BA's psql client on the
+          #    laptop calls this directly — not the jump container.
+          - Sid: ReadOnlySecretAndKey
+            Effect: Allow
+            Action: secretsmanager:GetSecretValue
+            Resource:
+              Fn::ImportValue: !Sub FortressP2-${BankId}-SecretDbPasswordReadOnlyArn
+          - Sid: DecryptReadOnlySecret
+            Effect: Allow
+            Action: kms:Decrypt
+            Resource:
+              Fn::ImportValue: !Sub FortressP2-${BankId}-KmsKeyRdsArn
+            Condition:
+              StringEquals:
+                kms:ViaService: !Sub secretsmanager.${AWS::Region}.amazonaws.com
+
+          # 6. Read the static SSM params the launcher script consumes
+          #    (AURORA_HOST, AURORA_PORT, DB_NAME). All non-secret.
+          - Sid: ReadConnectionParams
+            Effect: Allow
+            Action: ssm:GetParameter
+            Resource:
+              - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/fortress/${BankId}/AURORA_HOST
+              - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/fortress/${BankId}/AURORA_PORT
+              - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/fortress/${BankId}/DB_NAME
+
+          # 7. Hard deny anything write-y on the BA's behalf — defense in
+          #    depth in case a future policy is attached that broadens
+          #    perms (e.g. PowerUser). DenyAll wins.
+          - Sid: DenyAllWritesOnRds
+            Effect: Deny
+            Action:
+              - rds:Modify*
+              - rds:Delete*
+              - rds:Reboot*
+              - rds:Restore*
+              - rds:Create*
+              - rds-data:ExecuteStatement
+              - rds-data:BatchExecuteStatement
+            Resource: "*"
+
+Outputs:
+  BaJumpTaskDefArn:
+    Value: !Ref BaJumpTaskDef
+    Description: TD ARN consumed by scripts/start_ba_session.sh
+    Export:
+      Name: !Sub FortressP2-${BankId}-BaJumpTaskDefArn
+
+  BaJumpTaskDefFamily:
+    Value: !Sub fortress-p2-ba-jump-${BankId}
+    Export:
+      Name: !Sub FortressP2-${BankId}-BaJumpTaskDefFamily
+
+  BaQueryReadOnlyPolicyArn:
+    Value: !Ref BaQueryReadOnlyPolicy
+    Description: >
+      Attach this managed policy to the IAM group/role used by Business
+      Analysts who need to run the §12 SQL cheat-sheet against P2.
+    Export:
+      Name: !Sub FortressP2-${BankId}-BaQueryReadOnlyPolicyArn
+
+  PostDeployInstructions:
+    Value: !Sub |
+      REQUIRED after this stack deploys:
+      1. Bootstrap the fortress_ba_ro Postgres role:
+           BA_PW=$(aws secretsmanager get-secret-value \
+             --secret-id fortress/${BankId}/db-password-readonly \
+             --query SecretString --output text | jq -r .password)
+           psql "host=$AURORA_HOST user=fortress_${BankId} dbname=fortress_p2" \
+             -v ba_password="$BA_PW" \
+             -f scripts/setup/init_ba_readonly_role.sql
+      2. Attach the managed policy to the BA IAM group:
+           aws iam attach-group-policy \
+             --group-name <bank-ba-group> \
+             --policy-arn $(aws cloudformation describe-stacks \
+               --stack-name fortress-p2-ba-jump-${BankId} \
+               --query "Stacks[0].Outputs[?OutputKey=='BaQueryReadOnlyPolicyArn'].OutputValue" \
+               --output text)
+      3. Hand the BA scripts/start_ba_session.sh and the §12.0 section of
+         docs/business_analyst_validation_guide.md.

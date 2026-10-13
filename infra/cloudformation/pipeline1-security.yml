@@ -1,0 +1,235 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Fortress Labs — Pipeline 1 Security Stack
+  Security Hub (PCI DSS + FSBP), GuardDuty, CloudTrail.
+  Deploy last in the P1 stack sequence.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+  S3BucketName:
+    Type: String
+    Description: Bucket for CloudTrail logs (from pipeline1-data outputs)
+  AlertEmail:
+    Type: String
+    Description: Email for IAM policy-change + security alerts (SNS — manual confirm required)
+    Default: ""
+  # ── B9 paging subscriptions (FTR §13.1 B9 — AWS-only paging path) ────
+  # Phone numbers are E.164 (e.g. +14155550100) — passed at deploy time,
+  # never stored in the repo. Both subscriptions are independent (parallel
+  # paging), not serial escalation. Leaving either empty creates no
+  # subscription. SNS-SMS cost is ~$0.0075 per US SMS, billed to AWS;
+  # AWS promo credits apply since this is a first-party service (not
+  # Marketplace). The CI invariant `verify_ftr_invariants.py` only
+  # requires the subscription *resources* exist, not that the parameters
+  # are non-empty — populated values are an operational concern.
+  PrimaryPagingPhoneE164:
+    Type: String
+    Description: E.164 phone number for primary on-call SMS paging (B9). Empty = no SMS sub.
+    Default: ""
+    AllowedPattern: "^$|^\\+[1-9][0-9]{6,14}$"
+    ConstraintDescription: Must be empty or a valid E.164 number (e.g. +14155550100).
+  BackupPagingPhoneE164:
+    Type: String
+    Description: E.164 phone number for backup on-call SMS paging (B9). Empty = no SMS sub.
+    Default: ""
+    AllowedPattern: "^$|^\\+[1-9][0-9]{6,14}$"
+    ConstraintDescription: Must be empty or a valid E.164 number (e.g. +14155550100).
+
+Conditions:
+  HasAlertEmail: !Not [!Equals [!Ref AlertEmail, ""]]
+  HasPrimaryPagingPhone: !Not [!Equals [!Ref PrimaryPagingPhoneE164, ""]]
+  HasBackupPagingPhone: !Not [!Equals [!Ref BackupPagingPhoneE164, ""]]
+
+Resources:
+
+  GuardDutyDetector:
+    Type: AWS::GuardDuty::Detector
+    Properties:
+      Enable: true
+      Features:
+        - Name: RUNTIME_MONITORING
+          Status: ENABLED
+          AdditionalConfiguration:
+            - Name: ECS_FARGATE_AGENT_MANAGEMENT
+              Status: ENABLED
+        - Name: RDS_LOGIN_EVENTS
+          Status: ENABLED
+
+  SecurityHubHub:
+    Type: AWS::SecurityHub::Hub
+    Properties:
+      EnableDefaultStandards: false
+
+  SecurityHubPciDss:
+    Type: AWS::SecurityHub::Standard
+    DependsOn: SecurityHubHub
+    Properties:
+      StandardsArn: !Sub arn:aws:securityhub:${AWS::Region}::standards/pci-dss/v/3.2.1
+
+  SecurityHubFsbp:
+    Type: AWS::SecurityHub::Standard
+    DependsOn: SecurityHubHub
+    Properties:
+      StandardsArn: !Sub arn:aws:securityhub:${AWS::Region}::standards/aws-foundational-security-best-practices/v/1.0.0
+
+  CloudTrailBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3BucketName
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AWSCloudTrailAclCheck
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:GetBucketAcl
+            Resource: !Sub arn:aws:s3:::${S3BucketName}
+          - Sid: AWSCloudTrailWrite
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:PutObject
+            Resource: !Sub arn:aws:s3:::${S3BucketName}/cloudtrail/*
+            Condition:
+              StringEquals:
+                s3:x-amz-acl: bucket-owner-full-control
+
+  CloudTrail:
+    Type: AWS::CloudTrail::Trail
+    DependsOn: CloudTrailBucketPolicy
+    Properties:
+      TrailName: !Sub fortress-p1-trail-${Environment}
+      IsLogging: true
+      IsMultiRegionTrail: true
+      EnableLogFileValidation: true
+      S3BucketName: !Ref S3BucketName
+      S3KeyPrefix: cloudtrail
+      IncludeGlobalServiceEvents: true
+
+  # ── Security Alerts SNS + IAM-policy-change rule (FTR tracker #13) ──
+  # CIS Benchmark 4.4 — alert on any IAM policy mutation. IAM is a global
+  # service so its CloudTrail events surface in us-east-1 EventBridge only;
+  # this stack is us-east-1 so we're good. AlertEmail subscription needs
+  # one-time confirmation from the email link.
+  SecurityAlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub fortress-p1-security-alerts-${Environment}
+      DisplayName: Fortress P1 Security Alerts
+
+  SecurityAlertsTopicSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlertEmail
+    Properties:
+      TopicArn: !Ref SecurityAlertsTopic
+      Protocol: email
+      Endpoint: !Ref AlertEmail
+
+  # ── B9 SMS paging subscriptions (parallel — both numbers receive every alert) ──
+  # Treat these as the "paging" leg of the IR chain (see
+  # docs/runbooks/incident-response.md §4.1). Email above is the
+  # async/audit copy; SMS here is what wakes the on-call up.
+  SecurityAlertsTopicPrimaryPagingSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasPrimaryPagingPhone
+    Properties:
+      TopicArn: !Ref SecurityAlertsTopic
+      Protocol: sms
+      Endpoint: !Ref PrimaryPagingPhoneE164
+
+  SecurityAlertsTopicBackupPagingSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasBackupPagingPhone
+    Properties:
+      TopicArn: !Ref SecurityAlertsTopic
+      Protocol: sms
+      Endpoint: !Ref BackupPagingPhoneE164
+
+  SecurityAlertsTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics: [!Ref SecurityAlertsTopic]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: EventBridgePublish
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref SecurityAlertsTopic
+
+  IamPolicyChangeRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub fortress-p1-iam-policy-change-${Environment}
+      Description: Fires SNS alert on any IAM policy mutation (CIS 4.4)
+      State: ENABLED
+      EventPattern:
+        source: [aws.iam]
+        detail-type: ["AWS API Call via CloudTrail"]
+        detail:
+          eventSource: [iam.amazonaws.com]
+          eventName:
+            - CreatePolicy
+            - DeletePolicy
+            - CreatePolicyVersion
+            - DeletePolicyVersion
+            - SetDefaultPolicyVersion
+            - AttachUserPolicy
+            - DetachUserPolicy
+            - AttachRolePolicy
+            - DetachRolePolicy
+            - AttachGroupPolicy
+            - DetachGroupPolicy
+            - PutUserPolicy
+            - PutRolePolicy
+            - PutGroupPolicy
+            - DeleteUserPolicy
+            - DeleteRolePolicy
+            - DeleteGroupPolicy
+      Targets:
+        - Id: SecurityAlertsTopic
+          Arn: !Ref SecurityAlertsTopic
+
+  # ── IAM Access Analyzer (FTR tracker #14) ──────────────────────────
+  # Account-scope analyzer surfaces external-access on IAM roles, S3
+  # buckets, KMS keys, Secrets, Lambda, SQS, etc. Findings flow to
+  # Security Hub automatically; the EventBridge rule below also pushes
+  # *new ACTIVE* findings to SecurityAlertsTopic for direct email.
+  AccessAnalyzer:
+    Type: AWS::AccessAnalyzer::Analyzer
+    Properties:
+      AnalyzerName: !Sub fortress-p1-account-analyzer-${Environment}
+      Type: ACCOUNT
+
+  AccessAnalyzerFindingRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub fortress-p1-access-analyzer-finding-${Environment}
+      Description: Fires SNS alert on new ACTIVE Access Analyzer findings
+      State: ENABLED
+      EventPattern:
+        source: [aws.access-analyzer]
+        detail-type: ["Access Analyzer Finding"]
+        detail:
+          status: [ACTIVE]
+      Targets:
+        - Id: SecurityAlertsTopic
+          Arn: !Ref SecurityAlertsTopic
+
+Outputs:
+  SecurityAlertsTopicArn:
+    Value: !Ref SecurityAlertsTopic
+    Description: SNS topic for IAM policy changes, Access Analyzer findings, and #15 Budgets
+    Export:
+      Name: !Sub FortressP1-${Environment}-SecurityAlertsTopicArn
+
+  AccessAnalyzerArn:
+    Value: !GetAtt AccessAnalyzer.Arn
+    Description: Account-scope IAM Access Analyzer (external-access findings)
+    Export:
+      Name: !Sub FortressP1-${Environment}-AccessAnalyzerArn

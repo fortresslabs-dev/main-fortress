@@ -1,0 +1,27 @@
+{% extends "_base.html" %}
+{% block sections %}
+
+<section>
+  <h2>1. Regulatory change dispositions</h2>
+  <table>
+    <thead><tr>
+      <th>Change ref</th><th>Regulator</th><th>Summary</th>
+      <th>Disposition</th><th>Owner</th><th>Status</th><th>Implementation</th>
+    </tr></thead>
+    <tbody>
+    {% for c in change_log %}
+      <tr>
+        <td><code>{{ c.change_ref }}</code></td>
+        <td>{{ c.regulator }}</td>
+        <td>{{ c.change_summary }}</td>
+        <td>{{ c.disposition }}</td>
+        <td>{{ c.owner_name or "—" }}</td>
+        <td>{{ c.status }}</td>
+        <td>{% if c.impl_link %}<a href="{{ c.impl_link }}">link</a>{% else %}—{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+{% endblock %}

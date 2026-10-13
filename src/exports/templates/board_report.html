@@ -1,0 +1,31 @@
+{% extends "_base.html" %}
+{% block sections %}
+
+<section>
+  <h2>1. Fiscal period</h2>
+  <p>{{ quarter }} (driven by fiscal year end {{ cover.fiscal_year_end }}).</p>
+</section>
+
+<section>
+  <h2>2. Recent regulatory enforcement</h2>
+  <table>
+    <thead><tr>
+      <th>Date</th><th>Regulator</th><th>Action</th>
+      <th>Summary</th><th>Penalty</th><th>Peer signal</th>
+    </tr></thead>
+    <tbody>
+    {% for a in enforcement %}
+      <tr>
+        <td>{{ a.action_date }}</td>
+        <td>{{ a.regulator }}</td>
+        <td>{{ a.action_type }}</td>
+        <td>{{ a.summary_pretty or "—" }}</td>
+        <td>{% if a.penalty_amount_usd %}${{ "{:,.0f}".format(a.penalty_amount_usd) }}{% else %}—{% endif %}</td>
+        <td>{% if a.peer_signal_score is not none %}{{ "{:.0%}".format(a.peer_signal_score) }}{% else %}—{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+{% endblock %}

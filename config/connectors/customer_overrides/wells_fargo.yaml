@@ -1,0 +1,325 @@
+# Wells Fargo Bank - Customer-Specific Configuration Override
+# Overrides usa.yaml defaults with Wells Fargo specific settings
+
+customer:
+  name: "Wells Fargo Bank, N.A."
+  customer_id: "wells_fargo"
+  bank_code: "WFBIUS6S"  # SWIFT code
+  asset_size: 1900000000000  # $1.9 trillion
+  bank_type: "national_bank"
+  primary_regulator: "OCC"
+
+# Inherit from USA defaults
+inherits_from: usa
+
+# Wells Fargo uses FLEXCUBE
+core_banking:
+  system: flexcube
+  version: "14.5"
+  deployment: on_premise
+  
+  connection:
+    host_env_var: CORE_BANKING_FLEXCUBE_HOST
+    port: 1521
+    service: FLEXCUBE
+    readonly_user_env_var: CORE_BANKING_FLEXCUBE_READONLY_USER
+    readonly_password_env_var: CORE_BANKING_FLEXCUBE_READONLY_PASSWORD
+
+# Enabled connectors (Wells Fargo specific)
+connectors:
+  core_banking:
+    - flexcube        # PRIMARY
+    # NOT using: finacle, bancs, temenos
+    
+  regulatory:
+    - occ             # Primary regulator for Wells Fargo
+    - fdic            # Deposit insurance
+    - federal_reserve # Fed oversight
+    - cfpb            # Consumer protection
+    - pci_dss         # Payment card security
+    - sox_controls    # SOX 404 compliance
+    
+  requirements:
+    - jira            # Wells Fargo uses JIRA
+    # NOT using: azure_devops, servicenow
+
+# Wells Fargo specific transaction limits
+transaction_limits:
+  wire_transfer:
+    domestic:
+      per_transaction_max: 5000000   # $5M internal limit
+      daily_max: 25000000            # $25M daily limit
+      requires_dual_approval_above: 1000000  # $1M threshold
+      
+    international:
+      per_transaction_max: 2000000   # $2M for international
+      daily_max: 10000000            # $10M daily
+      requires_swift: true
+      requires_compliance_review_above: 500000
+      
+  mobile_banking:
+    per_transaction: 5000           # $5,000 per transaction
+    daily_limit: 10000              # $10,000 daily
+    monthly_limit: 50000            # $50,000 monthly
+    
+  atm_withdrawal:
+    daily_limit: 1500               # $1,500 ATM limit
+    international_fee: 5.00         # $5 international ATM fee
+
+# Wells Fargo KYC/AML (stricter than defaults)
+kyc_requirements:
+  enhanced_due_diligence:
+    enabled: true
+    triggers:
+      - high_risk_country
+      - pep_status  # Politically Exposed Person
+      - transaction_above_100k
+      
+  sanctions_screening:
+    providers: [ofac, world_check, dow_jones]
+    real_time: true
+    batch_daily: true
+    
+  transaction_monitoring:
+    threshold_sar: 3000        # Lower than USA default ($3K vs $5K)
+    threshold_ctr: 10000       # Standard $10K
+    ai_anomaly_detection: true
+    
+# Wells Fargo compliance frameworks
+compliance_frameworks:
+  active:
+    - occ_part_363
+    - sox_404
+    - pci_dss_4
+    - dodd_frank_stress_tests  # G-SIB - systemically important
+    - ccar                     # Comprehensive Capital Analysis
+    - glba_safeguards
+    - ofac_sanctions
+    - bank_secrecy_act
+    
+  reporting_to:
+    - occ
+    - fdic
+    - federal_reserve
+    - cfpb
+    - fincen
+
+# Wells Fargo specific audit requirements
+audit_requirements:
+  frequency:
+    internal_audit: quarterly
+    external_audit: annual
+    sox_testing: annual
+    penetration_testing: quarterly
+    
+  retention:
+    audit_logs: 10_years      # Wells Fargo keeps 10 years (vs USA default 7)
+    transaction_records: 10_years
+    compliance_docs: permanent
+    
+  coverage:
+    code_coverage_minimum: 90_percent  # Higher than default
+    compliance_coverage: 100_percent
+    critical_path_coverage: 100_percent
+
+# Wells Fargo security (enhanced)
+security:
+  encryption:
+    algorithm: AES_256_GCM
+    key_rotation: quarterly
+    hsm_required: true         # Hardware Security Module
+    
+  multi_factor_auth:
+    required: true
+    methods: [hardware_token, biometric, sms]  # Prefer hardware token
+    session_timeout_minutes: 15
+    
+  network_security:
+    firewall: next_gen_firewall
+    ids_ips: enabled
+    ddos_protection: enabled
+    zero_trust_architecture: true
+
+# Testing requirements (Wells Fargo standards)
+testing_requirements:
+  coverage_minimum: 90_percent
+  
+  mandatory_tests:
+    - unit_tests
+    - integration_tests
+    - security_penetration_tests
+    - sox_controls_tests
+    - stress_tests
+    - disaster_recovery_tests
+    - compliance_regression_tests
+    
+  test_environments:
+    - dev
+    - qa
+    - uat
+    - staging
+    - production
+    
+  deployment_gates:
+    unit_test_pass: required
+    integration_test_pass: required
+    security_scan_pass: required
+    compliance_check_pass: required
+    sox_sign_off: required
+
+# Wells Fargo notification settings
+notifications:
+  regulatory_changes:
+    channels: [email, slack, teams, dashboard]
+    recipients:
+      - compliance_team@wellsfargo.com
+      - cto_office@wellsfargo.com
+      - risk_management@wellsfargo.com
+      
+  alerts:
+    failed_compliance_test:
+      severity: critical
+      escalation_minutes: 15
+      
+    large_transaction:
+      threshold: 100000  # $100K
+      notify: fraud_team
+      
+    suspicious_activity:
+      notify: [aml_team, compliance_officer]
+      escalate_to_regulator_if: confirmed_fraud
+
+# Cost allocation (Wells Fargo budget)
+cost_tracking:
+  budget:
+    monthly: 50000            # $50K/month budget
+    annual: 500000            # $500K/year
+    
+  allocation:
+    bedrock_usage: 60_percent
+    pgvector_storage: 20_percent
+    infrastructure: 20_percent
+    
+  alerts:
+    threshold_80_percent: email_finance_team
+    threshold_95_percent: escalate_to_cfo
+
+# Integration with Wells Fargo systems
+integrations:
+  existing_systems:
+    - name: FLEXCUBE
+      type: core_banking
+      connection: oracle_db
+      
+    - name: Actimize
+      type: aml_monitoring
+      connection: api
+      
+    - name: NICE_Actimize_Fraud
+      type: fraud_detection
+      connection: api
+      
+    - name: Splunk
+      type: log_aggregation
+      connection: forwarder
+      
+    - name: ServiceNow
+      type: ticketing
+      connection: api
+      
+  data_sync:
+    flexcube_to_fortress:
+      frequency: realtime
+      method: change_data_capture
+      
+    compliance_rules_update:
+      frequency: daily
+      time: "02:00 AM PT"
+
+# Wells Fargo deployment specifics
+deployment:
+  cloud_provider: aws
+  regions:
+    primary: us-west-2        # Oregon data center
+    secondary: us-east-1      # Virginia DR site
+    
+  vpc:
+    vpc_id: vpc-wellsfargo-prod
+    subnets:
+      - subnet-private-a
+      - subnet-private-b
+    
+  endpoints:
+    bedrock: vpce-bedrock-wellsfargo
+    postgresql: rds-postgres-prod.wellsfargo.internal
+
+# SLA (Wells Fargo requirements)
+sla:
+  uptime: 99.99_percent       # "Four nines" - higher than default
+  response_time_ms: 100       # 100ms - faster than default
+  error_rate: 0.001_percent   # 0.001% - lower than default
+  
+  support:
+    dedicated_account_manager: true
+    escalation_path: [l1_support, l2_engineering, vp_engineering, cto]
+    critical_response_minutes: 10  # 10-minute response for P0
+
+# Change management (SOX compliance)
+change_management:
+  approval_chain:
+    - tech_lead
+    - engineering_manager
+    - compliance_officer
+    - ciso
+    - cto
+    
+  deployment_windows:
+    production: [Saturday_2AM_to_6AM_PT, Sunday_2AM_to_6AM_PT]
+    emergency_change: requires_cto_approval
+    
+  documentation:
+    change_request_required: true
+    risk_assessment_required: true
+    rollback_plan_required: true
+    post_deployment_report: required_within_24h
+
+# Contact information
+contacts:
+  primary:
+    name: "John Smith"
+    title: "VP Engineering"
+    email: "john.smith@wellsfargo.com"
+    phone: "+1-415-555-0100"
+    
+  compliance:
+    name: "Sarah Johnson"
+    title: "Chief Compliance Officer"
+    email: "sarah.johnson@wellsfargo.com"
+    phone: "+1-415-555-0101"
+    
+  technical:
+    name: "Mike Chen"
+    title: "Senior Architect"
+    email: "mike.chen@wellsfargo.com"
+    phone: "+1-415-555-0102"
+
+# Metadata
+version: "1.0"
+last_updated: "2026-03-08"
+contract:
+  start_date: "2026-04-01"
+  annual_value: 500000        # $500K/year
+  tier: enterprise
+  support_level: premium
+
+# Feature flags (Wells Fargo specific)
+features:
+  ai_compliance_suggestions: true
+  auto_test_generation: true
+  real_time_compliance_alerts: true
+  sox_automation: true
+  stress_test_automation: true
+  
+  experimental:
+    ai_code_review: false     # Not enabled yet
+    predictive_compliance: false  # In beta

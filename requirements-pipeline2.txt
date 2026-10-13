@@ -1,0 +1,47 @@
+# ─────────────────────────────────────────────────────────────
+# Pipeline 2 — Customer Docker
+# 6-agent pipeline + production validators + local compliance replica
+# Runs inside customer VPC — all customer data stays local
+# ─────────────────────────────────────────────────────────────
+
+# Core Framework
+fastapi>=0.111.0
+uvicorn[standard]==0.27.0
+pydantic>=2.8.0,<3.0.0
+python-dotenv==1.0.0
+pydantic-settings>=2.0.0
+
+# Database (workflow state, audit logs, local compliance replica)
+sqlalchemy==2.0.25
+alembic==1.13.1
+psycopg2-binary>=2.9.9
+asyncpg>=0.29.0
+redis==5.0.1
+pgvector>=0.2.5
+rapidfuzz>=3.6.0
+
+# AWS (Bedrock for code generation agent)
+boto3==1.34.34
+botocore==1.34.34
+
+# AI (code generation agent)
+anthropic>=0.25.0
+
+# HTTP client (for sync API calls to Fortress Cloud)
+httpx>=0.27.0,<1.0.0
+
+# JIRA integration (developer workflow)
+jira==3.8.0
+
+# Logging / Config
+structlog==24.1.0
+pyyaml==6.0.1
+
+# MCP Server
+mcp==1.0.0
+
+# Testing
+pytest==7.4.4
+pytest-asyncio==0.23.3
+pytest-cov==4.1.0
+python-jose[cryptography]>=3.3.0

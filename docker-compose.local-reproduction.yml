@@ -1,0 +1,56 @@
+# Local-reproduction overlay. Use WITH the base file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.local-reproduction.yml up -d
+#
+# Why this exists: the base compose pins DATABASE_URL/REDIS_URL/PIPELINE_MODE/
+# CLIENT_NAME in each service's `environment:` block, which overrides `.env`.
+# This overlay re-sets them to the correct LOCAL targets so the single `.env`
+# drives everything else (JIRA, GitHub, Bedrock, tokens, ALLOWED_ORIGINS …).
+#
+# It also: publishes host ports, mounts ~/.aws read-only (Bedrock in-container),
+# bypasses the entrypoint's `alembic upgrade head` (the restored dump is at a
+# newer revision than this checkout), and points the P2 sync at the LOCAL P1 so
+# startup never calls production.
+#
+# Prereqs: fortress_dev (P1 dump) and fortress_p2 (synced + testbank-seeded)
+# databases already exist in the postgres volume (see docs/LOCAL_SETUP.md).
+
+services:
+  pipeline1:
+    environment:
+      PIPELINE_MODE: pipeline1
+      SECRETS_SOURCE: ""
+      SCRAPER_IN_PROCESS: "false"
+      DATABASE_URL: postgresql+asyncpg://fortress:fortress_dev@postgres:5432/fortress_dev
+      REDIS_URL: redis://:fortress_dev@redis:6379/0
+      # Image runs as user `fortress`, not root — point boto3 at the mount explicitly.
+      AWS_SHARED_CREDENTIALS_FILE: /aws/credentials
+      AWS_CONFIG_FILE: /aws/config
+    command: ["uvicorn", "src.main_pipeline1:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8001:8000"
+    volumes:
+      - ~/.aws:/aws:ro
+
+  pipeline2:
+    environment:
+      PIPELINE_MODE: pipeline2
+      CLIENT_NAME: testbank
+      SECRETS_SOURCE: ""
+      DATABASE_URL: postgresql+asyncpg://fortress:fortress_dev@postgres:5432/fortress_p2
+      REDIS_URL: redis://:fortress_dev@redis:6379/0
+      # Keep P2 startup-sync local-only (never call prod P1 on boot):
+      FORTRESS_API_URL: http://pipeline1:8000
+      # Image runs as user `fortress`, not root — point boto3 at the mount explicitly.
+      AWS_SHARED_CREDENTIALS_FILE: /aws/credentials
+      AWS_CONFIG_FILE: /aws/config
+    command: ["uvicorn", "src.main_pipeline2:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8002:8000"
+    volumes:
+      - ~/.aws:/aws:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy

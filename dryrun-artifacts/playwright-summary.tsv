@@ -1,0 +1,6 @@
+F0 — dashboard first-contentful-paint under budget	expected	2394
+F1 — analyst screens a party against SDN and sees a decision	expected	2853
+F2 — CCO views the Regulatory change inbox	expected	1660
+F3 — JIRA webhook lands a workflow and CCO can approve it	expected	3476
+F4 — CCO walks ExecutiveToday → Readiness → RulesPerf	expected	4118
+F5 — Admin drilldown across VectorIntel, Obligations, Enforcement	expected	2500

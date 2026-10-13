@@ -1,0 +1,275 @@
+# Compliance Source Specifications
+# Used by the LangGraph Autonomous Compliance Agent
+# Each source defines a regulatory document to scrape, parse, and store
+
+sources:
+  # ── PRIORITY 1: Quick Wins (CSV/XML - Direct Parse) ──────────────
+
+  - source_id: ofac_sdn
+    name: OFAC SDN List
+    regulator: OFAC
+    category: Sanctions
+    url: https://www.treasury.gov/ofac/downloads/sdn.csv
+    format: csv
+    update_frequency: daily
+    expected_count: 8000
+    priority: 1
+    fields:
+      - entity_name
+      - entity_type
+      - program
+      - id_number
+      - address
+      - remarks
+
+  - source_id: ofac_sdn_xml
+    name: OFAC SDN XML Feed
+    regulator: OFAC
+    category: Sanctions
+    url: https://www.treasury.gov/ofac/downloads/sdn.xml
+    format: xml
+    update_frequency: daily
+    expected_count: 8000
+    priority: 1
+    fields:
+      - entity_name
+      - entity_type
+      - program
+      - sanctions_type
+
+  - source_id: frb_dfast_scenarios
+    name: FRB DFAST Stress Test Scenarios
+    regulator: FRB
+    category: Stress Testing
+    url: https://www.federalreserve.gov/publications/2025-stress-test-scenarios.htm
+    format: html
+    update_frequency: annual
+    expected_count: 28
+    priority: 1
+    fields:
+      - scenario_name
+      - variable_name
+      - quarter
+      - value
+      - baseline_value
+      - severely_adverse_value
+
+  # ── PRIORITY 2: PDF Sources (Regulatory Manuals) ──────────────────
+
+  - source_id: occ_bsa
+    name: OCC BSA/AML Examination Manual
+    regulator: OCC
+    category: BSA/AML
+    url: https://bsaaml.ffiec.gov/manual
+    format: html
+    update_frequency: monthly
+    expected_count: 45
+    priority: 1
+    fields:
+      - requirement_id
+      - requirement_text
+      - rule_type
+      - threshold_amount
+      - threshold_currency
+      - exam_procedure
+
+  - source_id: occ_third_party
+    name: OCC Third-Party Risk Management
+    regulator: OCC
+    category: Third-Party Risk
+    url: https://www.occ.gov/news-issuances/bulletins/2023/bulletin-2023-17.html
+    format: html
+    update_frequency: as_needed
+    expected_count: 35
+    priority: 2
+    fields:
+      - requirement_text
+      - risk_category
+      - control_objective
+      - assessment_criteria
+
+  - source_id: fdic_exam_manual
+    name: FDIC Consumer Compliance Exam Manual
+    regulator: FDIC
+    category: Consumer Compliance
+    url: https://www.fdic.gov/consumer-compliance-examination-manual
+    format: html
+    update_frequency: annual
+    expected_count: 60
+    priority: 2
+    fields:
+      - chapter_title
+      - exam_procedure
+      - tier
+      - exam_cycle_months
+      - asset_threshold
+
+  # ── PRIORITY 3: HTML Sources (Agency Websites) ────────────────────
+
+  - source_id: fincen_sar
+    name: FinCEN SAR Filing Requirements
+    regulator: FinCEN
+    category: AML
+    url: https://www.fincen.gov/resources/filing-information
+    format: html
+    update_frequency: quarterly
+    expected_count: 12
+    priority: 1
+    fields:
+      - filing_type
+      - requirement_text
+      - threshold_amount
+      - filing_deadline
+      - form_number
+
+  - source_id: fincen_sar_quality
+    name: FinCEN SAR Quality FAQs
+    regulator: FinCEN
+    category: AML
+    url: https://www.fincen.gov/resources/frequently-asked-questions-regarding-fincen-suspicious-activity-report-sar
+    format: html
+    update_frequency: quarterly
+    expected_count: 25
+    priority: 2
+    fields:
+      - rule_type
+      - quality_threshold
+      - narrative_requirement
+      - source_advisory
+
+  - source_id: fincen_cdd
+    name: FinCEN Customer Due Diligence Rule
+    regulator: FinCEN
+    category: AML/KYC
+    url: https://www.fincen.gov/resources/statutes-and-regulations/cdd-final-rule
+    format: html
+    update_frequency: as_needed
+    expected_count: 30
+    priority: 2
+    fields:
+      - requirement_text
+      - customer_type
+      - verification_method
+      - risk_category
+
+  - source_id: fincen_boi
+    name: FinCEN Beneficial Ownership Information
+    regulator: FinCEN
+    category: AML/KYC
+    url: https://www.fincen.gov/boi
+    format: html
+    update_frequency: quarterly
+    expected_count: 20
+    priority: 2
+    fields:
+      - requirement_text
+      - entity_type
+      - reporting_deadline
+      - exemption_criteria
+
+  - source_id: cfpb_1071
+    name: CFPB Section 1071 Small Business Lending
+    regulator: CFPB
+    category: Fair Lending
+    url: https://www.consumerfinance.gov/rules-policy/final-rules/small-business-lending-under-the-equal-credit-opportunity-act-regulation-b/
+    format: html
+    update_frequency: as_needed
+    expected_count: 88
+    priority: 1
+    compliance_deadline: "2026-07-01"
+    fields:
+      - field_name
+      - field_type
+      - required
+      - data_validation
+      - demographic_category
+
+  - source_id: cfpb_hmda
+    name: CFPB HMDA Reporting Guide
+    regulator: CFPB
+    category: Fair Lending
+    url: https://www.consumerfinance.gov/data-research/hmda/
+    format: html
+    update_frequency: annual
+    expected_count: 48
+    priority: 2
+    fields:
+      - data_field
+      - reporting_requirement
+      - edit_check
+      - valid_values
+
+  - source_id: cfpb_reg_b
+    name: CFPB Regulation B (Equal Credit)
+    regulator: CFPB
+    category: Fair Lending
+    url: https://www.consumerfinance.gov/rules-policy/regulations/1002/
+    format: html
+    update_frequency: as_needed
+    expected_count: 40
+    priority: 2
+    fields:
+      - section
+      - requirement_text
+      - prohibited_action
+      - protected_class
+
+  - source_id: frb_reg_e
+    name: FRB Regulation E (Electronic Fund Transfers)
+    regulator: FRB
+    category: Consumer Protection
+    url: https://www.federalreserve.gov/supervisionreg/regecg.htm
+    format: html
+    update_frequency: as_needed
+    expected_count: 35
+    priority: 2
+    fields:
+      - section
+      - requirement_text
+      - error_resolution_timeline
+      - consumer_rights
+
+  - source_id: ffiec_bsa
+    name: FFIEC BSA/AML Examination Manual
+    regulator: FFIEC
+    category: BSA/AML
+    url: https://bsaaml.ffiec.gov/manual
+    format: html
+    update_frequency: annual
+    expected_count: 100
+    priority: 1
+    fields:
+      - section
+      - exam_procedure
+      - risk_indicator
+      - control_requirement
+
+  - source_id: glba_privacy
+    name: GLBA Privacy Rule (Regulation P)
+    regulator: FTC/CFPB
+    category: Privacy
+    url: https://www.consumerfinance.gov/rules-policy/regulations/1016/
+    format: html
+    update_frequency: as_needed
+    expected_count: 25
+    priority: 3
+    fields:
+      - section
+      - privacy_requirement
+      - notice_type
+      - opt_out_right
+
+  - source_id: pci_dss_4
+    name: PCI DSS 4.0 Requirements
+    regulator: PCI SSC
+    category: Payment Security
+    url: https://www.pcisecuritystandards.org/standards/pci-dss/
+    format: html
+    update_frequency: as_needed
+    expected_count: 64
+    priority: 3
+    fields:
+      - requirement_id
+      - requirement_text
+      - testing_procedure
+      - guidance

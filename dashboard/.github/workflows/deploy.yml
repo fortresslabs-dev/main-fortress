@@ -1,0 +1,24 @@
+name: Deploy dashboard
+on:
+  push:
+    tags: ["dashboard-*-v*"]
+env:
+  AWS_REGION: us-east-1
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20", cache: npm }
+      - name: Parse bank ID
+        id: parse
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          echo "bank_id=$(echo $TAG | sed 's/^dashboard-//' | sed 's/-v[0-9].*//')" >> $GITHUB_OUTPUT
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.BANK_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.BANK_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - run: chmod +x deploy.sh && ./deploy.sh ${{ steps.parse.outputs.bank_id }} production

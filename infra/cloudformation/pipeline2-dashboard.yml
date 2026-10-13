@@ -1,0 +1,274 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Fortress Labs - Pipeline 2 Dashboard (S3 + CloudFront + Cognito per bank)
+  Deploy AFTER pipeline2-compute.yml.
+
+  TrialMode=true skips ACM and the dashboard.<BankDomain> alias and serves
+  the dashboard via the default *.cloudfront.net cert. Cognito callback
+  URLs + DASHBOARD_URL SSM param flip to the CloudFront default domain.
+
+Parameters:
+  BankId:
+    Type: String
+    AllowedPattern: "[a-z0-9]+"
+  BankDomain:
+    Type: String
+  Environment:
+    Type: String
+    Default: production
+  P2ApiUrl:
+    Type: String
+  TrialMode:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: true = no ACM cert, no custom alias, serve via default *.cloudfront.net cert.
+
+Conditions:
+  IsTrial: !Equals [!Ref TrialMode, "true"]
+  IsProd:  !Equals [!Ref TrialMode, "false"]
+
+Resources:
+
+  DashboardBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub fortress-dashboard-${BankId}-${Environment}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  DashboardBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref DashboardBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub arn:aws:s3:::${DashboardBucket}/*
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}
+
+  CloudFrontOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub fortress-dashboard-oac-${BankId}
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  AcmCert:
+    Type: AWS::CertificateManager::Certificate
+    Condition: IsProd
+    Properties:
+      DomainName: !Sub dashboard.${BankDomain}
+      ValidationMethod: DNS
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        Aliases: !If
+          - IsProd
+          - [!Sub "dashboard.${BankDomain}"]
+          - !Ref AWS::NoValue
+        ViewerCertificate: !If
+          - IsProd
+          - AcmCertificateArn: !Ref AcmCert
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt DashboardBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+            OriginAccessControlId: !GetAtt CloudFrontOAC.Id
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS]
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+        HttpVersion: http2
+
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub fortress-dashboard-${BankId}
+      UsernameAttributes: [email]
+      AutoVerifiedAttributes: [email]
+      # FTR §13.1 B2 — MFA enforced (Phase B of Option C rollout).
+      # Pool-wide MfaConfiguration: ON means users without TOTP enrolled
+      # are blocked at sign-in and forced through the SETUP_TOTP challenge
+      # (Amplify <Authenticator> handles this natively on v6+). SMS is
+      # intentionally NOT in EnabledMfas (SIM-swap risk); CI invariant in
+      # scripts/verify_ftr_invariants.py rejects any PR that adds SMS_MFA
+      # or sets MfaConfiguration back to OPTIONAL/OFF.
+      MfaConfiguration: "ON"
+      EnabledMfas:
+        - SOFTWARE_TOKEN_MFA
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      Schema:
+        - Name: bank_id
+          AttributeDataType: String
+          Mutable: false
+          Required: false
+
+  GroupCCO:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: CCO
+      UserPoolId: !Ref CognitoUserPool
+      Precedence: 1
+
+  GroupCRO:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: CRO
+      UserPoolId: !Ref CognitoUserPool
+      Precedence: 2
+
+  GroupCIO:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: CIO
+      UserPoolId: !Ref CognitoUserPool
+      Precedence: 3
+
+  # Analyst + Admin groups were created out-of-band in the testbank pool
+  # on 2026-06-06 before this template was updated to include them. They
+  # are now CFN-managed via resource-import (2026-06-29). DeletionPolicy:
+  # Retain prevents accidental deletion of the user group (and its
+  # membership) on stack delete or property-replacement.
+  GroupAnalyst:
+    Type: AWS::Cognito::UserPoolGroup
+    DeletionPolicy: Retain
+    Properties:
+      GroupName: Analyst
+      UserPoolId: !Ref CognitoUserPool
+      Precedence: 4
+
+  GroupAdmin:
+    Type: AWS::Cognito::UserPoolGroup
+    DeletionPolicy: Retain
+    Properties:
+      GroupName: Admin
+      UserPoolId: !Ref CognitoUserPool
+      Precedence: 5
+
+  CognitoAppClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub fortress-dashboard-client-${BankId}
+      UserPoolId: !Ref CognitoUserPool
+      GenerateSecret: false
+      AllowedOAuthFlows: [code]
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes: [openid, email, profile]
+      CallbackURLs: !If
+        - IsTrial
+        - - !Sub "https://${CloudFrontDistribution.DomainName}/auth/callback"
+          - "http://localhost:5173/auth/callback"
+        - - !Sub "https://dashboard.${BankDomain}/auth/callback"
+          - "http://localhost:5173/auth/callback"
+      LogoutURLs: !If
+        - IsTrial
+        - [!Sub "https://${CloudFrontDistribution.DomainName}/auth/logout"]
+        - [!Sub "https://dashboard.${BankDomain}/auth/logout"]
+      SupportedIdentityProviders: [COGNITO]
+      AccessTokenValidity: 60
+      IdTokenValidity: 60
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+
+  CognitoDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub fortress-${BankId}
+      UserPoolId: !Ref CognitoUserPool
+
+  SsmPoolId:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /fortress/${BankId}/COGNITO_USER_POOL_ID
+      Type: String
+      Value: !Ref CognitoUserPool
+
+  SsmClientId:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /fortress/${BankId}/COGNITO_CLIENT_ID
+      Type: String
+      Value: !Ref CognitoAppClient
+
+  SsmDashboardUrl:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /fortress/${BankId}/DASHBOARD_URL
+      Type: String
+      Value: !If
+        - IsTrial
+        - !Sub "https://${CloudFrontDistribution.DomainName}"
+        - !Sub "https://dashboard.${BankDomain}"
+
+  SsmP2ApiUrl:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /fortress/${BankId}/P2_API_URL
+      Type: String
+      Value: !Ref P2ApiUrl
+
+Outputs:
+  CloudFrontUrl:
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Description: "CNAME: dashboard.{BankDomain} -> this value"
+    Export:
+      Name: !Sub FortressP2-${BankId}-DashboardCFUrl
+
+  CloudFrontDistributionId:
+    Value: !Ref CloudFrontDistribution
+    Export:
+      Name: !Sub FortressP2-${BankId}-DashboardCFId
+
+  S3BucketName:
+    Value: !Ref DashboardBucket
+    Export:
+      Name: !Sub FortressP2-${BankId}-DashboardBucket
+
+  CognitoUserPoolId:
+    Value: !Ref CognitoUserPool
+    Export:
+      Name: !Sub FortressP2-${BankId}-CognitoPoolId
+
+  CognitoClientId:
+    Value: !Ref CognitoAppClient
+    Export:
+      Name: !Sub FortressP2-${BankId}-CognitoClientId
+
+  CognitoHostedUiUrl:
+    Value: !Sub https://fortress-${BankId}.auth.${AWS::Region}.amazoncognito.com

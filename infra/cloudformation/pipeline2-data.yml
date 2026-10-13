@@ -1,0 +1,411 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Fortress Labs - Pipeline 2 Data Stack (bank account)
+  RDS PostgreSQL 15 on db.t4g.medium (Graviton) with pgvector,
+  ElastiCache Redis t4g.micro, bank-managed KMS CMKs,
+  Secrets Manager (shells - values filled post-deploy),
+  SSM Parameter Store for static config.
+
+Parameters:
+  BankId:
+    Type: String
+    AllowedPattern: "[a-z0-9]+"
+  Environment:
+    Type: String
+    Default: production
+  DbInstanceClass:
+    Type: String
+    Default: db.t4g.medium
+    Description: RDS instance class. t4g.medium = Graviton, ~$45/mo. Use db.t4g.large for prod.
+  DbAllocatedStorage:
+    Type: Number
+    Default: 20
+    Description: Initial gp3 storage GiB. Autoscales up to DbMaxAllocatedStorage.
+  DbMaxAllocatedStorage:
+    Type: Number
+    Default: 100
+  DbMultiAz:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: true is the safe prod default (FTR §13.1 B3). Only set false for non-prod / trial cost-shaving.
+  DbName:
+    Type: String
+    Default: fortress_p2
+  P1ApiUrl:
+    Type: String
+    Default: https://api.fortresslabs.dev
+    Description: Fortress Cloud sync API endpoint
+
+# CloudFormation Rules — validated at create-stack / update-stack time, before
+# any resource action. Blocks prod deploys that pass DbMultiAz=false.
+Rules:
+  EnforceMultiAzInProduction:
+    RuleCondition: !Equals [!Ref Environment, production]
+    Assertions:
+      - Assert: !Equals [!Ref DbMultiAz, "true"]
+        AssertDescription: "DbMultiAz MUST be 'true' when Environment is 'production' (FTR §13.1 B3 — RDS single-AZ is a hard blocker for FTR submission)."
+
+Resources:
+
+  # -- KMS CMKs (bank-managed - Fortress has NO access) ---------------
+  KmsKeyRds:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: !Sub Fortress P2 RDS encryption - ${BankId}
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: BankAccountFullAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+  KmsKeyRdsAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub alias/fortress-rds-${BankId}
+      TargetKeyId: !Ref KmsKeyRds
+
+  KmsKeyRedis:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: !Sub Fortress P2 Redis encryption - ${BankId}
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: BankAccountFullAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: "*"
+
+  KmsKeyRedisAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub alias/fortress-redis-${BankId}
+      TargetKeyId: !Ref KmsKeyRedis
+
+  # -- Secrets Manager (shells - fill values after deploy) -------------
+  SecretDbPassword:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub fortress/${BankId}/db-password
+      Description: !Sub Postgres master password for ${BankId} - rotation currently off
+      GenerateSecretString:
+        SecretStringTemplate: !Sub '{"username": "fortress_${BankId}"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        ExcludeCharacters: '"@/\'
+      KmsKeyId: !Ref KmsKeyRds
+
+  # Read-only Postgres password for the Business Analyst role
+  # (fortress_ba_ro). Role itself is created post-deploy by
+  # scripts/setup/init_ba_readonly_role.sql — that script reads THIS secret
+  # to set the role's LOGIN password. Username pinned to fortress_ba_ro so
+  # the bootstrap SQL doesn't need to template it.
+  # KMS-encrypted with KmsKeyRds so the BA IAM policy in
+  # pipeline2-ba-jump.yml can grant decrypt against a single key.
+  SecretDbPasswordReadOnly:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub fortress/${BankId}/db-password-readonly
+      Description: !Sub Postgres read-only password (fortress_ba_ro) for ${BankId}
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "fortress_ba_ro"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        ExcludeCharacters: '"@/\'
+      KmsKeyId: !Ref KmsKeyRds
+
+  SecretRedisToken:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub fortress/${BankId}/redis-auth-token
+      Description: !Sub ElastiCache AUTH token for ${BankId}
+      GenerateSecretString:
+        PasswordLength: 32
+        ExcludePunctuation: true   # ElastiCache rejects most punctuation
+      KmsKeyId: !Ref KmsKeyRedis
+
+  SecretJwtSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub fortress/${BankId}/jwt-secret
+      Description: !Sub JWT signing secret for ${BankId} CCO dashboard
+      SecretString: "REPLACE_WITH_openssl_rand_hex_32"
+
+  SecretJiraApiToken:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub fortress/${BankId}/jira-api-token
+      Description: !Sub JIRA API token for ${BankId} - bank provides
+      SecretString: "REPLACE_WITH_JIRA_API_TOKEN"
+
+  SecretJiraWebhookSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub fortress/${BankId}/jira-webhook-secret
+      Description: !Sub JIRA webhook HMAC secret for ${BankId}
+      GenerateSecretString:
+        PasswordLength: 32
+        ExcludeCharacters: '"@/\'
+
+  SecretInternalSyncSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub fortress/${BankId}/internal-sync-secret
+      Description: !Sub Shared secret gating POST /internal/sync/trigger for ${BankId}
+      GenerateSecretString:
+        PasswordLength: 32
+        ExcludeCharacters: '"@/\'
+
+  SecretP1ApiKey:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub fortress/${BankId}/pipeline1-api-key
+      Description: !Sub Fortress sync API key for ${BankId} - Fortress provides
+      SecretString: "REPLACE_WITH_FORTRESS_PROVIDED_API_KEY"
+
+  # -- RDS PostgreSQL 15 (db.t4g.medium, Graviton) ---------------------
+  # Engine 15.x because docker-compose runs pgvector/pgvector:pg15 locally;
+  # pgvector + tsvector ship with PG15 on RDS. Enable extension post-deploy
+  # via: CREATE EXTENSION IF NOT EXISTS vector;
+  DbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: !Sub Fortress P2 RDS subnet group - ${BankId}
+      SubnetIds:
+        - Fn::ImportValue: !Sub FortressP2-${BankId}-PrivateSubnetA
+        - Fn::ImportValue: !Sub FortressP2-${BankId}-PrivateSubnetB
+
+  DbInstance:
+    Type: AWS::RDS::DBInstance
+    # Trial: Delete + DeletionProtection=false. Prod: DeletionPolicy: Snapshot.
+    DeletionPolicy: Delete
+    Properties:
+      DBInstanceIdentifier: !Sub fortress-p2-pg-${BankId}-${Environment}
+      Engine: postgres
+      EngineVersion: "15.8"
+      DBInstanceClass: !Ref DbInstanceClass
+      AllocatedStorage: !Ref DbAllocatedStorage
+      MaxAllocatedStorage: !Ref DbMaxAllocatedStorage
+      StorageType: gp3
+      StorageEncrypted: true
+      KmsKeyId: !GetAtt KmsKeyRds.Arn
+      DBName: !Ref DbName
+      MasterUsername: !Sub fortress_${BankId}
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:${SecretDbPassword}:SecretString:password}}"
+      DBSubnetGroupName: !Ref DbSubnetGroup
+      VPCSecurityGroups:
+        - Fn::ImportValue: !Sub FortressP2-${BankId}-SgAurora
+      PubliclyAccessible: false
+      MultiAZ: !Ref DbMultiAz
+      AutoMinorVersionUpgrade: true
+      BackupRetentionPeriod: 7
+      DeletionProtection: false
+      EnableCloudwatchLogsExports: [postgresql, upgrade]
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p2-rds-${BankId}-${Environment}
+        - Key: BankId
+          Value: !Ref BankId
+
+  # -- Secrets Manager rotation for Postgres --------------------------
+  # DISABLED: AWS-managed PostgreSQLSingleUser rotation broke P1 Aurora
+  # (see memory project_p1_secret_rotation_gap.md, P1 2026-05-13).
+  # Re-enable only with: Transform: AWS::SecretsManager-2020-07-23 +
+  # CAPABILITY_AUTO_EXPAND on deploy.
+  # SecretDbRotationSchedule:
+  #   Type: AWS::SecretsManager::RotationSchedule
+  #   DependsOn: DbInstance
+  #   Properties:
+  #     SecretId: !Ref SecretDbPassword
+  #     HostedRotationLambda:
+  #       RotationType: PostgreSQLSingleUser
+  #       RotationLambdaName: !Sub fortress-p2-rds-rotate-${BankId}
+  #       VpcSecurityGroupIds:
+  #         Fn::ImportValue: !Sub FortressP2-${BankId}-SgEcs
+  #       VpcSubnetIds: !Join
+  #         - ","
+  #         - - Fn::ImportValue: !Sub FortressP2-${BankId}-PrivateSubnetA
+  #           - Fn::ImportValue: !Sub FortressP2-${BankId}-PrivateSubnetB
+  #     RotationRules:
+  #       AutomaticallyAfterDays: 90
+
+  # -- ElastiCache Redis 7 (t4g.micro, Graviton, TLS, KMS) -----------
+  RedisSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: !Sub Fortress P2 Redis subnet group - ${BankId}
+      SubnetIds:
+        - Fn::ImportValue: !Sub FortressP2-${BankId}-PrivateSubnetA
+        - Fn::ImportValue: !Sub FortressP2-${BankId}-PrivateSubnetB
+
+  RedisCluster:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      ReplicationGroupDescription: !Sub Fortress P2 Redis - ${BankId}
+      Engine: redis
+      EngineVersion: "7.1"
+      CacheNodeType: cache.t4g.micro
+      NumCacheClusters: 2
+      AutomaticFailoverEnabled: true
+      MultiAZEnabled: true
+      CacheSubnetGroupName: !Ref RedisSubnetGroup
+      SecurityGroupIds:
+        - Fn::ImportValue: !Sub FortressP2-${BankId}-SgRedis
+      AtRestEncryptionEnabled: true
+      TransitEncryptionEnabled: true
+      TransitEncryptionMode: required
+      AuthToken: !Sub "{{resolve:secretsmanager:${SecretRedisToken}}}"
+      KmsKeyId: !GetAtt KmsKeyRedis.Arn
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p2-redis-${BankId}
+        - Key: BankId
+          Value: !Ref BankId
+
+  # -- SSM Parameters (static config - injected by config.py at startup)
+  SsmPipelineMode:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /fortress/${BankId}/PIPELINE_MODE
+      Type: String
+      Value: pipeline2
+
+  SsmClientName:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /fortress/${BankId}/CLIENT_NAME
+      Type: String
+      Value: !Ref BankId
+
+  # SSM parameter names kept as AURORA_HOST/AURORA_PORT to avoid churn in
+  # config.py; the value is now the RDS Postgres instance endpoint. Rename
+  # to DB_HOST/DB_PORT in a follow-up once compute is stable.
+  SsmAuroraHost:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /fortress/${BankId}/AURORA_HOST
+      Type: String
+      Value: !GetAtt DbInstance.Endpoint.Address
+
+  SsmAuroraPort:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /fortress/${BankId}/AURORA_PORT
+      Type: String
+      Value: !GetAtt DbInstance.Endpoint.Port
+
+  SsmDbName:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /fortress/${BankId}/DB_NAME
+      Type: String
+      Value: !Ref DbName
+
+  SsmRedisHost:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /fortress/${BankId}/REDIS_HOST
+      Type: String
+      Value: !GetAtt RedisCluster.PrimaryEndPoint.Address
+
+  SsmP1ApiUrl:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /fortress/${BankId}/PIPELINE1_API_URL
+      Type: String
+      Value: !Ref P1ApiUrl
+
+  SsmEnvironment:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /fortress/${BankId}/ENVIRONMENT
+      Type: String
+      Value: !Ref Environment
+
+Outputs:
+  # Output names retained as AuroraEndpoint/AuroraPort for backwards compat
+  # with the compute stack's ImportValue path. Value now points at RDS.
+  AuroraEndpoint:
+    Value: !GetAtt DbInstance.Endpoint.Address
+    Export:
+      Name: !Sub FortressP2-${BankId}-AuroraEndpoint
+
+  AuroraPort:
+    Value: !GetAtt DbInstance.Endpoint.Port
+    Export:
+      Name: !Sub FortressP2-${BankId}-AuroraPort
+
+  RedisEndpoint:
+    Value: !GetAtt RedisCluster.PrimaryEndPoint.Address
+    Export:
+      Name: !Sub FortressP2-${BankId}-RedisEndpoint
+
+  KmsKeyRdsArn:
+    Value: !GetAtt KmsKeyRds.Arn
+    Export:
+      Name: !Sub FortressP2-${BankId}-KmsKeyRdsArn
+
+  SecretDbPasswordArn:
+    Value: !Ref SecretDbPassword
+    Export:
+      Name: !Sub FortressP2-${BankId}-SecretDbPasswordArn
+
+  SecretDbPasswordReadOnlyArn:
+    Value: !Ref SecretDbPasswordReadOnly
+    Description: BA read-only Postgres credential — referenced by pipeline2-ba-jump.yml
+    Export:
+      Name: !Sub FortressP2-${BankId}-SecretDbPasswordReadOnlyArn
+
+  SecretRedisTokenArn:
+    Value: !Ref SecretRedisToken
+    Export:
+      Name: !Sub FortressP2-${BankId}-SecretRedisTokenArn
+
+  SecretJwtSecretArn:
+    Value: !Ref SecretJwtSecret
+    Export:
+      Name: !Sub FortressP2-${BankId}-SecretJwtSecretArn
+
+  SecretJiraApiTokenArn:
+    Value: !Ref SecretJiraApiToken
+    Export:
+      Name: !Sub FortressP2-${BankId}-SecretJiraApiTokenArn
+
+  SecretJiraWebhookSecretArn:
+    Value: !Ref SecretJiraWebhookSecret
+    Export:
+      Name: !Sub FortressP2-${BankId}-SecretJiraWebhookSecretArn
+
+  SecretInternalSyncSecretArn:
+    Value: !Ref SecretInternalSyncSecret
+    Export:
+      Name: !Sub FortressP2-${BankId}-SecretInternalSyncSecretArn
+
+  SecretPipeline1ApiKeyArn:
+    Value: !Ref SecretP1ApiKey
+    Export:
+      Name: !Sub FortressP2-${BankId}-SecretPipeline1ApiKeyArn
+
+  PostDeployInstructions:
+    Value: !Sub |
+      REQUIRED after stack deploys:
+      1. aws secretsmanager put-secret-value --secret-id fortress/${BankId}/jwt-secret --secret-string $(openssl rand -hex 32)
+      2. aws secretsmanager put-secret-value --secret-id fortress/${BankId}/jira-api-token --secret-string <BANK_JIRA_TOKEN>
+      3. aws secretsmanager put-secret-value --secret-id fortress/${BankId}/pipeline1-api-key --secret-string <FORTRESS_PROVIDED_KEY>
+      4. Enable pgvector on the RDS instance:
+           psql "...connect..." -c "CREATE EXTENSION IF NOT EXISTS vector;"
+      5. Run Alembic: python -m alembic upgrade head
+      6. Bootstrap BA read-only role (one-shot, idempotent):
+           psql ... -v ba_password=$(aws secretsmanager get-secret-value \
+             --secret-id fortress/${BankId}/db-password-readonly \
+             --query 'SecretString' --output text | jq -r .password) \
+             -f scripts/setup/init_ba_readonly_role.sql

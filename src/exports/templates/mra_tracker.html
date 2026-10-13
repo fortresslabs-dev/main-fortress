@@ -1,0 +1,29 @@
+{% extends "_base.html" %}
+{% block sections %}
+
+<section>
+  <h2>1. Findings (OCC 5 Cs)</h2>
+  <p>{{ findings|length }} findings as of {{ cover.as_of }}.</p>
+  <table>
+    <thead><tr>
+      <th>ID</th><th>Type</th><th>Severity</th><th>Status</th>
+      <th>Identified</th><th>Due</th><th>Concern</th><th>Repeat</th>
+    </tr></thead>
+    <tbody>
+    {% for f in findings %}
+      <tr>
+        <td>{{ f.finding_id }}</td>
+        <td><strong>{{ f.type }}</strong></td>
+        <td>{{ f.severity }}</td>
+        <td>{{ f.status }}</td>
+        <td>{{ f.identified_date }}</td>
+        <td>{{ f.due_date or "—" }}</td>
+        <td>{{ f.concern }}</td>
+        <td>{% if f.repeat_flag %}yes (of {{ f.repeat_of_finding_id }}){% else %}no{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+{% endblock %}

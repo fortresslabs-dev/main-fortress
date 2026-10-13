@@ -1,0 +1,146 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Fortress Labs - P2 exports observability (Q23 + Q24).
+  Three CloudWatch alarms + EventBridge cron for the quarterly drill.
+  Per feedback_cw_alarm_dimension_split each alarm has dimensioned and
+  dimensionless variants so "did the job run" and "is the artifact pipeline
+  healthy" can both page.
+
+Parameters:
+  BankId:
+    Type: String
+    AllowedPattern: "[a-z0-9]+"
+  Environment:
+    Type: String
+    Default: production
+  AlarmSnsTopicArn:
+    Type: String
+    Description: SNS topic that pages CCO oncall (existing topic, not created here).
+  ExportsBucketName:
+    Type: String
+
+Resources:
+  # ── Alarm 1 — render failure rate ───────────────────────────────────
+  RenderFailureRateAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "fortress-p2-exports-render-fail-rate-${BankId}-${Environment}"
+      AlarmDescription: >
+        >5% of exports failed to render in the last hour. Likely Chromium
+        OOM / template error / Bedrock outage on board_report.
+      Namespace: Fortress/P2/Exports
+      MetricName: RenderFailures
+      Dimensions:
+        - Name: BankId
+          Value: !Ref BankId
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlarmSnsTopicArn]
+
+  RenderFailureRateAlarmDimensionless:
+    # Dimensionless heartbeat per feedback_cw_alarm_dimension_split — alarms
+    # on the same MetricName but Dimensions=[] so "no events at all" pages.
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "fortress-p2-exports-render-fail-heartbeat-${Environment}"
+      AlarmDescription: >
+        No render events seen in 4 hours across any bank. Worker
+        EventBridge dispatch may be broken.
+      Namespace: Fortress/P2/Exports
+      MetricName: RenderAttempts
+      Statistic: Sum
+      Period: 3600
+      EvaluationPeriods: 4
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref AlarmSnsTopicArn]
+
+  # ── Alarm 2 — sign-off SLA breach ───────────────────────────────────
+  SignoffSlaAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "fortress-p2-exports-signoff-sla-${BankId}-${Environment}"
+      AlarmDescription: >
+        Artifact rendered > 30 days ago with no sign-off (OCC dual-control
+        breach risk). Pages CCO directly.
+      Namespace: Fortress/P2/Exports
+      MetricName: UnsignedArtifactAge30dCount
+      Dimensions:
+        - Name: BankId
+          Value: !Ref BankId
+      Statistic: Maximum
+      Period: 86400
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlarmSnsTopicArn]
+
+  # ── Alarm 3 — retention near expiry ─────────────────────────────────
+  # WORM compliance: zero artifacts should ever come within 30d of their
+  # Object Lock expiry without an explicit extend decision.
+  RetentionNearExpiryAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub "fortress-p2-exports-retention-near-expiry-${BankId}-${Environment}"
+      AlarmDescription: >
+        Artifact within 30 days of its Object Lock retention expiry —
+        compliance/legal must extend or accept expiry before lock lifts.
+      Namespace: Fortress/P2/Exports
+      MetricName: RetentionNearExpiryCount
+      Dimensions:
+        - Name: BankId
+          Value: !Ref BankId
+      Statistic: Maximum
+      Period: 86400
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlarmSnsTopicArn]
+
+  # ── Quarterly re-attestation drill (Q24) ────────────────────────────
+  QuarterlyDrillRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub "fortress-p2-exports-quarterly-drill-${BankId}-${Environment}"
+      Description: >
+        Runs the re-attestation drill on the 1st day of each quarter:
+        re-render a pinned past as_of and assert the stored artifact's
+        bytes (not a re-render) come back. Catches snapshot/canonical/
+        template drift early.
+      ScheduleExpression: "cron(0 10 1 1,4,7,10 ? *)"
+      State: ENABLED
+      Targets:
+        - Id: drill-target
+          Arn: !Sub "arn:aws:ecs:${AWS::Region}:${AWS::AccountId}:cluster/fortress-pipeline2-${BankId}-${Environment}"
+          RoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/fortress-eventbridge-ecs-runtask"
+          EcsParameters:
+            TaskDefinitionArn:
+              Fn::ImportValue: !Sub "fortress-p2-${BankId}-${Environment}-exports-worker-td-arn"
+            LaunchType: FARGATE
+            PlatformVersion: LATEST
+            NetworkConfiguration:
+              AwsVpcConfiguration:
+                Subnets: !Split [",", !ImportValue "fortress-pipeline2-private-subnets"]
+                SecurityGroups: [!ImportValue "fortress-pipeline2-task-sg"]
+                AssignPublicIp: DISABLED
+          Input: !Sub |
+            {"containerOverrides":[{
+              "name":"exports-worker",
+              "command":["python","-m","tests.drills.quarterly_reattestation",
+                         "--bank-id","${BankId}","--bucket","${ExportsBucketName}"]
+            }]}
+
+Outputs:
+  RenderFailureAlarmArn:
+    Value: !GetAtt RenderFailureRateAlarm.Arn
+  SignoffSlaAlarmArn:
+    Value: !GetAtt SignoffSlaAlarm.Arn
+  RetentionNearExpiryAlarmArn:
+    Value: !GetAtt RetentionNearExpiryAlarm.Arn

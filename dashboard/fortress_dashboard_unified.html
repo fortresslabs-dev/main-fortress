@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fortress Labs · Compliance Command</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f6f3ec;--paper-2:#fbf9f4;--card:#fff;--ink:#13181f;--ink-2:#39424f;
+    --muted:#6b7686;--faint:#97a0ad;--line:#e7e1d6;--line-2:#efeae1;
+    --gold:#b1842f;--gold-soft:#f5ead2;--emerald:#1f8f63;--emerald-soft:#e2f3ea;
+    --amber:#c98a18;--amber-soft:#fbeed2;--red:#c0453f;--red-soft:#f8e3e1;
+    --navy:#26456b;--navy-soft:#e6edf6;--radius:13px;
+    --shadow:0 1px 2px rgba(20,24,31,.04),0 8px 24px -14px rgba(20,24,31,.18);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:radial-gradient(900px 500px at 100% -5%,rgba(177,132,47,.06),transparent 55%),var(--paper);
+    color:var(--ink);font-family:'IBM Plex Sans',sans-serif;line-height:1.5;font-size:14px;-webkit-font-smoothing:antialiased;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  header{position:sticky;top:0;z-index:60;background:rgba(251,249,244,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);}
+  .bar{max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:58px;padding:0 24px;}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:16px;}
+  .brand .mark{width:29px;height:29px;border-radius:8px;background:linear-gradient(140deg,var(--gold),#8d6420);display:grid;place-items:center;color:#fff7e6;font-family:'Fraunces';font-weight:700;font-size:16px;box-shadow:0 5px 14px -6px rgba(177,132,47,.7);}
+  .brand b{color:var(--gold);}
+  .who{display:flex;align-items:center;gap:11px;font-size:12.5px;color:var(--muted);}
+  .who .role{background:var(--emerald-soft);color:var(--emerald);font-weight:600;padding:3px 9px;border-radius:6px;font-size:11px;letter-spacing:.4px;}
+  nav{max-width:1280px;margin:0 auto;padding:0 16px;display:flex;gap:1px;overflow-x:auto;}
+  nav button{border:none;background:none;font-family:inherit;font-size:13px;color:var(--muted);padding:12px 13px;cursor:pointer;white-space:nowrap;font-weight:500;position:relative;}
+  nav button:hover{color:var(--ink);}
+  nav button.active{color:var(--ink);}
+  nav button.active::after{content:"";position:absolute;left:9px;right:9px;bottom:0;height:2.5px;background:var(--gold);border-radius:3px;}
+  nav button.home{color:var(--gold);font-weight:600;}
+  nav .div{width:1px;background:var(--line);margin:8px 6px;}
+  main{max-width:1280px;margin:0 auto;padding:24px 24px 80px;}
+  .view{display:none;animation:fade .35s ease;}
+  .view.on{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+  h1.page{font-family:'Fraunces';font-weight:500;font-size:25px;letter-spacing:-.3px;display:flex;align-items:baseline;gap:10px;}
+  h1.page .count{font-family:'IBM Plex Mono';font-size:12.5px;color:var(--faint);font-weight:400;}
+  .page-sub{color:var(--muted);font-size:13px;margin:3px 0 22px;}
+  .biz{font-size:11.5px;color:var(--gold);background:var(--gold-soft);border:1px solid #e9d5a8;border-radius:8px;padding:3px 9px;display:inline-block;margin-left:8px;font-weight:500;}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);}
+  .panel h3{font-family:'Fraunces';font-weight:600;font-size:16px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .panel h3 .hint{font-family:'IBM Plex Sans';font-size:11px;color:var(--faint);font-weight:400;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr;}}
+
+  /* KPI */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+  @media(max-width:880px){.kpis{grid-template-columns:1fr 1fr;}}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);}
+  .kpi .lab{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
+  .kpi .val{font-family:'Fraunces';font-size:30px;font-weight:600;line-height:1.1;margin-top:6px;}
+  .kpi .val.green{color:var(--emerald);}.kpi .val.amber{color:var(--amber);}.kpi .val.red{color:var(--red);}.kpi .val.gold{color:var(--gold);}
+  .kpi .cap{font-size:11.5px;color:var(--faint);margin-top:4px;}
+  .kpi .trend{font-size:11px;color:var(--emerald);font-weight:600;margin-left:5px;}
+  .progress{height:6px;border-radius:4px;background:var(--line-2);margin-top:10px;position:relative;}
+  .progress i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#2aa873,var(--emerald));}
+  .progress .tgt{position:absolute;top:-3px;height:12px;width:2px;background:var(--gold);}
+  .progress .tgt::after{content:"target 80%";position:absolute;top:-13px;left:50%;transform:translateX(-50%);font-family:'IBM Plex Mono';font-size:8px;color:var(--gold);white-space:nowrap;}
+
+  /* lens toggle */
+  .topline{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:14px;margin-bottom:20px;}
+  .lens{display:flex;gap:5px;background:var(--paper-2);border:1px solid var(--line);border-radius:11px;padding:5px;}
+  .lens button{border:none;background:none;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--muted);padding:7px 15px;border-radius:8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1.25;}
+  .lens button small{font-weight:400;font-size:10px;color:var(--faint);}
+  .lens button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.1);}
+  .lens button.on small{color:var(--gold);}
+
+  /* gauge + matrix */
+  .hero{display:grid;grid-template-columns:310px 1fr;gap:18px;margin-bottom:20px;}
+  @media(max-width:900px){.hero{grid-template-columns:1fr;}}
+  .gauge-wrap{text-align:center;}
+  .gauge{position:relative;width:184px;height:184px;margin:4px auto;}
+  .gauge svg{transform:rotate(-90deg);}
+  .gauge .center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .gauge .num{font-family:'Fraunces';font-size:48px;font-weight:600;line-height:1;color:var(--amber);}
+  .gauge .den{font-size:11px;color:var(--faint);}
+  .gauge .band{font-size:10.5px;font-weight:600;color:var(--amber);text-transform:uppercase;letter-spacing:.5px;margin-top:5px;}
+  .gauge-foot{font-size:11.5px;color:var(--muted);margin-top:6px;border-top:1px dashed var(--line);padding-top:10px;}
+  .gauge-foot b{color:var(--red);}
+  .matrix{display:grid;grid-template-columns:58px repeat(3,1fr);gap:7px;}
+  .matrix .hd{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;text-align:center;align-self:end;padding-bottom:3px;}
+  .matrix .yl{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;writing-mode:vertical-rl;transform:rotate(180deg);display:flex;align-items:center;justify-content:center;}
+  .cell{border-radius:9px;padding:12px 8px;text-align:center;border:1px solid var(--line);position:relative;}
+  .cell .c-n{font-family:'Fraunces';font-size:24px;font-weight:600;line-height:1;}
+  .cell .c-l{font-size:9.5px;color:var(--muted);margin-top:3px;}
+  .cell.danger{background:var(--red-soft);border-color:#e8b4b0;}.cell.danger .c-n{color:var(--red);}
+  .cell.warn{background:var(--amber-soft);border-color:#e9d09a;}.cell.warn .c-n{color:var(--amber);}
+  .cell.ok{background:var(--emerald-soft);border-color:#bfe3cf;}.cell.ok .c-n{color:var(--emerald);}
+  .cell.neutral{background:var(--paper-2);}.cell.neutral .c-n{color:var(--ink-2);}
+  .cell .tagq{position:absolute;top:5px;right:7px;font-size:7.5px;font-weight:700;letter-spacing:.4px;color:var(--red);text-transform:uppercase;}
+  .matrix-note{font-size:11.5px;color:var(--muted);margin-top:12px;display:flex;gap:7px;align-items:center;}
+  .matrix-note .sw{width:10px;height:10px;border-radius:3px;background:var(--red-soft);border:1px solid #e8b4b0;}
+
+  /* dimensions */
+  .dims{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;}
+  @media(max-width:1000px){.dims{grid-template-columns:repeat(2,1fr);}}
+  .dim{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;box-shadow:var(--shadow);}
+  .dim .dt{font-size:11px;color:var(--ink-2);font-weight:600;min-height:28px;}
+  .dim .dbar{height:5px;border-radius:4px;background:var(--line-2);margin:7px 0 5px;overflow:hidden;}
+  .dim .dbar i{display:block;height:100%;border-radius:4px;}
+  .dim .ds{font-family:'IBM Plex Mono';font-size:11.5px;font-weight:600;}
+  .g i{background:linear-gradient(90deg,#2aa873,var(--emerald));}.g .ds{color:var(--emerald);}
+  .a i{background:linear-gradient(90deg,#d9a23c,var(--amber));}.a .ds{color:var(--amber);}
+  .r i{background:linear-gradient(90deg,#d98a5c,var(--red));}.r .ds{color:var(--red);}
+
+  /* lens bodies */
+  .lens-body{display:none;}.lens-body.on{display:block;animation:fade .3s ease;}
+  .row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line-2);font-size:13px;}
+  .row:last-child{border-bottom:none;}
+  .row .v{font-family:'IBM Plex Mono';font-weight:600;}
+  .v.good{color:var(--emerald);}.v.warn{color:var(--amber);}.v.bad{color:var(--red);}
+  .mra{font-size:10px;font-weight:600;padding:3px 8px;border-radius:6px;}
+  .mra.open{background:var(--red-soft);color:var(--red);}.mra.prog{background:var(--amber-soft);color:var(--amber);}.mra.closed{background:var(--emerald-soft);color:var(--emerald);}
+  .track{height:15px;border-radius:5px;background:var(--line-2);overflow:hidden;flex:1;margin:0 11px;}
+  .track i{display:block;height:100%;background:linear-gradient(90deg,var(--navy),#3a6296);}
+  .track i.r{background:linear-gradient(90deg,#d98a5c,var(--red));}.track i.a{background:linear-gradient(90deg,#d9a23c,var(--amber));}
+  .chartrow{display:grid;grid-template-columns:118px 1fr 34px;align-items:center;gap:8px;margin-bottom:10px;font-size:12px;}
+  .chartrow .pc{text-align:right;font-family:'IBM Plex Mono';color:var(--muted);}
+
+  /* tables */
+  .tablecard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  thead th{background:var(--paper-2);text-align:left;padding:10px 14px;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line);}
+  tbody td{padding:11px 14px;border-bottom:1px solid var(--line-2);vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}tbody tr:hover{background:var(--paper-2);}
+  .rid{font-family:'IBM Plex Mono';font-size:11px;color:var(--navy);font-weight:500;}
+  .reg{font-family:'IBM Plex Mono';font-size:10px;font-weight:600;padding:3px 7px;border-radius:6px;background:var(--navy-soft);color:var(--navy);}
+  .cfr{font-family:'IBM Plex Mono';font-size:11px;color:var(--muted);}
+  .ob{color:var(--ink-2);max-width:380px;}
+  .risk{font-family:'IBM Plex Mono';font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:6px;min-width:40px;text-align:center;display:inline-block;}
+  .risk.hi{background:var(--red-soft);color:var(--red);}.risk.md{background:var(--amber-soft);color:var(--amber);}.risk.lo{background:var(--emerald-soft);color:var(--emerald);}
+  .st{font-size:11.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;}
+  .st::before{content:"";width:7px;height:7px;border-radius:50%;}
+  .st.pass{color:var(--emerald);}.st.pass::before{background:var(--emerald);}
+  .st.wait{color:var(--faint);}.st.wait::before{background:var(--faint);}
+  .st.fail{color:var(--red);}.st.fail::before{background:var(--red);}
+  .st.run{color:var(--navy);}.st.run::before{background:var(--navy);animation:pulse 1.2s infinite;}
+  @keyframes pulse{50%{opacity:.3;}}
+  .btn{font-family:inherit;font-size:11.5px;border:1px solid var(--navy);background:var(--navy-soft);color:var(--navy);padding:5px 10px;border-radius:7px;cursor:pointer;font-weight:500;}
+  .btn:hover{background:var(--navy);color:#fff;}
+  .btn.ghost{border-color:var(--line);background:var(--card);color:var(--faint);cursor:default;}
+  .btn.sm{padding:3px 8px;font-size:10.5px;margin-right:4px;}
+  .btn.na{border-color:var(--line);background:var(--card);color:var(--muted);}
+  .link{color:var(--navy);font-weight:500;cursor:pointer;}.link:hover{text-decoration:underline;}
+  .flag{font-size:9.5px;color:var(--red);background:var(--red-soft);padding:2px 6px;border-radius:5px;margin-left:6px;font-weight:600;}
+  .pen{font-family:'IBM Plex Mono';font-weight:600;}
+
+  /* filters */
+  .filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;align-items:center;}
+  .filters .grp{display:flex;gap:5px;background:var(--paper-2);border:1px solid var(--line);border-radius:9px;padding:4px;flex-wrap:wrap;}
+  .chip{border:none;background:none;font-family:inherit;font-size:12px;color:var(--muted);padding:4px 10px;border-radius:6px;cursor:pointer;font-weight:500;}
+  .chip.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+  .filters .glab{font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.4px;font-weight:600;margin-right:2px;}
+
+  /* changes */
+  .change{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:11px;padding:15px 17px;margin-bottom:11px;display:flex;justify-content:space-between;gap:14px;box-shadow:var(--shadow);}
+  .change.high{border-left-color:var(--red);}
+  .change .meta{display:flex;gap:7px;margin-bottom:6px;flex-wrap:wrap;align-items:center;}
+  .sev{font-size:9.5px;font-weight:600;padding:2px 7px;border-radius:5px;letter-spacing:.3px;}
+  .sev.high{background:var(--red-soft);color:var(--red);}.sev.med{background:var(--amber-soft);color:var(--amber);}
+  .badge{font-size:9.5px;font-weight:600;padding:2px 7px;border-radius:5px;background:var(--navy-soft);color:var(--navy);}
+  .change .title{font-weight:600;font-size:14px;margin-bottom:3px;}
+  .change .desc{font-size:12.5px;color:var(--muted);}
+  .change .foot{font-family:'IBM Plex Mono';font-size:10.5px;color:var(--faint);margin-top:7px;}
+  .magbar{display:inline-flex;align-items:center;gap:6px;margin-left:8px;}
+  .magbar .mt{width:54px;height:5px;border-radius:3px;background:var(--line-2);overflow:hidden;}
+  .magbar .mt i{display:block;height:100%;background:var(--amber);}
+
+  /* ofac */
+  .ofac-head{display:flex;justify-content:space-between;align-items:center;background:var(--emerald-soft);border:1px solid #bfe3cf;border-radius:var(--radius);padding:16px 20px;margin-bottom:18px;flex-wrap:wrap;gap:12px;}
+  .ofac-head .l{display:flex;align-items:center;gap:13px;}
+  .ofac-head .dot{width:11px;height:11px;border-radius:50%;background:var(--emerald);box-shadow:0 0 0 4px rgba(31,143,99,.18);}
+  .ofac-head .txt b{font-size:14.5px;color:var(--emerald);}
+  .ofac-head .txt div{font-size:12px;color:var(--ink-2);}
+  .ofac-head .fresh{text-align:right;font-size:11.5px;color:var(--ink-2);}
+  .ofac-head .fresh b{font-family:'IBM Plex Mono';color:var(--emerald);}
+  .caps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;}
+  @media(max-width:760px){.caps{grid-template-columns:1fr;}}
+  .cap-c{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);}
+  .cap-c .ic{font-size:17px;}.cap-c h4{font-size:13px;margin:7px 0 3px;}.cap-c p{font-size:12px;color:var(--muted);}
+  details.tech{background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:2px 15px;margin-bottom:18px;}
+  details.tech summary{cursor:pointer;font-size:12px;color:var(--muted);padding:10px 0;font-weight:500;}
+  details.tech .tg{font-family:'IBM Plex Mono';font-size:11.5px;color:var(--ink-2);display:grid;grid-template-columns:repeat(2,1fr);gap:7px 22px;padding:5px 0 13px;}
+  details.tech .tg span b{color:var(--gold);}
+
+  /* reports */
+  .note-strip{background:var(--navy-soft);border:1px solid #cdddf0;border-radius:10px;padding:11px 14px;font-size:12px;color:var(--navy);margin-bottom:16px;}
+  .note-strip b{font-weight:600;}
+  .exp-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:8px;}
+  .asof{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted);}
+  .asof input{font-family:'IBM Plex Mono';font-size:12px;border:1px solid var(--line);border-radius:7px;padding:6px 9px;background:var(--card);color:var(--ink);}
+  .stamp{font-family:'IBM Plex Mono';font-size:10.5px;color:var(--emerald);background:var(--emerald-soft);border:1px solid #bfe3cf;border-radius:7px;padding:5px 9px;}
+  .exports{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-top:4px;}
+  @media(max-width:900px){.exports{grid-template-columns:1fr;}}
+  .ex{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px;box-shadow:var(--shadow);display:flex;flex-direction:column;}
+  .ex.req{border-color:#e9d5a8;background:linear-gradient(180deg,var(--gold-soft),var(--card) 60%);}
+  .ex .tag{font-size:8.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:2px 7px;border-radius:5px;align-self:flex-start;margin-bottom:8px;}
+  .ex .tag.req{background:var(--gold);color:#fff7e6;}.ex .tag.opt{background:var(--navy-soft);color:var(--navy);}
+  .ex h4{font-family:'Fraunces';font-weight:600;font-size:15px;margin-bottom:3px;}
+  .ex p{font-size:11.5px;color:var(--muted);flex:1;margin-bottom:11px;}
+  .ex .acts{display:flex;gap:6px;}
+  .ex .acts button{font-family:inherit;font-size:11px;font-weight:600;border-radius:7px;padding:5px 10px;cursor:pointer;border:1px solid var(--navy);}
+  .ex .acts .pdf{background:var(--navy);color:#fff;}.ex .acts .csv{background:var(--card);color:var(--navy);}
+  .ex .meta{font-family:'IBM Plex Mono';font-size:9.5px;color:var(--faint);margin-top:8px;}
+
+  .flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:18px;background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:11px 14px;}
+  .flow b{color:var(--ink);}.flow .ar{color:var(--gold);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <div class="brand"><span class="mark">F</span>Fortress <b>Labs</b></div>
+    <div class="who"><span class="role" id="roleBadge">CCO</span> <span id="roleEmail">cco@trial.invalid</span></div>
+  </div>
+  <nav id="nav">
+    <button data-v="readiness" class="home active">◆ Readiness</button>
+    <span class="div"></span>
+    <button data-v="rules">Rules</button>
+    <button data-v="changes">Changes</button>
+    <button data-v="obligations">Obligations</button>
+    <button data-v="enforcement">Enforcement</button>
+    <button data-v="ofac">OFAC</button>
+    <button data-v="workflows">Workflows</button>
+    <span class="div"></span>
+    <button data-v="reports">Reports</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- ============ READINESS (HOME) ============ -->
+<section class="view on" id="readiness">
+  <div class="topline">
+    <div>
+      <h1 class="page">Examination Readiness</h1>
+      <p class="page-sub">One posture, three lenses · the executive landing for audit, risk &amp; compliance review</p>
+    </div>
+    <div class="lens" id="lens">
+      <button data-l="cco" class="on">CCO<small>compliance</small></button>
+      <button data-l="cro">CRO<small>risk</small></button>
+      <button data-l="cio">CIO<small>infrastructure</small></button>
+    </div>
+  </div>
+
+  <div class="flow">
+    <b>Flow:</b> <span>Readiness <span class="ar">→</span> see the gap</span> <span class="ar">→</span> <span>Rules / Obligations / OFAC <span class="ar">→</span> operate</span> <span class="ar">→</span> <span>Workflows <span class="ar">→</span> evidence produced</span> <span class="ar">→</span> <span>Reports <span class="ar">→</span> prove it to the examiner</span>
+  </div>
+
+  <div class="hero">
+    <div class="panel gauge-wrap">
+      <h3>Readiness score <span class="hint" id="lensLabel">compliance lens</span></h3>
+      <div class="gauge">
+        <svg width="184" height="184" viewBox="0 0 184 184">
+          <circle cx="92" cy="92" r="77" fill="none" stroke="#efeae1" stroke-width="16"/>
+          <circle cx="92" cy="92" r="77" fill="none" stroke="#c98a18" stroke-width="16" stroke-linecap="round" stroke-dasharray="484" stroke-dashoffset="184" id="gaugeArc"/>
+        </svg>
+        <div class="center"><div class="num" id="gaugeNum">62</div><div class="den">/ 100</div><div class="band" id="gaugeBand">Developing</div></div>
+      </div>
+      <div class="gauge-foot" id="gaugeBiz">Business read: <b id="gaugeDrag">24 obligations unmapped</b></div>
+    </div>
+
+    <div class="panel">
+      <h3>Risk × coverage matrix <span class="hint">where danger and gaps overlap</span></h3>
+      <div class="matrix">
+        <div></div><div class="hd">Untested</div><div class="hd">Partial</div><div class="hd">Tested</div>
+        <div class="yl">High</div>
+        <div class="cell danger"><span class="tagq">⚠ danger</span><div class="c-n">7</div><div class="c-l">high·untested</div></div>
+        <div class="cell warn"><div class="c-n">3</div><div class="c-l">high·partial</div></div>
+        <div class="cell ok"><div class="c-n">4</div><div class="c-l">high·tested</div></div>
+        <div class="yl">Med</div>
+        <div class="cell warn"><div class="c-n">12</div><div class="c-l">med·untested</div></div>
+        <div class="cell neutral"><div class="c-n">5</div><div class="c-l">med·partial</div></div>
+        <div class="cell ok"><div class="c-n">3</div><div class="c-l">med·tested</div></div>
+        <div class="yl">Low</div>
+        <div class="cell neutral"><div class="c-n">28</div><div class="c-l">low·untested</div></div>
+        <div class="cell neutral"><div class="c-n">4</div><div class="c-l">low·partial</div></div>
+        <div class="cell ok"><div class="c-n">2</div><div class="c-l">low·tested</div></div>
+      </div>
+      <div class="matrix-note"><span class="sw"></span> The red quadrant is the examiner's first finding — high-risk obligations with no tested control. Clearing these is the fastest readiness gain.</div>
+    </div>
+  </div>
+
+  <div class="dims">
+    <div class="dim a"><div class="dt">1·Obligation inventory</div><div class="dbar"><i style="width:88%"></i></div><div class="ds">88%</div></div>
+    <div class="dim a"><div class="dt">2·Control mapping</div><div class="dbar"><i style="width:71%"></i></div><div class="ds">71%</div></div>
+    <div class="dim r"><div class="dt">3·Testing &amp; rationale</div><div class="dbar"><i style="width:24%"></i></div><div class="ds">24%</div></div>
+    <div class="dim a"><div class="dt">4·Risk-assessment currency</div><div class="dbar"><i style="width:66%"></i></div><div class="ds">66%</div></div>
+    <div class="dim g"><div class="dt">5·Change management</div><div class="dbar"><i style="width:82%"></i></div><div class="ds">82%</div></div>
+    <div class="dim r"><div class="dt">6·Findings remediation</div><div class="dbar"><i style="width:45%"></i></div><div class="ds">45%</div></div>
+    <div class="dim g"><div class="dt">7·Governance evidence</div><div class="dbar"><i style="width:90%"></i></div><div class="ds">90%</div></div>
+    <div class="dim a"><div class="dt">8·Independent testing</div><div class="dbar"><i style="width:58%"></i></div><div class="ds">58%</div></div>
+    <div class="dim r"><div class="dt">9·Point-in-time reporting</div><div class="dbar"><i style="width:40%"></i></div><div class="ds">40%</div></div>
+    <div class="dim g"><div class="dt">10·Engine integrity</div><div class="dbar"><i style="width:78%"></i></div><div class="ds">78%</div></div>
+  </div>
+
+  <!-- CCO lens -->
+  <div class="lens-body on" id="cco">
+    <div class="grid2">
+      <div class="panel">
+        <h3>Coverage &amp; evidence <span class="biz">avoids MRAs &amp; manual test cost</span></h3>
+        <div class="row"><span>Obligations with passing tests</span><span class="v warn">9 / 81 · 11%</span></div>
+        <div class="row"><span>Controls mapped, awaiting test</span><span class="v">48</span></div>
+        <div class="row"><span>Obligations unmapped</span><span class="v bad">24</span></div>
+        <div class="row"><span>Changes pending your sign-off</span><span class="v warn">12</span></div>
+        <div class="row"><span>OFAC screening health</span><span class="v good">Operational ✓</span></div>
+      </div>
+      <div class="panel">
+        <h3>Open findings (MRAs) <span class="hint">most-scrutinized exam artifact</span></h3>
+        <div class="row"><span>BSA risk assessment outdated &gt;12mo</span><span class="mra open">Open · 30d</span></div>
+        <div class="row"><span>CIP documentary verification gap</span><span class="mra prog">In progress</span></div>
+        <div class="row"><span>SAR narrative quality sampling</span><span class="mra prog">In progress</span></div>
+        <div class="row"><span>OFAC list refresh cadence</span><span class="mra closed">Closed ✓</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CRO lens -->
+  <div class="lens-body" id="cro">
+    <div class="grid2">
+      <div class="panel">
+        <h3>Residual risk vs. appetite <span class="biz">board &amp; capital governance</span></h3>
+        <div class="chartrow"><span>Sanctions / OFAC</span><div class="track"><i class="r" style="width:78%"></i></div><span class="pc">78</span></div>
+        <div class="chartrow"><span>BSA / AML</span><div class="track"><i class="a" style="width:64%"></i></div><span class="pc">64</span></div>
+        <div class="chartrow"><span>Consumer / fair lending</span><div class="track"><i class="a" style="width:52%"></i></div><span class="pc">52</span></div>
+        <div class="chartrow"><span>Privacy / data</span><div class="track"><i style="width:38%"></i></div><span class="pc">38</span></div>
+        <div class="chartrow"><span>State licensing</span><div class="track"><i style="width:31%"></i></div><span class="pc">31</span></div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:6px;border-top:1px dashed var(--line);padding-top:9px;">Sanctions residual exceeds appetite (60) — driven by 7 untested high-risk obligations.</div>
+      </div>
+      <div class="panel">
+        <h3>Key risk indicators <span class="hint">90-day trend</span></h3>
+        <div class="row"><span>High-risk obligations untested</span><span class="v bad">7 ▲</span></div>
+        <div class="row"><span>Avg. days to remediate finding</span><span class="v warn">71 ▼</span></div>
+        <div class="row"><span>Overdue MRAs</span><span class="v bad">1</span></div>
+        <div class="row"><span>Coverage velocity</span><span class="v good">+14% ▲</span></div>
+        <div class="row"><span>Risk-assessment age</span><span class="v warn">13 months</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CIO lens -->
+  <div class="lens-body" id="cio">
+    <div class="grid2">
+      <div class="panel">
+        <h3>Evidence-engine integrity <span class="biz">vendor / third-party risk</span></h3>
+        <div class="row"><span>Pipeline success rate (7d)</span><span class="v good">72% ▲ +14%</span></div>
+        <div class="row"><span>Avg run duration</span><span class="v">3m 41s</span></div>
+        <div class="row"><span>Index / embedding integrity</span><span class="v good">44,008 = 44,008 ✓</span></div>
+        <div class="row"><span>Uptime (30d)</span><span class="v good">99.94%</span></div>
+        <div class="row"><span>SOC 2 / certifications</span><span class="v warn">in progress</span></div>
+      </div>
+      <div class="panel">
+        <h3>Architecture &amp; data residency <span class="biz">for bank architect / TPRM</span></h3>
+        <div class="row"><span>Deployment model</span><span class="v good">In-VPC (customer) ✓</span></div>
+        <div class="row"><span>Customer transaction data</span><span class="v good">never leaves VPC</span></div>
+        <div class="row"><span>Cross-boundary flow</span><span class="v good">compliance rules only</span></div>
+        <div class="row"><span>Connectors (JIRA / GitHub / core)</span><span class="v warn">2 / 3 healthy</span></div>
+        <div class="row"><span>RBAC + audit-trail immutability</span><span class="v good">enforced</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RULES ============ -->
+<section class="view" id="rules">
+  <h1 class="page">Rules <span class="count">· 35</span></h1>
+  <p class="page-sub">Unified ID, regulator, jurisdiction, live risk score, and documented test threshold.</p>
+  <div class="filters">
+    <span class="glab">Jurisdiction</span>
+    <div class="grp"><button class="chip on">All</button><button class="chip">Federal</button><button class="chip">State</button></div>
+    <span class="glab" style="margin-left:6px">Regulator</span>
+    <div class="grp"><button class="chip on">All</button><button class="chip">FinCEN</button><button class="chip">OCC</button><button class="chip">CFPB</button><button class="chip">FDIC</button><button class="chip">OFAC</button><button class="chip">FFIEC</button><button class="chip">CA-DFPI</button><button class="chip">TX-DOB</button><button class="chip">FL-OFR</button></div>
+  </div>
+  <div class="tablecard">
+    <table>
+      <thead><tr><th>Rule ID</th><th>Regulator</th><th>CFR</th><th>Obligation</th><th>Risk</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        <tr><td class="rid">OFAC-SCREEN-FUZZY-001</td><td><span class="reg">OFAC</span></td><td class="cfr">31 CFR 501</td><td class="ob">Fuzzy name match ≥92% triggers manual review</td><td><span class="risk hi">0.92</span></td><td><span class="st pass">Tested</span></td><td><span class="btn sm">Regenerate</span></td></tr>
+        <tr><td class="rid">OFAC-SCREEN-OWN50-001</td><td><span class="reg">OFAC</span></td><td class="cfr">50% Rule</td><td class="ob">Entity ≥50% owned by SDN party must block</td><td><span class="risk hi">0.96</span></td><td><span class="st run">Generating</span></td><td><span class="btn ghost sm">In pipeline</span></td></tr>
+        <tr><td class="rid">CA-CCPA-OPTOUT-001</td><td><span class="reg">CA-DFPI</span></td><td class="cfr">Cal.Civ §1798.120</td><td class="ob">Honor consumer opt-out of data sale</td><td><span class="risk md">0.64</span></td><td><span class="st pass">Tested</span></td><td><span class="btn sm">Regenerate</span></td></tr>
+        <tr><td class="rid">TX-MSA-LIC-001</td><td><span class="reg">TX-DOB</span></td><td class="cfr">TX Fin §151.301</td><td class="ob">Money transmission requires state license</td><td><span class="risk hi">0.81</span></td><td><span class="st pass">Tested</span></td><td><span class="btn sm">Regenerate</span></td></tr>
+        <tr><td class="rid">OCC-WIRE-SDN-001</td><td><span class="reg">OCC</span></td><td class="cfr">12 CFR 21.21</td><td class="ob">Wire to SDN individual blocked &amp; reported</td><td><span class="risk hi">0.94</span></td><td><span class="st wait">Not tested</span></td><td><span class="btn sm">Generate ↗</span><span class="btn na sm">N/A</span></td></tr>
+        <tr><td class="rid">FINCEN-CTR-AGG-001</td><td><span class="reg">FinCEN</span></td><td class="cfr">31 CFR 1010.311</td><td class="ob">Aggregate cash &gt;$10k files CTR</td><td><span class="risk md">0.75</span></td><td><span class="st wait">Not tested</span></td><td><span class="btn sm">Generate ↗</span><span class="btn na sm">N/A</span></td></tr>
+        <tr><td class="rid">FFIEC-BSA-CIP-001</td><td><span class="reg">FFIEC</span></td><td class="cfr">31 CFR 1020.220</td><td class="ob">Customer identification at account opening</td><td><span class="risk md">0.68</span></td><td><span class="st pass">Tested</span></td><td><span class="btn sm">Regenerate</span></td></tr>
+        <tr><td class="rid">FL-MSA-LIC-001</td><td><span class="reg">FL-OFR</span></td><td class="cfr">Fla.Stat §560.204</td><td class="ob">Money services business must be licensed</td><td><span class="risk hi">0.79</span></td><td><span class="st pass">Tested</span></td><td><span class="btn sm">Regenerate</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ CHANGES ============ -->
+<section class="view" id="changes">
+  <h1 class="page">Regulatory change inbox <span class="count">· 12 unique</span></h1>
+  <p class="page-sub">Deduplicated and translated to obligation impact — the change-management exam pillar.</p>
+  <div class="note-strip">8 duplicate alerts collapsed. Each card shows the <b>obligation impact</b> a CCO acts on, not the raw sentence diff.</div>
+  <div class="change high">
+    <div><div class="meta"><span class="sev high">HIGH</span><span class="badge">FFIEC</span><span class="badge">New</span></div>
+      <div class="title">CIP identity-verification requirement expanded</div>
+      <div class="desc">FFIEC-BSA-CIP-001 now requires documentary verification for beneficial owners — affects your account-opening control.<span class="magbar"><span class="mt"><i style="width:62%"></i></span> 62%</span></div>
+      <div class="foot">CHG-6A8A1B · 29/5/2026 · 3 feeds merged</div></div>
+    <span class="btn">Sign off</span>
+  </div>
+  <div class="change high">
+    <div><div class="meta"><span class="sev high">HIGH</span><span class="badge">FL-OFR</span><span class="badge">New</span></div>
+      <div class="title">Money-services licensing scope broadened</div>
+      <div class="desc">FL-MSA-001 adds virtual-currency activity to the licensable definition — review product trigger.<span class="magbar"><span class="mt"><i style="width:41%"></i></span> 41%</span></div>
+      <div class="foot">CHG-4947DF · 29/5/2026</div></div>
+    <span class="btn">Sign off</span>
+  </div>
+  <div class="change">
+    <div><div class="meta"><span class="sev med">MEDIUM</span><span class="badge">CFPB</span><span class="badge">New</span></div>
+      <div class="title">§1071 phase-in threshold clarified</div>
+      <div class="desc">Tier-1 originator threshold confirmed — reporting obligation begins this cycle.<span class="magbar"><span class="mt"><i style="width:22%"></i></span> 22%</span></div>
+      <div class="foot">CHG-B280B0 · 28/5/2026</div></div>
+    <span class="btn">Sign off</span>
+  </div>
+</section>
+
+<!-- ============ OBLIGATIONS ============ -->
+<section class="view" id="obligations">
+  <h1 class="page">Obligations <span class="count">· 81 extracted</span></h1>
+  <p class="page-sub">Every obligation attributed to a regulator — no "unknown" bucket.</p>
+  <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+    <div class="kpi"><div class="lab">Total obligations</div><div class="val">81</div><div class="cap">scored from source text</div></div>
+    <div class="kpi"><div class="lab">With test coverage</div><div class="val green">9</div><div class="cap">11% · rising as pipeline runs</div></div>
+    <div class="kpi"><div class="lab">Awaiting tests</div><div class="val amber">72</div><div class="cap">queued for generation</div></div>
+  </div>
+  <div class="panel">
+    <h3>By regulator <span class="hint">attribution enforced at intake</span></h3>
+    <div class="chartrow"><span>OCC</span><div class="track"><i style="width:90%"></i></div><span class="pc">22</span></div>
+    <div class="chartrow"><span>FFIEC</span><div class="track"><i style="width:84%"></i></div><span class="pc">20</span></div>
+    <div class="chartrow"><span>FinCEN</span><div class="track"><i style="width:50%"></i></div><span class="pc">12</span></div>
+    <div class="chartrow"><span>CFPB</span><div class="track"><i style="width:42%"></i></div><span class="pc">10</span></div>
+    <div class="chartrow"><span>CA-DFPI</span><div class="track"><i style="width:25%"></i></div><span class="pc">6</span></div>
+    <div class="chartrow"><span>FDIC</span><div class="track"><i style="width:21%"></i></div><span class="pc">5</span></div>
+    <div class="chartrow"><span>OFAC</span><div class="track"><i style="width:8%"></i></div><span class="pc">2</span></div>
+  </div>
+</section>
+
+<!-- ============ ENFORCEMENT ============ -->
+<section class="view" id="enforcement">
+  <h1 class="page">Enforcement actions <span class="count">· 361 records</span></h1>
+  <p class="page-sub">Parsed peer enforcement — real dates, named institutions, validated penalties (CRO's leading indicator).</p>
+  <div class="note-strip">Penalty parser sanity-bounded: figures above $10B held for review. Institution names now parsed (not just type).</div>
+  <div class="filters"><div class="grp"><button class="chip on">All</button><button class="chip">OCC</button><button class="chip">CFPB</button><button class="chip">FinCEN</button><button class="chip">OFAC</button></div></div>
+  <div class="tablecard">
+    <table>
+      <thead><tr><th>Date</th><th>Regulator</th><th>Action</th><th>Institution</th><th>Summary</th><th style="text-align:right">Penalty</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">2025-01-14</td><td><span class="reg">CFPB</span></td><td>Consent order</td><td>Capital One, N.A.</td><td class="ob">Alleged interest underpayment on savings</td><td style="text-align:right" class="pen">$425M <span class="flag">was $480B</span></td></tr>
+        <tr><td class="mono">2024-09-11</td><td><span class="reg">CFPB</span></td><td>Consent order</td><td>TD Bank, N.A.</td><td class="ob">Inaccurate credit-reporting practices</td><td style="text-align:right" class="pen">$28M</td></tr>
+        <tr><td class="mono">2024-10-23</td><td><span class="reg">CFPB</span></td><td>Order</td><td>Goldman Sachs Bank USA</td><td class="ob">Credit-card account management failures</td><td style="text-align:right" class="pen">$45M</td></tr>
+        <tr><td class="mono">2025-01-17</td><td><span class="reg">CFPB</span></td><td>Order</td><td>American Honda Finance</td><td class="ob">Furnishing inaccurate auto-loan data</td><td style="text-align:right" class="pen">$12.8M</td></tr>
+        <tr><td class="mono">2024-08-29</td><td><span class="reg">CFPB</span></td><td>Order</td><td>New Day Financial, LLC</td><td class="ob">Deceptive mortgage advertising</td><td style="text-align:right" class="pen">$2.25M</td></tr>
+        <tr><td class="mono">2024-06-09</td><td><span class="reg">OCC</span></td><td>Supervisory guidance</td><td>Industry-wide</td><td class="ob">Operational-resilience expectations</td><td style="text-align:right" class="pen">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ OFAC ============ -->
+<section class="view" id="ofac">
+  <h1 class="page">OFAC / SDN screening</h1>
+  <p class="page-sub">Complete, evasion-resistant, and provably current sanctions screening.</p>
+  <div class="ofac-head">
+    <div class="l"><span class="dot"></span><div class="txt"><b>Screening engine: Operational &amp; current</b><div>Complete SDN coverage · catches misspellings, aliases &amp; transliterations</div></div></div>
+    <div class="fresh">SDN list current ✓<br><b>updated 2h ago</b> · within 24h SLA</div>
+  </div>
+  <div class="caps">
+    <div class="cap-c"><div class="ic">📋</div><h4>Complete</h4><p>19,051 SDN entries · 44,008 names including all aliases — no gaps.</p></div>
+    <div class="cap-c"><div class="ic">🔍</div><h4>Evasion-resistant</h4><p>Catches typos, spelling variants, phonetic and transliterated names.</p></div>
+    <div class="cap-c"><div class="ic">⏱️</div><h4>Current</h4><p>Refreshed within 24h of every OFAC update — the metric examiners weigh.</p></div>
+  </div>
+  <details class="tech"><summary>Technical details (for IT / security &amp; bank architect review)</summary>
+    <div class="tg"><span>SDN entries: <b>19,051</b></span><span>Name variants: <b>44,008</b></span><span>Embeddings: <b>44,008 (100%)</b></span><span>Retrieval: <b>HNSW + trgm + tsv</b></span><span>Deployment: <b>in-VPC (customer)</b></span><span>Last refresh: <b>2h ago · within SLA</b></span></div>
+  </details>
+  <div class="tablecard">
+    <table>
+      <thead><tr><th>Screening control</th><th>Rule</th><th>Threshold</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="ob">Fuzzy match triggers review</td><td class="rid">OFAC-SCREEN-FUZZY-001</td><td class="mono">≥92%</td><td><span class="st pass">Passing</span></td></tr>
+        <tr><td class="ob">Clean name clears</td><td class="rid">OFAC-SCREEN-CLEAN-001</td><td class="mono">no FP</td><td><span class="st pass">Passing</span></td></tr>
+        <tr><td class="ob">≥50%-owned entity blocked</td><td class="rid">OFAC-SCREEN-OWN50-001</td><td class="mono">≥50%</td><td><span class="st run">Generating</span></td></tr>
+        <tr><td class="ob">List freshness</td><td class="rid">OFAC-SCREEN-FRESH-001</td><td class="mono">&lt;24h</td><td><span class="st pass">Passing</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ WORKFLOWS ============ -->
+<section class="view" id="workflows">
+  <h1 class="page">JIRA workflow runs <span class="count">· 20</span></h1>
+  <p class="page-sub">Each run carries duration and a failure reason — the engine that produces your evidence.</p>
+  <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+    <div class="kpi"><div class="lab">Success rate (7d)</div><div class="val green">72%<span class="trend">▲ +14%</span></div><div class="cap">trending up as parsing stabilizes</div></div>
+    <div class="kpi"><div class="lab">Avg duration</div><div class="val">3m 41s</div><div class="cap">intake → PR opened</div></div>
+    <div class="kpi"><div class="lab">Open failures</div><div class="val amber">3</div><div class="cap">diagnosed · retry available</div></div>
+  </div>
+  <div class="tablecard">
+    <table>
+      <thead><tr><th>JIRA story</th><th>Status</th><th>Started</th><th>Duration</th><th>Reason / Result</th></tr></thead>
+      <tbody>
+        <tr><td class="rid">MDP-32</td><td><span class="st pass">Completed</span></td><td class="mono">9:04 pm</td><td class="mono">3m 12s</td><td><span class="link">View PR ↗</span></td></tr>
+        <tr><td class="rid">MDP-31</td><td><span class="st pass">Completed</span></td><td class="mono">8:59 pm</td><td class="mono">4m 02s</td><td><span class="link">View PR ↗</span></td></tr>
+        <tr><td class="rid">MDP-29</td><td><span class="st fail">Failed</span></td><td class="mono">8:23 pm</td><td class="mono">0m 51s</td><td style="color:var(--muted)">Missing CFR field · <span class="link">Retry</span></td></tr>
+        <tr><td class="rid">MDP-28</td><td><span class="st fail">Failed</span></td><td class="mono">8:21 pm</td><td class="mono">1m 09s</td><td style="color:var(--muted)">Regulator unattributed · <span class="link">Retry</span></td></tr>
+        <tr><td class="rid">MDP-27</td><td><span class="st run">Running</span></td><td class="mono">8:02 pm</td><td class="mono">—</td><td style="color:var(--navy)">Agent 4 of 6…</td></tr>
+        <tr><td class="rid">MDP-25</td><td><span class="st pass">Completed</span></td><td class="mono">7:21 pm</td><td class="mono">3m 55s</td><td><span class="link">View PR ↗</span></td></tr>
+        <tr><td class="rid">MDP-23</td><td><span class="st fail">Failed</span></td><td class="mono">7:05 pm</td><td class="mono">0m 38s</td><td style="color:var(--muted)">Duplicate of MDP-22 · auto-skipped</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ REPORTS ============ -->
+<section class="view" id="reports">
+  <h1 class="page">Examination evidence &amp; reports <span class="count">· downloadable</span></h1>
+  <p class="page-sub">Frozen, dated, tamper-evident artifacts — what an exam actually runs on.</p>
+  <div class="note-strip">Each export is stamped <b>point-in-time</b> with a version hash so an examiner can prove it reflects the program as of the request date. CSV generates real files now; PDF opens a print-ready document.</div>
+  <div class="panel">
+    <div class="exp-head">
+      <div class="asof"><span>Generate “as of”:</span><input type="date" id="asofDate" value="2026-06-02"><span class="stamp" id="stamp">v.—</span></div>
+      <div style="font-size:11.5px;color:var(--faint)">Artifacts are self-contained &amp; archive-safe.</div>
+    </div>
+    <div class="exports">
+      <div class="ex req"><span class="tag req">Required</span><h4>Examiner evidence package</h4><p>PBC response: obligation inventory, mapped control, test + threshold + rationale, result, JIRA→PR trace.</p><div class="acts"><button class="pdf" onclick="genPDF('Examiner Evidence Package')">PDF</button><button class="csv" onclick="genCSV('inventory')">CSV</button></div><div class="meta">81 obligations · 9 tested</div></div>
+      <div class="ex req"><span class="tag req">Required</span><h4>OFAC screening attestation</h4><p>Dated proof of freshness within SLA, tested screening controls, completeness counts.</p><div class="acts"><button class="pdf" onclick="genPDF('OFAC Screening Attestation')">PDF</button><button class="csv" onclick="genCSV('ofac')">CSV</button></div><div class="meta">19,051 entries · 2h fresh</div></div>
+      <div class="ex"><span class="tag opt">Governance</span><h4>Board / audit-committee report</h4><p>Quarterly: coverage trend, changes signed off, open findings, OFAC health.</p><div class="acts"><button class="pdf" onclick="genPDF('Board Report')">PDF</button></div><div class="meta">Q2 2026 · risk committee</div></div>
+      <div class="ex"><span class="tag opt">Tracker</span><h4>Findings / MRA remediation</h4><p>Every finding with owner, deadline, status, evidence of closure.</p><div class="acts"><button class="pdf" onclick="genPDF('MRA Tracker')">PDF</button><button class="csv" onclick="genCSV('mra')">CSV</button></div><div class="meta">4 findings · 1 overdue</div></div>
+      <div class="ex"><span class="tag opt">Change mgmt</span><h4>Regulatory change log</h4><p>Dated, signed-off record of changes and disposition.</p><div class="acts"><button class="pdf" onclick="genPDF('Change Log')">PDF</button><button class="csv" onclick="genCSV('changes')">CSV</button></div><div class="meta">12 unique</div></div>
+      <div class="ex"><span class="tag opt">Self-assessment</span><h4>Coverage gap report</h4><p>Which obligations lack a tested control — mock-exam tool.</p><div class="acts"><button class="pdf" onclick="genPDF('Coverage Gap Report')">PDF</button><button class="csv" onclick="genCSV('gaps')">CSV</button></div><div class="meta">7 high-risk gaps</div></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+  // top nav
+  document.getElementById('nav').addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b)return;
+    document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.querySelectorAll('.view').forEach(s=>s.classList.remove('on'));
+    document.getElementById(b.dataset.v).classList.add('on');
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+  // persona lens
+  const lensData={
+    cco:{score:62,band:'Developing',color:'#c98a18',drag:'24 obligations unmapped, 12 changes unsigned',label:'compliance lens',badge:'CCO',bg:'#EAF3DE',fg:'#3B6D11',email:'cco@trial.invalid'},
+    cro:{score:54,band:'Elevated risk',color:'#c0453f',drag:'sanctions risk over appetite · 7 high-risk untested',label:'risk lens',badge:'CRO',bg:'#FAEEDA',fg:'#854F0B',email:'cro@trial.invalid'},
+    cio:{score:74,band:'Operational',color:'#1f8f63',drag:'1 connector degraded · SOC 2 pending',label:'infrastructure lens',badge:'CIO',bg:'#E6F1FB',fg:'#185FA5',email:'cio@trial.invalid'}
+  };
+  const C=2*Math.PI*77;
+  function setLens(k){
+    const d=lensData[k];
+    document.getElementById('gaugeNum').textContent=d.score;
+    document.getElementById('gaugeNum').style.color=d.color;
+    document.getElementById('gaugeBand').textContent=d.band;
+    document.getElementById('gaugeBand').style.color=d.color;
+    document.getElementById('gaugeDrag').textContent=d.drag;
+    document.getElementById('lensLabel').textContent=d.label;
+    const arc=document.getElementById('gaugeArc');arc.style.stroke=d.color;arc.style.strokeDashoffset=C*(1-d.score/100);
+    document.querySelectorAll('.lens-body').forEach(s=>s.classList.remove('on'));
+    document.getElementById(k).classList.add('on');
+    const rb=document.getElementById('roleBadge');rb.textContent=d.badge;rb.style.background=d.bg;rb.style.color=d.fg;
+    document.getElementById('roleEmail').textContent=d.email;
+  }
+  document.getElementById('lens').addEventListener('click',e=>{
+    const b=e.target.closest('button');if(!b)return;
+    document.querySelectorAll('#lens button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');setLens(b.dataset.l);
+  });
+  setLens('cco');
+  // chip toggles
+  document.querySelectorAll('.grp').forEach(g=>g.addEventListener('click',e=>{const c=e.target.closest('.chip');if(!c)return;g.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');}));
+  // exports
+  function hash(s){let h=0;for(let i=0;i<s.length;i++){h=(h<<5)-h+s.charCodeAt(i);h|=0;}return Math.abs(h).toString(16).slice(0,7).toUpperCase();}
+  function stampId(){const d=document.getElementById('asofDate').value;const id='v.'+hash(d+Date.now());document.getElementById('stamp').textContent=id;return{id,d};}
+  document.getElementById('asofDate').addEventListener('change',stampId);stampId();
+  const data={
+    inventory:[['Rule ID','Regulator','CFR','Obligation','Risk','Threshold','Status','Trace'],
+      ['OFAC-SCREEN-FUZZY-001','OFAC','31 CFR 501','Fuzzy match triggers review','0.92','>=92% similarity','Tested PASS','PR#412'],
+      ['OCC-WIRE-SDN-001','OCC','12 CFR 21.21','Wire to SDN blocked','0.94','exact+fuzzy','Not tested','—'],
+      ['FFIEC-BSA-CIP-001','FFIEC','31 CFR 1020.220','CIP at account opening','0.68','doc+non-doc','Tested PASS','PR#398']],
+    ofac:[['Control','Rule','Threshold','Result','Last run'],
+      ['Fuzzy match','OFAC-SCREEN-FUZZY-001','>=92%','PASS','2h ago'],
+      ['Clean name clears','OFAC-SCREEN-CLEAN-001','no FP','PASS','2h ago'],
+      ['List freshness','OFAC-SCREEN-FRESH-001','<24h','PASS','2h ago']],
+    mra:[['Finding','Owner','Opened','Deadline','Status','Evidence'],
+      ['BSA risk assessment outdated','CRO','2026-04-01','2026-07-02','Open','—'],
+      ['CIP documentary verification gap','CCO','2026-03-15','2026-06-15','In progress','PR#398'],
+      ['OFAC list refresh cadence','CIO','2026-02-10','2026-05-10','Closed','SLA met']],
+    changes:[['Change ID','Regulator','Rule','Impact','Magnitude','Date','Sign-off'],
+      ['CHG-6A8A1B','FFIEC','FFIEC-BSA-CIP-001','CIP verification expanded','62%','2026-05-29','Pending'],
+      ['CHG-4947DF','FL-OFR','FL-MSA-001','Licensing scope broadened','41%','2026-05-29','Pending']],
+    gaps:[['Rule ID','Regulator','Risk','Obligation','Why uncovered'],
+      ['OCC-WIRE-SDN-001','OCC','0.94','Wire to SDN blocked','No test generated'],
+      ['FINCEN-CTR-AGG-001','FinCEN','0.75','Aggregate cash CTR','No test generated']]
+  };
+  function genCSV(key){const{id,d}=stampId();const rows=data[key];const header=`# Fortress export: ${key} | AS OF ${d} | ${id} | point-in-time tamper-evident`;const csv=header+'\n'+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`fortress_${key}_${d}_${id}.csv`;a.click();URL.revokeObjectURL(a.href);}
+  function genPDF(title){const{id,d}=stampId();const w=window.open('','_blank');w.document.write(`<html><head><title>${title}</title><style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#13181f;line-height:1.6}.hd{border-bottom:2px solid #b1842f;padding-bottom:14px;margin-bottom:24px}.hd .b{color:#b1842f;font-weight:bold;font-size:13px;letter-spacing:1px}h1{font-size:24px;margin:6px 0}.stamp{font-family:monospace;font-size:11px;color:#1f8f63;background:#e2f3ea;padding:6px 10px;border-radius:6px;display:inline-block}.row{display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:8px 0}.foot{margin-top:30px;font-size:11px;color:#97a0ad;border-top:1px solid #eee;padding-top:12px;font-style:italic}@media print{button{display:none}}</style></head><body><div class="hd"><div class="b">FORTRESS LABS · EXAMINATION EVIDENCE</div><h1>${title}</h1><span class="stamp">AS OF ${d} · ${id} · point-in-time, tamper-evident</span></div><div class="row"><span>Institution</span><b>testbank</b></div><div class="row"><span>Obligations in scope</span><b>81</b></div><div class="row"><span>Controls with passing tests</span><b>9</b></div><div class="row"><span>High-risk obligations untested</span><b>7</b></div><div class="row"><span>OFAC list freshness</span><b>2h (within 24h SLA)</b></div><div class="row"><span>Open findings (MRAs)</span><b>3 (1 overdue)</b></div><p style="margin-top:24px">This artifact reflects the compliance program as of the date above. Each control links to a versioned test and pull-request trace.</p><div class="foot">Illustrative prototype. Validate against the institution's records before examiner distribution.</div><button onclick="window.print()" style="margin-top:20px;padding:10px 18px;cursor:pointer">Print / Save as PDF</button></body></html>`);w.document.close();}
+</script>
+</body>
+</html>

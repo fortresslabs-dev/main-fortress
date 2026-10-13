@@ -1,0 +1,221 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Fortress Labs - P2 per-bank exports worker (Fargate, scale-to-zero)
+  Task def + IAM role for the Playwright renderer. Invoked one-shot per
+  export request via ECS RunTask from the API. Per design doc §11.1 Q3
+  (separate worker keeps API image lean).
+
+Parameters:
+  BankId:
+    Type: String
+    AllowedPattern: "[a-z0-9]+"
+  Environment:
+    Type: String
+    Default: production
+  ImageUri:
+    Type: String
+    Description: ECR image URI for fortress/p2-exports-worker (pinned tag, NEVER :latest per feedback_p1_taskdef_semver_pinned).
+  ExportsBucketArn:
+    Type: String
+    Description: Pass via stack-import from pipeline2-exports-bucket.yml.
+  ExportsKmsKeyArn:
+    Type: String
+    Description: Pass via stack-import from pipeline2-exports-bucket.yml.
+  Cpu:
+    Type: String
+    Default: "1024"
+  Memory:
+    Type: String
+    Default: "2048"
+    Description: 2 GiB is enough for Chromium + typical 6-section template. Bump if OOM observed.
+  AuroraHost:
+    Type: String
+    Description: P2 Aurora writer endpoint (same as API TD AURORA_HOST).
+  AuroraPort:
+    Type: String
+    Default: "5432"
+  DbName:
+    Type: String
+    Default: fortress_p2
+  DbSecretArn:
+    Type: String
+    Description: >
+      Full Secrets Manager ARN incl. -XXXXXX suffix for the bank's db-password
+      secret (keys: username, password). Per feedback_ecs_secrets_arn_format
+      partial ARNs silently fail.
+  DbSecretKmsKeyArn:
+    Type: String
+    Description: >
+      KMS CMK ARN the DbSecretArn is encrypted with. Required because the
+      ECS task execution agent must kms:Decrypt the secret on startup, and
+      the managed ECSTaskExecutionRolePolicy does NOT cover customer-managed
+      Secrets Manager keys.
+  RedisHost:
+    Type: String
+    Description: ElastiCache primary endpoint (REDIS_HOST). Required because the unified Settings class hard-requires REDIS_URL even though the worker does not connect to Redis.
+  RedisAuthTokenSecretArn:
+    Type: String
+    Description: Full Secrets Manager ARN for the Redis auth token (single-key secret).
+  RedisAuthTokenKmsKeyArn:
+    Type: String
+    Description: KMS CMK ARN the Redis auth secret is encrypted with.
+
+Resources:
+  ExportsWorkerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/fortress/p2/exports-worker/${BankId}/${Environment}"
+      RetentionInDays: 2557   # 7 years per FFIEC IT Hdbk §IV (Q22)
+
+  ExportsWorkerExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ecs-tasks.amazonaws.com}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: ReadDbSecret
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource:
+                  - !Ref DbSecretArn
+                  - !Ref RedisAuthTokenSecretArn
+              - Effect: Allow
+                Action: kms:Decrypt
+                Resource:
+                  - !Ref DbSecretKmsKeyArn
+                  - !Ref RedisAuthTokenKmsKeyArn
+
+  ExportsWorkerTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "fortress-p2-${BankId}-${Environment}-exports-worker"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: {Service: ecs-tasks.amazonaws.com}
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: ExportsWriteAndRead
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # WORM PUT — note IfNotExists is enforced application-side.
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:PutObjectRetention
+                  - s3:GetObject
+                  - s3:GetObjectRetention
+                  - s3:GetObjectVersion
+                Resource: !Sub "${ExportsBucketArn}/*"
+              - Effect: Allow
+                Action: s3:ListBucket
+                Resource: !Ref ExportsBucketArn
+              # KMS for the per-bank CMK.
+              - Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:Encrypt
+                  - kms:GenerateDataKey*
+                  - kms:DescribeKey
+                Resource: !Ref ExportsKmsKeyArn
+              # Bedrock for the board-report Sonnet summariser (Q16).
+              # Marketplace per feedback_bedrock_marketplace_iam.
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:GetInferenceProfile
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - aws-marketplace:Subscribe
+                  - aws-marketplace:Unsubscribe
+                  - aws-marketplace:ViewSubscriptions
+                Resource: "*"
+              # SSM for bank profile / policy.yaml overrides.
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                  - ssm:GetParametersByPath
+                Resource:
+                  - !Sub "arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/fortress/${BankId}/*"
+
+  ExportsWorkerTaskDef:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub "fortress-p2-exports-worker-${BankId}"
+      Cpu: !Ref Cpu
+      Memory: !Ref Memory
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      ExecutionRoleArn: !GetAtt ExportsWorkerExecutionRole.Arn
+      TaskRoleArn: !GetAtt ExportsWorkerTaskRole.Arn
+      ContainerDefinitions:
+        - Name: exports-worker
+          Image: !Ref ImageUri
+          Essential: true
+          Environment:
+            - Name: PIPELINE_MODE
+              Value: pipeline2
+            - Name: CLIENT_NAME
+              Value: !Ref BankId
+            - Name: AWS_REGION
+              Value: !Ref AWS::Region
+            - Name: ENVIRONMENT
+              Value: !Ref Environment
+            - Name: EXPORTS_BUCKET
+              Value: !Sub "fortress-p2-exports-${BankId}-${Environment}"
+            - Name: EXPORTS_KMS_KEY_ARN
+              Value: !Ref ExportsKmsKeyArn
+            # Per feedback_bedrock_inference_profile_prefix — overridable
+            # via SSM at task launch.
+            - Name: BEDROCK_MODEL
+              Value: us.anthropic.claude-sonnet-4-v1:0
+            - Name: AURORA_HOST
+              Value: !Ref AuroraHost
+            - Name: AURORA_PORT
+              Value: !Ref AuroraPort
+            - Name: DB_NAME
+              Value: !Ref DbName
+            - Name: REDIS_HOST
+              Value: !Ref RedisHost
+            # Unified Settings hard-requires this in prod even though worker
+            # doesn't serve HTTP — per feedback_p2_allowed_origins_env it
+            # must be a JSON array, not a comma-list. Placeholder value
+            # because the worker doesn't accept inbound CORS.
+            - Name: ALLOWED_ORIGINS
+              Value: '["https://exports-worker.internal"]'
+          Secrets:
+            - Name: DB_USER
+              ValueFrom: !Sub "${DbSecretArn}:username::"
+            - Name: DB_PASSWORD
+              ValueFrom: !Sub "${DbSecretArn}:password::"
+            - Name: REDIS_AUTH_TOKEN
+              ValueFrom: !Ref RedisAuthTokenSecretArn
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref ExportsWorkerLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: exports-worker
+
+Outputs:
+  TaskDefArn:
+    Value: !Ref ExportsWorkerTaskDef
+    Export:
+      Name: !Sub "fortress-p2-${BankId}-${Environment}-exports-worker-td-arn"
+  TaskRoleArn:
+    Value: !GetAtt ExportsWorkerTaskRole.Arn
+    Export:
+      Name: !Sub "fortress-p2-${BankId}-${Environment}-exports-worker-role"

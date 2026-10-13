@@ -1,0 +1,58 @@
+# ─────────────────────────────────────────────────────────────────
+# Pipeline 1 — Fortress Cloud
+# Read-only compliance rules API + autonomous scraper agents
+# ─────────────────────────────────────────────────────────────────
+
+# Core Framework
+fastapi>=0.111.0
+uvicorn[standard]==0.27.0
+pydantic>=2.8.0,<3.0.0
+python-dotenv==1.0.0
+pydantic-settings>=2.0.0
+
+# Database (rules store)
+sqlalchemy==2.0.25
+alembic==1.13.1
+psycopg2-binary>=2.9.9
+asyncpg>=0.29.0
+redis==5.0.1
+pgvector>=0.2.5
+rapidfuzz>=3.6.0
+
+# AWS (Bedrock for scraper AI, S3 for rule storage)
+boto3>=1.34.131
+botocore>=1.34.131
+
+# Anthropic direct API (alternative to Bedrock)
+anthropic>=0.40.0
+
+# LangGraph Agentic Framework (scraper agents)
+langgraph==0.2.73
+langchain-core==0.3.27
+langchain-aws==0.2.9
+langchain-community==0.3.13
+langsmith==0.2.10
+
+# Web Scraping (regulation scrapers)
+requests==2.31.0
+beautifulsoup4==4.12.3
+lxml==5.1.0
+selenium==4.17.2
+
+# PDF Processing (PdfExtractionAgent — text_native / layout_aware / ocr / hybrid)
+pdfplumber>=0.11.9
+pi-heif>=0.18.0
+pdf2image>=1.17.0
+pytesseract>=0.3.10
+pypdf2==3.0.1
+
+# Data Processing
+pandas==2.2.0
+numpy==1.26.3
+
+# Requirements Connectors
+jira>=3.8.0
+
+# Logging / Config
+structlog==24.1.0
+pyyaml==6.0.1

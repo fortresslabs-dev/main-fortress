@@ -1,0 +1,1342 @@
+<title>Fortress DB Design — P1 & P2 Schema</title>
+<style>
+  :root {
+    --paper: #FBFBFD;
+    --ground-2: #F2F4F7;
+    --card: #FFFFFF;
+    --ink: #141A22;
+    --ink-soft: #4A5663;
+    --ink-faint: #7A8694;
+    --hair: #DCE1E8;
+    --hair-strong: #C3CBD6;
+    --p1: #1F4E79;
+    --p1-soft: #E9F0F8;
+    --p2: #8A5320;
+    --p2-soft: #F7EEE2;
+    --shared: #5B4B8A;
+    --shared-soft: #EEEAF6;
+    --good: #2E7D4F;
+    --warn: #9A6B00;
+    --crit: #B23A3A;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Menlo", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", "Roboto", sans-serif;
+    --serif: "Iowan Old Style", "Palatino Linotype", Georgia, "Times New Roman", serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.55;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px 120px; }
+
+  /* ---------- Masthead ---------- */
+  .masthead {
+    border-bottom: 2px solid var(--ink);
+    padding: 54px 0 26px;
+    margin-bottom: 8px;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(32px, 5vw, 52px);
+    line-height: 1.04;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    margin: 0 0 16px;
+  }
+  .standfirst {
+    font-size: 18px;
+    color: var(--ink-soft);
+    max-width: 68ch;
+    margin: 0;
+  }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 26px;
+    margin-top: 26px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--ink-faint);
+  }
+  .meta-row b { color: var(--ink-soft); font-weight: 600; }
+
+  /* ---------- Sticky nav ---------- */
+  nav.toc {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(251,251,253,0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--hair);
+    margin: 0 -28px 44px;
+    padding: 11px 28px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 4px;
+  }
+  nav.toc a {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    color: var(--ink-soft);
+    text-decoration: none;
+    padding: 4px 10px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  nav.toc a:hover { background: var(--ground-2); color: var(--ink); }
+  nav.toc a:focus-visible { outline: 2px solid var(--p1); outline-offset: 1px; }
+  nav.toc .sep { color: var(--hair-strong); align-self: center; padding: 0 2px; }
+
+  /* ---------- Section ---------- */
+  section { margin-bottom: 58px; scroll-margin-top: 64px; }
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    border-bottom: 1px solid var(--hair-strong);
+    padding-bottom: 10px;
+    margin-bottom: 8px;
+  }
+  .sec-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink-faint);
+    font-weight: 600;
+  }
+  h2 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 27px;
+    letter-spacing: -0.01em;
+    margin: 0;
+    flex: 1;
+  }
+  .sec-intro { color: var(--ink-soft); max-width: 74ch; margin: 14px 0 30px; }
+  h3.grp {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 36px 0 16px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--hair);
+  }
+
+  /* ---------- Pills / badges ---------- */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: 100px;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .pill.p1 { background: var(--p1-soft); color: var(--p1); }
+  .pill.p2 { background: var(--p2-soft); color: var(--p2); }
+  .pill.shared { background: var(--shared-soft); color: var(--shared); }
+  .pill.law { background: #EAF3EE; color: var(--good); }
+  .pill.pk { background: var(--ink); color: #fff; }
+  .pill.fk { background: #fff; color: var(--ink-soft); border: 1px solid var(--hair-strong); }
+  .pill.tiny { font-size: 10px; padding: 1px 6px; }
+
+  /* ---------- Entity card ---------- */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--hair);
+    border-radius: 7px;
+    overflow: hidden;
+    margin-bottom: 22px;
+    box-shadow: 0 1px 2px rgba(20,26,34,0.03);
+  }
+  .card.p1 { border-left: 4px solid var(--p1); }
+  .card.p2 { border-left: 4px solid var(--p2); }
+  .card.shared { border-left: 4px solid var(--shared); }
+
+  .card-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 15px 20px;
+    background: linear-gradient(0deg, var(--ground-2), #fff);
+    border-bottom: 1px solid var(--hair);
+  }
+  .tbl-name {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .card-head .mig { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); margin-left: auto; }
+  .card-body { padding: 4px 20px 18px; }
+  .purpose { color: var(--ink-soft); font-size: 14.5px; margin: 14px 0 4px; }
+
+  .usecase {
+    display: flex;
+    gap: 12px;
+    background: var(--p2-soft);
+    border-radius: 5px;
+    padding: 12px 15px;
+    margin: 14px 0 4px;
+    font-size: 14px;
+    color: #5f3c17;
+  }
+  .usecase .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--p2);
+    padding-top: 2px;
+    white-space: nowrap;
+  }
+
+  /* ---------- Column + data tables ---------- */
+  .scroll { overflow-x: auto; margin: 14px 0 2px; border: 1px solid var(--hair); border-radius: 5px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .cols th, .cols td { text-align: left; padding: 7px 12px; border-bottom: 1px solid var(--hair); vertical-align: top; }
+  .cols thead th {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    background: var(--ground-2);
+    position: sticky; top: 0;
+  }
+  .cols tr:last-child td { border-bottom: none; }
+  .cols .cn { font-family: var(--mono); font-weight: 600; color: var(--ink); white-space: nowrap; }
+  .cols .ty { font-family: var(--mono); color: var(--p1); font-size: 12px; white-space: nowrap; }
+  .card.p2 .cols .ty { color: var(--p2); }
+  .card.shared .cols .ty { color: var(--shared); }
+  .cols .nt { color: var(--ink-soft); font-size: 12.5px; }
+
+  .data-label {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 18px 0 7px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .data-label::before { content: "▸"; color: var(--hair-strong); }
+  .data { font-family: var(--mono); font-size: 12px; }
+  .data th, .data td {
+    text-align: left; padding: 6px 12px; border-bottom: 1px solid var(--hair);
+    white-space: nowrap; font-variant-numeric: tabular-nums;
+  }
+  .data thead th { background: #20303f; color: #dfe7ef; font-weight: 600; font-size: 11px; letter-spacing: 0.03em; }
+  .card.p2 .data thead th { background: #43321c; color: #f1e6d8; }
+  .data tbody tr:nth-child(even) { background: var(--ground-2); }
+  .data td.num { text-align: right; }
+  .muted { color: var(--ink-faint); }
+
+  /* ---------- Overview / callouts ---------- */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 8px 0 4px; }
+  .lane { border: 1px solid var(--hair); border-radius: 7px; padding: 20px 22px; background: var(--card); }
+  .lane.p1 { border-top: 4px solid var(--p1); }
+  .lane.p2 { border-top: 4px solid var(--p2); }
+  .lane h4 { font-family: var(--serif); font-size: 20px; margin: 0 0 4px; }
+  .lane .mode { font-family: var(--mono); font-size: 11.5px; color: var(--ink-faint); margin-bottom: 12px; }
+  .lane p { font-size: 14px; color: var(--ink-soft); margin: 0 0 12px; }
+  .lane ul { margin: 0; padding-left: 18px; font-size: 13.5px; color: var(--ink-soft); }
+  .lane li { margin-bottom: 4px; }
+
+  .note {
+    border-left: 3px solid var(--warn);
+    background: #FBF6E9;
+    padding: 13px 17px;
+    border-radius: 0 5px 5px 0;
+    font-size: 14px;
+    color: #5f4a12;
+    margin: 20px 0;
+  }
+  .note b { color: #4a3a0e; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px 22px; margin: 18px 0 0; font-size: 13px; color: var(--ink-soft); align-items: center; }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+
+  /* ---------- Relationship map ---------- */
+  .rel-note { font-size: 13px; color: var(--ink-soft); margin: 2px 0 18px; }
+  .relfk th, .relfk td { padding: 8px 13px; border-bottom: 1px solid var(--hair); text-align: left; font-size: 13px; vertical-align: top; }
+  .relfk thead th { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); background: var(--ground-2); }
+  .relfk .src, .relfk .dst { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+  .relfk .onreq { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
+  .relfk tr.cross td { background: var(--shared-soft); }
+  .arrow { color: var(--ink-faint); padding: 0 4px; }
+
+  footer { border-top: 2px solid var(--ink); margin-top: 60px; padding-top: 20px; font-size: 13px; color: var(--ink-faint); }
+  footer code { font-family: var(--mono); background: var(--ground-2); padding: 1px 5px; border-radius: 3px; }
+
+  a.anchor-link { color: var(--p1); text-decoration: none; }
+  a.anchor-link:hover { text-decoration: underline; }
+
+  @media (max-width: 720px) {
+    .split { grid-template-columns: 1fr; }
+    .wrap { padding: 0 16px 80px; }
+    nav.toc { margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+  html { scroll-behavior: smooth; }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Fortress Labs · Data Architecture Reference</p>
+    <h1>Pipeline 1 &amp; Pipeline 2 Database Design</h1>
+    <p class="standfirst">One PostgreSQL (Aurora pgvector) schema, two pipelines. Pipeline&nbsp;1 (Fortress Cloud) scrapes and publishes regulatory rules; Pipeline&nbsp;2 (bank-side) consumes them and runs the compliance program. This document inventories every table, shows BSA/AML-grounded sample rows, and maps the relationships — including the joins that cross the pipeline boundary.</p>
+    <div class="meta-row">
+      <span><b>Source of truth</b> &nbsp;src/models/database.py + migration 048</span>
+      <span><b>Engine</b> &nbsp;PostgreSQL 15 · pgvector · tsvector</span>
+      <span><b>Tables</b> &nbsp;44 public + 6 rulegen</span>
+      <span><b>Generated</b> &nbsp;2026-10-02</span>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Section navigation">
+    <a href="#overview">Overview</a>
+    <span class="sep">·</span>
+    <a href="#p1-core">P1·Rules</a>
+    <a href="#p1-ofac">P1·OFAC</a>
+    <a href="#p1-oblig">P1·Obligations</a>
+    <a href="#p1-enf">P1·Enforcement</a>
+    <a href="#p1-deadlines">P1·Deadlines</a>
+    <a href="#p1-change">P1·Change</a>
+    <a href="#p1-sync">P1·Sync</a>
+    <span class="sep">·</span>
+    <a href="#p2-screen">P2·Screening</a>
+    <a href="#p2-org">P2·Bank</a>
+    <a href="#p2-controls">P2·Controls</a>
+    <a href="#p2-findings">P2·Findings</a>
+    <a href="#p2-exports">P2·Exports</a>
+    <a href="#p2-readiness">P2·Readiness</a>
+    <span class="sep">·</span>
+    <a href="#rel">Relationships</a>
+    <a href="#rulegen">rulegen</a>
+  </nav>
+
+  <!-- ===================== OVERVIEW ===================== -->
+  <section id="overview">
+    <div class="sec-head"><span class="sec-num">00</span><h2>The two-pipeline model</h2></div>
+    <p class="sec-intro">There is a single ORM model file and a single Alembic migration chain, so <code>alembic upgrade head</code> materialises the <em>same</em> schema on either database. The pipelines differ by <em>what they write</em>, not by which tables exist. The split below is by ownership — which process is the author of record for each table.</p>
+
+    <div class="split">
+      <div class="lane p1">
+        <h4>Pipeline 1 — Fortress Cloud</h4>
+        <div class="mode">PIPELINE_MODE=pipeline1 · EventBridge → ECS scraper</div>
+        <p>Scrapes 17 federal + 5 state regulatory connectors, embeds rules with Bedrock Titan, and publishes a versioned rule corpus the banks pull from. Author of the public regulatory dataset.</p>
+        <ul>
+          <li>Writes rules, OFAC SDN data, obligations, enforcement &amp; deadlines</li>
+          <li>Owns the monotonic <b>sync_version</b> every bank replicates against</li>
+          <li>Never sees customer/transaction data</li>
+        </ul>
+      </div>
+      <div class="lane p2">
+        <h4>Pipeline 2 — Bank-side</h4>
+        <div class="mode">PIPELINE_MODE=pipeline2 · per-bank Docker / ECS</div>
+        <p>Pulls the P1 corpus, screens live transactions, runs the 6-agent test factory off JIRA, and drives the CCO exam-readiness dashboard. Author of everything bank-specific.</p>
+        <ul>
+          <li>Validators &amp; OFAC screening with full case management</li>
+          <li>Controls, tests, findings, governance evidence, signed exports</li>
+          <li>Holds PII; isolated per bank</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="note"><b>The bridge:</b> P2 replicates P1's <span class="pill p1 tiny">compliance_rules</span> + <span class="pill p1 tiny">obligations</span> locally via the sync API (keyed on <code>sync_version</code>). Most P1→P2 links are therefore <b>logical joins on business keys</b> (<code>rule_id</code>, <code>obligation_id</code>) rather than enforced foreign keys — the one hard FK that crosses the line is <code>control_obligation_mappings.obligation_id → obligations.obligation_id</code>.</p></div>
+
+    <div class="legend">
+      <span><span class="pill p1 tiny">P1</span> Fortress Cloud table</span>
+      <span><span class="pill p2 tiny">P2</span> Bank-side table</span>
+      <span><span class="pill shared tiny">SYNC</span> Shared / replicated</span>
+      <span><span class="pill pk tiny">PK</span> Primary key</span>
+      <span><span class="pill fk tiny">FK</span> Foreign key</span>
+      <span><span class="pill law tiny">LAW</span> Authority-gated field</span>
+    </div>
+  </section>
+
+  <!-- ===================== P1 CORE RULES ===================== -->
+  <section id="p1-core">
+    <div class="sec-head"><span class="sec-num">01</span><h2>P1 · Core regulatory rules</h2></div>
+    <p class="sec-intro">The published rule corpus. <code>compliance_rules</code> is the primary target of any BSA/AML ingest and the table the sync API serves to banks.</p>
+
+    <div class="card p1">
+      <div class="card-head">
+        <span class="pill p1">P1</span>
+        <span class="tbl-name">compliance_rules</span>
+        <span class="mig">47 cols · uq(rule_id, regulator, geography)</span>
+      </div>
+      <div class="card-body">
+        <p class="purpose">One row per regulatory rule served to customer agents (read-only API). Carries threshold, CFR citation, authority classification, provenance and a pgvector <code>embedding</code> + generated <code>tsv</code> for hybrid search.</p>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span></td><td class="ty">uuid</td><td class="nt">surrogate key</td></tr>
+            <tr><td class="cn">rule_id</td><td class="ty">varchar(100)</td><td class="nt">business key, e.g. OCC-BSA-CTR-001</td></tr>
+            <tr><td class="cn">regulator</td><td class="ty">varchar(50)</td><td class="nt">occ · fincen · ofac · ffiec · cfpb · nydfs …</td></tr>
+            <tr><td class="cn">category</td><td class="ty">varchar(100)</td><td class="nt">bsa_aml, section_1071 …</td></tr>
+            <tr><td class="cn">domain · rule_type</td><td class="ty">varchar</td><td class="nt">wire_transfer / ctr_filing / beneficial_ownership</td></tr>
+            <tr><td class="cn">rule_text</td><td class="ty">text</td><td class="nt">verbatim obligation text (NOT NULL)</td></tr>
+            <tr><td class="cn">threshold_amount</td><td class="ty">float</td><td class="nt">+ threshold_currency (USD)</td></tr>
+            <tr><td class="cn">cfr_citation</td><td class="ty">text</td><td class="nt">31 C.F.R. § 1010.311</td></tr>
+            <tr><td class="cn">authority_type <span class="pill law tiny">LAW</span></td><td class="ty">varchar(20)</td><td class="nt">LAW · STATUTE · GUIDANCE · INTERNAL_CONTROL</td></tr>
+            <tr><td class="cn">citation_verified</td><td class="ty">bool</td><td class="nt">LAW ⇒ must be true (authority gate)</td></tr>
+            <tr><td class="cn">source_content_hash · scraped_at</td><td class="ty">varchar · tstz</td><td class="nt">provenance anchor</td></tr>
+            <tr><td class="cn">hash · version · is_active</td><td class="ty">varchar · bigint · bool</td><td class="nt">change detection + tombstoning</td></tr>
+            <tr><td class="cn">applicability_charter / _asset_min/max / _states</td><td class="ty">jsonb · numeric</td><td class="nt">who the rule applies to</td></tr>
+            <tr><td class="cn">embedding · tsv</td><td class="ty">vector(1024) · tsvector</td><td class="nt">hybrid pgvector + BM25 search</td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample rows</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>rule_id</th><th>regulator</th><th>rule_type</th><th>threshold</th><th>cfr_citation</th><th>authority_type</th><th>verified</th></tr></thead>
+          <tbody>
+            <tr><td>OCC-BSA-CTR-001</td><td>OCC</td><td>ctr_filing</td><td class="num">10,000.00</td><td>31 CFR 1010.311</td><td>LAW</td><td>true</td></tr>
+            <tr><td>BSA-TRAVEL-001</td><td>OCC</td><td>travel_rule</td><td class="num">3,000.00</td><td>31 CFR 1010.410(f)</td><td>LAW</td><td>true</td></tr>
+            <tr><td>OCC-BSA-CDD-001</td><td>OCC</td><td>beneficial_ownership</td><td class="num">25.0</td><td>31 CFR 1010.230(d)(1)</td><td>LAW</td><td>true</td></tr>
+            <tr><td>BSA-DUALCTRL-001</td><td>OCC</td><td>dual_approval_limit</td><td class="num">10,000.00</td><td class="muted">null</td><td>INTERNAL_CONTROL</td><td>false</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p1">
+      <div class="card-head">
+        <span class="pill p1">P1</span><span class="tbl-name">compliance_rule_changes</span>
+        <span class="mig">delta log</span>
+      </div>
+      <div class="card-body">
+        <p class="purpose">Delta feed for customer-side caching — one row per added / modified / removed rule so a bank can apply an incremental sync instead of a full reload.</p>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span></td><td class="ty">uuid</td><td class="nt"></td></tr>
+            <tr><td class="cn">rule_id</td><td class="ty">varchar(100)</td><td class="nt">→ compliance_rules.rule_id (logical)</td></tr>
+            <tr><td class="cn">change_type</td><td class="ty">varchar(20)</td><td class="nt">added · modified · removed</td></tr>
+            <tr><td class="cn">old_value · new_value</td><td class="ty">json</td><td class="nt">before/after payloads</td></tr>
+            <tr><td class="cn">changed_at</td><td class="ty">timestamp</td><td class="nt">indexed</td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample rows</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>rule_id</th><th>change_type</th><th>changed_at</th></tr></thead>
+          <tbody>
+            <tr><td>OCC-BSA-CDD-001</td><td>modified</td><td>2026-09-30T02:14Z</td></tr>
+            <tr><td>NYDFS-504-002</td><td>added</td><td>2026-09-30T02:14Z</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p1">
+      <div class="card-head"><span class="pill p1">P1</span><span class="tbl-name">deleted_rules</span><span class="mig">tombstones</span></div>
+      <div class="card-body">
+        <p class="purpose">Tombstone table — when a scrape no longer finds a rule the sync API uses this so banks can deactivate the corresponding local rule. Records the version at which the rule disappeared.</p>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span></td><td class="ty">uuid</td><td class="nt"></td></tr>
+            <tr><td class="cn">rule_id</td><td class="ty">varchar(100)</td><td class="nt">indexed</td></tr>
+            <tr><td class="cn">regulator · geography</td><td class="ty">varchar</td><td class="nt"></td></tr>
+            <tr><td class="cn">deleted_at_version</td><td class="ty">bigint</td><td class="nt">sync version of removal (indexed)</td></tr>
+            <tr><td class="cn">deleted_at</td><td class="ty">timestamp</td><td class="nt"></td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample row</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>rule_id</th><th>regulator</th><th>deleted_at_version</th></tr></thead>
+          <tbody><tr><td>OCC-BSA-WIRE-001</td><td>OCC</td><td class="num">126</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== P1 OFAC ===================== -->
+  <section id="p1-ofac">
+    <div class="sec-head"><span class="sec-num">02</span><h2>P1 · OFAC &amp; sanctions</h2></div>
+    <p class="sec-intro">Sourced daily from <code>SDN_ADVANCED.XML</code>. Two representations: the canonical entry list, and a denormalised per-name-variant table carrying pgvector + tsvector for the fuzzy screener.</p>
+
+    <div class="card p1">
+      <div class="card-head"><span class="pill p1">P1</span><span class="tbl-name">ofac_sdn_entries</span><span class="mig">migration 007</span></div>
+      <div class="card-body">
+        <p class="purpose">One row per Specially Designated National — canonical identity plus aliases, addresses, ID numbers and sanctions programs.</p>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span></td><td class="ty">uuid</td><td class="nt"></td></tr>
+            <tr><td class="cn">sdn_number</td><td class="ty">varchar(50)</td><td class="nt">unique · OFAC identifier</td></tr>
+            <tr><td class="cn">entity_name</td><td class="ty">varchar(500)</td><td class="nt">indexed</td></tr>
+            <tr><td class="cn">entity_type</td><td class="ty">varchar(50)</td><td class="nt">individual · entity · vessel · aircraft</td></tr>
+            <tr><td class="cn">programs · aliases · addresses · id_numbers</td><td class="ty">json</td><td class="nt">["SDNTK"], ["SAMARK LOPEZ"] …</td></tr>
+            <tr><td class="cn">country · nationality</td><td class="ty">varchar(100)</td><td class="nt"></td></tr>
+            <tr><td class="cn">is_active · source_updated_at</td><td class="ty">bool · timestamp</td><td class="nt"></td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample row</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>sdn_number</th><th>entity_name</th><th>entity_type</th><th>programs</th><th>country</th></tr></thead>
+          <tbody><tr><td>22790</td><td>LOPEZ BELLO, Samark Jose</td><td>individual</td><td>["SDNTK"]</td><td>Venezuela</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p1">
+      <div class="card-head"><span class="pill p1">P1</span><span class="tbl-name">ofac_sdn_vectors</span><span class="mig">migration 021/022 · HNSW</span></div>
+      <div class="card-body">
+        <p class="purpose">One row <em>per name variant</em> (primary + each alias) so the screener hits a single denormalised table. <code>is_active / missed_pulls / last_seen_at</code> drive N-strikes soft-deactivation — a bad scrape must never unblock a real SDN.</p>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span></td><td class="ty">bigint</td><td class="nt">autoincrement</td></tr>
+            <tr><td class="cn">sdn_number</td><td class="ty">varchar(50)</td><td class="nt">→ ofac_sdn_entries (logical)</td></tr>
+            <tr><td class="cn">name_variant · name_normalized</td><td class="ty">text</td><td class="nt">raw + uppercased/unaccented</td></tr>
+            <tr><td class="cn">is_primary</td><td class="ty">bool</td><td class="nt">primary name vs alias</td></tr>
+            <tr><td class="cn">embedding · tsv</td><td class="ty">vector · tsvector</td><td class="nt">SQL-side (column_property)</td></tr>
+            <tr><td class="cn">is_active · missed_pulls · last_seen_at</td><td class="ty">bool · int · tstz</td><td class="nt">N-strikes lifecycle</td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample rows &nbsp;<span class="muted">· uq(sdn_number, name_normalized)</span></div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>sdn_number</th><th>name_variant</th><th>is_primary</th><th>is_active</th><th>missed_pulls</th></tr></thead>
+          <tbody>
+            <tr><td>22790</td><td>LOPEZ BELLO, Samark Jose</td><td>true</td><td>true</td><td class="num">0</td></tr>
+            <tr><td>22790</td><td>Samark Jose Lopez</td><td>false</td><td>true</td><td class="num">0</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p1">
+      <div class="card-head"><span class="pill p1">P1</span><span class="tbl-name">ofac_list_versions</span><span class="mig">migration 038</span></div>
+      <div class="card-body">
+        <p class="purpose">Source-freshness anchor — one row per (list_name, version_id) with published date, SHA-256 of the raw XML and ingestion lag. Lets P2's OFAC attestation export prove exactly which list build it screened against.</p>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span></td><td class="ty">bigserial</td><td class="nt"></td></tr>
+            <tr><td class="cn">list_name · version_id</td><td class="ty">text</td><td class="nt">uq together</td></tr>
+            <tr><td class="cn">content_sha256</td><td class="ty">char(64)</td><td class="nt">hash of raw XML</td></tr>
+            <tr><td class="cn">published_at · ingested_at</td><td class="ty">tstz</td><td class="nt">freshness + lag</td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample row</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>list_name</th><th>version_id</th><th>published_at</th><th>content_sha256</th></tr></thead>
+          <tbody><tr><td>sdn</td><td>2026-10-01T18:02Z</td><td>2026-10-01</td><td>9f2a…c41d</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== P1 OBLIGATIONS ===================== -->
+  <section id="p1-oblig">
+    <div class="sec-head"><span class="sec-num">03</span><h2>P1 · Obligations &amp; coverage</h2></div>
+    <p class="sec-intro">Bedrock decomposes each scraped rule into discrete duties. Obligations are the grain the P2 control-mapping dashboard scores against — this is where the two pipelines meet.</p>
+
+    <div class="card shared">
+      <div class="card-head"><span class="pill shared">SYNC</span><span class="tbl-name">obligations</span><span class="mig">migration 008 · replicated to P2</span></div>
+      <div class="card-body">
+        <p class="purpose">One row per discrete duty extracted from a rule (REQ-010). <code>obligation_id</code> is the join target for P2's <code>control_obligation_mappings</code> — the one enforced FK that crosses the pipeline boundary.</p>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span></td><td class="ty">uuid</td><td class="nt"></td></tr>
+            <tr><td class="cn">obligation_id</td><td class="ty">varchar(200)</td><td class="nt">unique · referenced by P2</td></tr>
+            <tr><td class="cn">regulation_id</td><td class="ty">varchar(100)</td><td class="nt">→ compliance_rules.rule_id (logical)</td></tr>
+            <tr><td class="cn">regulator · category</td><td class="ty">varchar</td><td class="nt"></td></tr>
+            <tr><td class="cn">source_text</td><td class="ty">text</td><td class="nt">verbatim duty sentence</td></tr>
+            <tr><td class="cn">obligation_type</td><td class="ty">varchar(20)</td><td class="nt">shall · must · prohibited · required · may_not</td></tr>
+            <tr><td class="cn">cfr_citation · section_reference</td><td class="ty">text</td><td class="nt"></td></tr>
+            <tr><td class="cn">has_test_coverage · test_scenario_ids</td><td class="ty">bool · jsonb</td><td class="nt">coverage tracking</td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample rows</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>obligation_id</th><th>regulation_id</th><th>obligation_type</th><th>has_test_coverage</th></tr></thead>
+          <tbody>
+            <tr><td>OB-1020.210-001</td><td>FFIEC-BSA-PILLARS</td><td>required</td><td>true</td></tr>
+            <tr><td>OB-1010.311-001</td><td>OCC-BSA-CTR-001</td><td>must</td><td>true</td></tr>
+            <tr><td>OB-1010.230-002</td><td>OCC-BSA-CDD-001</td><td>shall</td><td>false</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p1">
+      <div class="card-head"><span class="pill p1">P1</span><span class="tbl-name">coverage_snapshots</span><span class="mig">migration 008</span></div>
+      <div class="card-body">
+        <p class="purpose">Daily coverage % per regulator/category — the trend line behind the "obligations with test coverage" widget.</p>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span></td><td class="ty">uuid</td><td class="nt"></td></tr>
+            <tr><td class="cn">snapshot_date · regulator · category</td><td class="ty">date · varchar</td><td class="nt">uq together</td></tr>
+            <tr><td class="cn">total_obligations · covered_obligations</td><td class="ty">int</td><td class="nt"></td></tr>
+            <tr><td class="cn">coverage_pct</td><td class="ty">float</td><td class="nt"></td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample row</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>snapshot_date</th><th>regulator</th><th>category</th><th>total</th><th>covered</th><th>coverage_pct</th></tr></thead>
+          <tbody><tr><td>2026-10-01</td><td>OCC</td><td>bsa_aml</td><td class="num">124</td><td class="num">101</td><td class="num">81.5</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== P1 ENFORCEMENT ===================== -->
+  <section id="p1-enf">
+    <div class="sec-head"><span class="sec-num">04</span><h2>P1 · Enforcement &amp; risk</h2></div>
+    <p class="sec-intro">Scraped enforcement actions (weekly) and the risk scores derived from them, plus anonymised peer benchmarks.</p>
+
+    <div class="card p1">
+      <div class="card-head"><span class="pill p1">P1</span><span class="tbl-name">enforcement_actions</span><span class="mig">migration 009</span></div>
+      <div class="card-body">
+        <p class="purpose">Public regulatory enforcement actions (consent orders, civil money penalties) with the regulations each cited.</p>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span></td><td class="ty">uuid</td><td class="nt"></td></tr>
+            <tr><td class="cn">action_ref</td><td class="ty">varchar(200)</td><td class="nt">unique</td></tr>
+            <tr><td class="cn">regulator · action_type · action_date</td><td class="ty">varchar · date</td><td class="nt"></td></tr>
+            <tr><td class="cn">institution_type · asset_tier</td><td class="ty">varchar</td><td class="nt">peer scoping</td></tr>
+            <tr><td class="cn">regulations_cited</td><td class="ty">jsonb</td><td class="nt">["31 CFR 1020.210"]</td></tr>
+            <tr><td class="cn">penalty_amount_usd</td><td class="ty">numeric(15,2)</td><td class="nt"></td></tr>
+            <tr><td class="cn">violation_summary · source_url</td><td class="ty">text</td><td class="nt"></td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample row</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>action_ref</th><th>regulator</th><th>action_type</th><th>penalty_usd</th><th>regulations_cited</th></tr></thead>
+          <tbody><tr><td>FINCEN-2026-0042</td><td>FinCEN</td><td>civil_money_penalty</td><td class="num">15,000,000.00</td><td>["31 CFR 1020.210"]</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p1">
+      <div class="card-head"><span class="pill p1">P1</span><span class="tbl-name">enforcement_risk_scores</span><span class="mig">migration 009</span></div>
+      <div class="card-body">
+        <p class="purpose">Rolling risk score per regulation computed from action frequency, average penalty and trend — surfaced per rule on the dashboard.</p>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span></td><td class="ty">uuid</td><td class="nt"></td></tr>
+            <tr><td class="cn">regulation_id · period_months</td><td class="ty">varchar · int</td><td class="nt">uq together</td></tr>
+            <tr><td class="cn">action_count · avg_penalty_usd</td><td class="ty">int · numeric</td><td class="nt"></td></tr>
+            <tr><td class="cn">trend_direction · risk_score</td><td class="ty">varchar · float</td><td class="nt">rising/flat/falling · 0–100</td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample row</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>regulation_id</th><th>period_months</th><th>action_count</th><th>avg_penalty_usd</th><th>risk_score</th></tr></thead>
+          <tbody><tr><td>31 CFR 1020.210</td><td class="num">24</td><td class="num">7</td><td class="num">8,400,000.00</td><td class="num">86.0</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p1">
+      <div class="card-head"><span class="pill p1">P1</span><span class="tbl-name">peer_benchmarks</span><span class="mig">migration 012</span></div>
+      <div class="card-body">
+        <p class="purpose">Anonymised peer coverage percentiles by asset tier (FFIEC call-report derived) — lets a bank compare its coverage against similar institutions.</p>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span></td><td class="ty">uuid</td><td class="nt"></td></tr>
+            <tr><td class="cn">regulation_id · asset_tier · source · data_period</td><td class="ty">varchar · date</td><td class="nt">uq together</td></tr>
+            <tr><td class="cn">avg/median/top_quartile/bottom_quartile_pct</td><td class="ty">float</td><td class="nt">percentile spread</td></tr>
+            <tr><td class="cn">sample_size</td><td class="ty">int</td><td class="nt"></td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample row</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>regulation_id</th><th>asset_tier</th><th>median_pct</th><th>top_quartile_pct</th><th>sample_size</th></tr></thead>
+          <tbody><tr><td>31 CFR 1010.230</td><td>1B-10B</td><td class="num">78.0</td><td class="num">92.0</td><td class="num">41</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== P1 DEADLINES ===================== -->
+  <section id="p1-deadlines">
+    <div class="sec-head"><span class="sec-num">05</span><h2>P1 · Deadlines</h2></div>
+    <div class="card p1">
+      <div class="card-head"><span class="pill p1">P1</span><span class="tbl-name">compliance_deadlines</span><span class="mig">migration 010</span></div>
+      <div class="card-body">
+        <p class="purpose">Upcoming filing deadlines with a live <code>days_remaining</code> and coverage rollup (how many underlying obligations are tested). Seeded by P1, refreshed daily.</p>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span></td><td class="ty">uuid</td><td class="nt"></td></tr>
+            <tr><td class="cn">deadline_key</td><td class="ty">varchar(200)</td><td class="nt">unique</td></tr>
+            <tr><td class="cn">regulator · deadline_type · deadline_name</td><td class="ty">varchar · text</td><td class="nt"></td></tr>
+            <tr><td class="cn">deadline_date · days_remaining</td><td class="ty">date · int</td><td class="nt"></td></tr>
+            <tr><td class="cn">obligation_count · uncovered_obligation_count</td><td class="ty">int</td><td class="nt">readiness</td></tr>
+            <tr><td class="cn">is_recurring · recurrence_rule</td><td class="ty">bool · text</td><td class="nt"></td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample rows</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>deadline_key</th><th>regulator</th><th>deadline_date</th><th>days_remaining</th><th>uncovered</th></tr></thead>
+          <tbody>
+            <tr><td>FFIEC-CALL-2026Q3</td><td>FFIEC</td><td>2026-10-30</td><td class="num">28</td><td class="num">3</td></tr>
+            <tr><td>FINCEN-CTR-BATCH</td><td>FinCEN</td><td>2026-10-17</td><td class="num">15</td><td class="num">0</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== P1 CHANGE MGMT ===================== -->
+  <section id="p1-change">
+    <div class="sec-head"><span class="sec-num">06</span><h2>P1 · Change management</h2></div>
+    <p class="sec-intro">When a rule's content hash drifts, P1 opens a change record. The comment thread is the append-only audit trail; the record is later <em>dispositioned</em> on the bank side (see P2 §11).</p>
+
+    <div class="card shared">
+      <div class="card-head"><span class="pill shared">SYNC</span><span class="tbl-name">regulatory_change_records</span><span class="mig">migration 011/037</span></div>
+      <div class="card-body">
+        <p class="purpose">One record per detected rule mutation — before/after hashes, semantic diff, per-record <code>change_delta</code> (JSONB), impact rating and sign-off fields.</p>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span></td><td class="ty">uuid</td><td class="nt"></td></tr>
+            <tr><td class="cn">change_ref</td><td class="ty">varchar(50)</td><td class="nt">unique · CHG-2026-0412</td></tr>
+            <tr><td class="cn">rule_id · regulation_id · regulator</td><td class="ty">varchar</td><td class="nt"></td></tr>
+            <tr><td class="cn">previous_hash · new_hash</td><td class="ty">varchar(64)</td><td class="nt"></td></tr>
+            <tr><td class="cn">change_summary · semantic_diff · change_delta</td><td class="ty">text · jsonb</td><td class="nt"></td></tr>
+            <tr><td class="cn">impact_rating · change_type · status</td><td class="ty">varchar</td><td class="nt">high/med/low · detected…signed_off</td></tr>
+            <tr><td class="cn">reviewer_name · signed_off_at</td><td class="ty">varchar · tstz</td><td class="nt"></td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample row</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>change_ref</th><th>rule_id</th><th>change_type</th><th>impact_rating</th><th>status</th></tr></thead>
+          <tbody><tr><td>CHG-2026-0412</td><td>OCC-BSA-CDD-001</td><td>modified</td><td>high</td><td>detected</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p1">
+      <div class="card-head"><span class="pill p1">P1</span><span class="tbl-name">change_record_comments</span><span class="mig">FK → regulatory_change_records</span></div>
+      <div class="card-body">
+        <p class="purpose">Append-only comment / status-transition log for a change record.</p>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span></td><td class="ty">uuid</td><td class="nt"></td></tr>
+            <tr><td class="cn">change_record_id <span class="pill fk tiny">FK</span></td><td class="ty">uuid</td><td class="nt">→ regulatory_change_records.id</td></tr>
+            <tr><td class="cn">comment_type · author · author_role</td><td class="ty">varchar</td><td class="nt">comment · status_change</td></tr>
+            <tr><td class="cn">status_from · status_to</td><td class="ty">varchar</td><td class="nt">transition captured</td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample row</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>change_record_id</th><th>author</th><th>status_from</th><th>status_to</th></tr></thead>
+          <tbody><tr><td>…b1f0</td><td>j.rivera (BSA Officer)</td><td>detected</td><td>under_review</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== P1 SYNC / OPS ===================== -->
+  <section id="p1-sync">
+    <div class="sec-head"><span class="sec-num">07</span><h2>P1 · Sync, versioning &amp; ops</h2></div>
+    <p class="sec-intro">The machinery banks replicate against, plus operational tables for the scraper and API auth.</p>
+
+    <h3 class="grp">Version &amp; replication</h3>
+    <div class="card p1">
+      <div class="card-head"><span class="pill p1">P1</span><span class="tbl-name">sync_versions</span><span class="mig">single row</span></div>
+      <div class="card-body">
+        <p class="purpose">The global monotonic counter. One row (<code>id=1</code>); every scrape cycle increments <code>current_version</code>. This number is the contract between the two pipelines.</p>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>id</th><th>current_version</th><th>updated_at</th></tr></thead>
+          <tbody><tr><td class="num">1</td><td class="num">128</td><td>2026-10-02T02:11Z</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+    <div class="card p1">
+      <div class="card-head"><span class="pill p1">P1</span><span class="tbl-name">sync_metadata</span><span class="mig">per-customer</span></div>
+      <div class="card-body">
+        <p class="purpose">What version each customer last pulled — P1's view of replication lag across banks.</p>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>customer_id</th><th>last_sync_version</th><th>sync_count</th><th>last_sync_timestamp</th></tr></thead>
+          <tbody>
+            <tr><td>firstnational</td><td class="num">128</td><td class="num">412</td><td>2026-10-02T06:00Z</td></tr>
+            <tr><td>pioneer_cu</td><td class="num">126</td><td class="num">287</td><td>2026-10-01T06:00Z</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <h3 class="grp">Operations</h3>
+    <div class="card p1">
+      <div class="card-head"><span class="pill p1">P1</span><span class="tbl-name">scrape_runs</span><span class="mig">migration 018 · scrape_monitor MCP</span></div>
+      <div class="card-body">
+        <p class="purpose">One row per connector per cycle — success flag, counts and timing. Backs the CloudWatch no-run / failure alarms and Agent-1 health checks.</p>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>connector_name</th><th>success</th><th>rules_upserted</th><th>run_at</th></tr></thead>
+          <tbody>
+            <tr><td>ofac_sdn</td><td>true</td><td class="num">17,204</td><td>2026-10-02T02:03Z</td></tr>
+            <tr><td>occ_bsa</td><td>true</td><td class="num">26</td><td>2026-10-02T02:05Z</td></tr>
+            <tr><td>ffiec_bsa</td><td>false</td><td class="num">0</td><td>2026-10-02T02:06Z</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+    <div class="card p1">
+      <div class="card-head"><span class="pill p1">P1</span><span class="tbl-name">client_credentials</span><span class="mig">migration 015</span></div>
+      <div class="card-body">
+        <p class="purpose">Per-bank API key registry for sync-endpoint HMAC auth. Stores only <code>SHA-256(raw_key)</code> — never plaintext.</p>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>customer_id</th><th>bank_name</th><th>tier</th><th>is_active</th></tr></thead>
+          <tbody><tr><td>firstnational</td><td>First National Bank, N.A.</td><td>premium</td><td>true</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+    <div class="card p1">
+      <div class="card-head"><span class="pill p1">P1</span><span class="tbl-name">vocab_versions</span><span class="mig">Q18</span><span class="mig" style="margin-left:0">+ applicable_obligation_registry (043)</span></div>
+      <div class="card-body">
+        <p class="purpose"><b>vocab_versions</b> freezes the disposition/finding vocabulary (so exports are reproducible). <b>applicable_obligation_registry</b> holds the per-charter/per-tier target obligation set — the <em>denominator</em> for the P2 obligation-inventory readiness widget.</p>
+        <div class="data-label">applicable_obligation_registry — sample row</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>bank_charter</th><th>asset_tier</th><th>cfr_citation</th><th>obligation_key</th><th>is_required</th></tr></thead>
+          <tbody><tr><td>national_bank</td><td>1B-10B</td><td>31 CFR 1020.210</td><td>bsa_program_pillar_internal_controls</td><td>true</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== P2 SCREENING ===================== -->
+  <section id="p2-screen">
+    <div class="sec-head"><span class="sec-num">08</span><h2>P2 · Validation &amp; OFAC screening</h2></div>
+    <p class="sec-intro">The bank-side runtime. Validators decide allow/block/review on live transactions; every OFAC screen becomes an immutable event, and a REVIEW/HOLD opens a case with full reviewer workflow.</p>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">transaction_validations</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Wire &amp; loan validation audit.</b> When a wire or loan application hits the validator API, the allow/block/review decision and the list of rule violations are logged here (non-PII metadata only) for exam evidence and latency monitoring.</div></div>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span></td><td class="ty">uuid</td><td class="nt"></td></tr>
+            <tr><td class="cn">validation_type · action</td><td class="ty">varchar</td><td class="nt">wire_transfer/loan · allow/block/review</td></tr>
+            <tr><td class="cn">violations_count · violations</td><td class="ty">int · json</td><td class="nt">which rules fired</td></tr>
+            <tr><td class="cn">request_metadata · latency_ms</td><td class="ty">json · float</td><td class="nt">non-PII only</td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample rows</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>validation_type</th><th>action</th><th>violations_count</th><th>violations</th><th>latency_ms</th></tr></thead>
+          <tbody>
+            <tr><td>wire_transfer</td><td>review</td><td class="num">1</td><td>["BSA-TRAVEL-001"]</td><td class="num">42.0</td></tr>
+            <tr><td>wire_transfer</td><td>block</td><td class="num">1</td><td>["BSA-DUALCTRL-001-R2"]</td><td class="num">8.1</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">ofac_screenings</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Lightweight screen counter.</b> A rolling clear/block tally with matched SDN numbers only (no names) — the fast audit log that predates the richer event/case model below.</div></div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>action</th><th>match_count</th><th>matched_entries</th><th>latency_ms</th></tr></thead>
+          <tbody><tr><td>block</td><td class="num">1</td><td>["22790"]</td><td class="num">11.4</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">screening_events</span><span class="mig">migration 028</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Immutable screen-of-record.</b> One append-only row per <code>OFACScreener.screen()</code> call — the exact criteria (PII), the full engine response, the PASS/REVIEW/HOLD decision, score, engine mode and the SDN data age at screen time. This is the row an examiner reconstructs a decision from.</div></div>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span> · screening_id</td><td class="ty">uuid · varchar</td><td class="nt">screening_id unique</td></tr>
+            <tr><td class="cn">party_name · party_country · criteria</td><td class="ty">text · jsonb</td><td class="nt">PII screened</td></tr>
+            <tr><td class="cn">decision · final_score · match_count</td><td class="ty">varchar(8) · numeric</td><td class="nt">PASS · REVIEW · HOLD</td></tr>
+            <tr><td class="cn">engine_mode · engine_response</td><td class="ty">varchar · jsonb</td><td class="nt">legacy/vector · full payload</td></tr>
+            <tr><td class="cn">sdn_data_age_hours · latency_ms</td><td class="ty">numeric</td><td class="nt">freshness at screen time</td></tr>
+            <tr><td class="cn">actor_kind · actor_user_id</td><td class="ty">varchar</td><td class="nt">who initiated</td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample row</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>screening_id</th><th>party_name</th><th>decision</th><th>final_score</th><th>engine_mode</th></tr></thead>
+          <tbody><tr><td>scr_9f31…</td><td>S. J. Lopez</td><td>HOLD</td><td class="num">0.9120</td><td>vector</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">screening_cases</span><span class="mig">FK → screening_events ×2, screening_rules</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Alert disposition workflow.</b> A REVIEW/HOLD event opens a case. An analyst picks it up, works it to a <code>reviewer_action</code> (true match / false positive), and resolves it. <code>first_event_id</code>/<code>last_event_id</code> bracket the activity; <code>matched_rule_id</code> attributes which screening rule fired.</div></div>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span> · case_id</td><td class="ty">uuid · varchar</td><td class="nt"></td></tr>
+            <tr><td class="cn">sdn_number · matched_name</td><td class="ty">varchar · text</td><td class="nt">→ ofac_sdn_entries (logical)</td></tr>
+            <tr><td class="cn">status · priority · decision_at_open</td><td class="ty">varchar</td><td class="nt">open/…/resolved</td></tr>
+            <tr><td class="cn">first_event_id <span class="pill fk tiny">FK</span> · last_event_id <span class="pill fk tiny">FK</span></td><td class="ty">uuid</td><td class="nt">→ screening_events.id</td></tr>
+            <tr><td class="cn">matched_rule_id <span class="pill fk tiny">FK</span></td><td class="ty">varchar(64)</td><td class="nt">→ screening_rules.rule_id (SET NULL)</td></tr>
+            <tr><td class="cn">reviewer_action · reviewer_notes · resolved_at</td><td class="ty">varchar · text · tstz</td><td class="nt"></td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample row</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>case_id</th><th>matched_name</th><th>status</th><th>priority</th><th>matched_rule_id</th></tr></thead>
+          <tbody><tr><td>case_4471</td><td>S. J. Lopez</td><td>open</td><td>HIGH</td><td>FUZZY</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">screening_rules</span><span class="mig">migration 034</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>No-deploy rule tuning.</b> DB-backed inventory of screening rules (FUZZY, OWN50 …). Compliance can add, rename, reweight or deactivate a rule and the dashboard's rules-performance panel updates — no code release.</div></div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>rule_id</th><th>name</th><th>weight</th><th>version</th><th>is_active</th></tr></thead>
+          <tbody>
+            <tr><td>FUZZY</td><td>Fuzzy name match ≥ 85%</td><td class="num">1.00</td><td class="num">3</td><td>true</td></tr>
+            <tr><td>OWN50</td><td>OFAC 50% ownership rule</td><td class="num">0.80</td><td class="num">1</td><td>true</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">screening_case_events</span><span class="mig">join · PK(case_id,event_id)</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Re-hit linkage.</b> Associative table tying every event (initial + later re-hits of the same party) to a single case, so a recurring match doesn't open duplicate cases.</div></div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>case_id (FK→cases.id)</th><th>event_id (FK→events.id)</th><th>linked_at</th></tr></thead>
+          <tbody>
+            <tr><td>…4471</td><td>scr_9f31…</td><td>2026-10-02T14:03Z</td></tr>
+            <tr><td>…4471</td><td>scr_a802…</td><td>2026-10-03T09:12Z</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">local_sync_status</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Replication receipt.</b> Each pull from P1's sync API logs a row here — how many rules were added/updated/deleted and whether it succeeded. The <code>/health/sync</code> endpoint reads it.</div></div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>sync_version</th><th>rules_added</th><th>rules_updated</th><th>rules_deleted</th><th>sync_status</th></tr></thead>
+          <tbody><tr><td class="num">128</td><td class="num">4</td><td class="num">11</td><td class="num">1</td><td>SUCCESS</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== P2 ORG ===================== -->
+  <section id="p2-org">
+    <div class="sec-head"><span class="sec-num">09</span><h2>P2 · Bank organisation</h2></div>
+    <p class="sec-intro">The bank's own profile and the people who own controls and sign exams. Almost every other P2 table hangs off <code>bank_profile</code> and <code>bank_officers</code>.</p>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">bank_profile</span><span class="mig">migration 042 · PK bank_id</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Institution identity.</b> Charter, primary/secondary regulators, total assets and fiscal year — drives asset-tier scoping (which peer benchmarks and which applicable-obligation registry rows apply).</div></div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>bank_id</th><th>legal_name</th><th>primary_regulator</th><th>total_assets_usd</th><th>fiscal_year_end</th></tr></thead>
+          <tbody><tr><td>firstnational</td><td>First National Bank, N.A.</td><td>OCC</td><td class="num">4,200,000,000.00</td><td>2026-12-31</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">bank_officers</span><span class="mig">FK → bank_profile</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Accountable persons.</b> The BSA Officer, CCO, CRO, Internal Audit, Board Chair etc. Referenced as owners of controls and findings and as signers on exports — the human accountability chain an examiner expects.</div></div>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">person_id <span class="pill pk tiny">PK</span></td><td class="ty">uuid</td><td class="nt"></td></tr>
+            <tr><td class="cn">bank_id <span class="pill fk tiny">FK</span></td><td class="ty">varchar(80)</td><td class="nt">→ bank_profile (RESTRICT)</td></tr>
+            <tr><td class="cn">full_name · email</td><td class="ty">text</td><td class="nt"></td></tr>
+            <tr><td class="cn">role</td><td class="ty">enum officer_role_t</td><td class="nt">bsa_officer · cco · cro · internal_audit …</td></tr>
+            <tr><td class="cn">started_at · ended_at</td><td class="ty">date</td><td class="nt">tenure</td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample rows</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>full_name</th><th>role</th><th>started_at</th></tr></thead>
+          <tbody>
+            <tr><td>Jordan Rivera</td><td>bsa_officer</td><td>2024-03-01</td></tr>
+            <tr><td>Dana Osei</td><td>cco</td><td>2022-07-15</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== P2 CONTROLS ===================== -->
+  <section id="p2-controls">
+    <div class="sec-head"><span class="sec-num">10</span><h2>P2 · Controls, test factory &amp; execution</h2></div>
+    <p class="sec-intro">The bank maps P1 rules/obligations to its internal controls, the 6-agent factory generates a test per control off a JIRA story, and each run is recorded with evidence. This is the chain from regulation → control → tested evidence.</p>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">controls</span><span class="mig">FK → bank_profile, bank_officers</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Control inventory.</b> The bank's named controls, each with an owner role and owning officer. The anchor for rule mappings, tests and obligation mappings.</div></div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>control_id</th><th>name</th><th>owner_role</th><th>control_type</th></tr></thead>
+          <tbody>
+            <tr><td>CTRL-CTR-01</td><td>Currency Transaction Report filing</td><td>bsa_officer</td><td>detective</td></tr>
+            <tr><td>CTRL-WIRE-02</td><td>Wire dual-control enforcement</td><td>bsa_officer</td><td>preventive</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">control_rule_mappings</span><span class="mig">FK → controls</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Rule ↔ control crosswalk.</b> Links each control to the P1 <code>rule_id</code>(s) it satisfies, with a <code>mapping_strength</code> (full/partial). <code>superseded_at</code> preserves history instead of deleting.</div></div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>control_id</th><th>rule_id (→ P1)</th><th>mapping_strength</th><th>created_by</th></tr></thead>
+          <tbody>
+            <tr><td>CTRL-CTR-01</td><td>OCC-BSA-CTR-001</td><td>full</td><td>j.rivera</td></tr>
+            <tr><td>CTRL-WIRE-02</td><td>BSA-DUALCTRL-001</td><td>full</td><td>j.rivera</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">control_tests</span><span class="mig">FK → controls</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Generated test of record.</b> The 6-agent factory (discovery→understanding→framework→generation→validation→execution) produces a pytest for a control; the row stores the JIRA story, GitHub PR, commit hash and the threshold it tests — traced back to the source P1 rule via <code>threshold_source_rule_id</code>.</div></div>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">test_id <span class="pill pk tiny">PK</span></td><td class="ty">varchar(80)</td><td class="nt"></td></tr>
+            <tr><td class="cn">control_id <span class="pill fk tiny">FK</span></td><td class="ty">varchar(80)</td><td class="nt">→ controls (CASCADE)</td></tr>
+            <tr><td class="cn">framework · threshold_value · threshold_unit</td><td class="ty">varchar · numeric</td><td class="nt">pytest · 10000 · usd</td></tr>
+            <tr><td class="cn">threshold_source_rule_id</td><td class="ty">varchar(100)</td><td class="nt">→ P1 rule the threshold came from</td></tr>
+            <tr><td class="cn">jira_story_key · github_pr_url · commit_hash</td><td class="ty">varchar · text</td><td class="nt">provenance</td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample row</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>test_id</th><th>control_id</th><th>threshold_value</th><th>threshold_source_rule_id</th><th>jira_story_key</th></tr></thead>
+          <tbody><tr><td>TEST-CTR-01</td><td>CTRL-CTR-01</td><td class="num">10,000.0000</td><td>OCC-BSA-CTR-001</td><td>BSA-312</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">test_executions</span><span class="mig">FK → control_tests</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Evidence of testing.</b> Every run of a control test — PASS/PARTIAL/FAIL/NOT_TESTED with S3 URIs to the evidence bundle and run log. The rows that prove, at exam time, that a control was actually exercised.</div></div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>test_id</th><th>executed_at</th><th>result</th><th>evidence_s3_uri</th></tr></thead>
+          <tbody>
+            <tr><td>TEST-CTR-01</td><td>2026-09-28T03:00Z</td><td>PASS</td><td>s3://…/ctr/2026-09-28.json</td></tr>
+            <tr><td>TEST-WIRE-02</td><td>2026-09-28T03:00Z</td><td>FAIL</td><td>s3://…/wire/2026-09-28.json</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== P2 FINDINGS ===================== -->
+  <section id="p2-findings">
+    <div class="sec-head"><span class="sec-num">11</span><h2>P2 · Findings &amp; change disposition</h2></div>
+    <p class="sec-intro">Examination findings in OCC "5 Cs" form, their full edit history, and the bank's dispositions of the P1 regulatory change feed.</p>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">findings</span><span class="mig">FK → bank_officers · self-ref</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Issue management.</b> MRA/MRIA/violations tracked through the OCC 5 Cs (concern, cause, consequence, corrective action, commitment) with severity, owner, due date and a <code>repeat_of_finding_id</code> self-link to flag repeat findings — the thing examiners punish hardest.</div></div>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">finding_id <span class="pill pk tiny">PK</span></td><td class="ty">varchar(80)</td><td class="nt"></td></tr>
+            <tr><td class="cn">type · severity · status</td><td class="ty">enum</td><td class="nt">MRA/MRIA · high/med/low · open…validated_closed</td></tr>
+            <tr><td class="cn">concern · cause · consequence · corrective_action · commitment</td><td class="ty">text</td><td class="nt">OCC 5 Cs</td></tr>
+            <tr><td class="cn">owner_person_id <span class="pill fk tiny">FK</span></td><td class="ty">uuid</td><td class="nt">→ bank_officers (SET NULL)</td></tr>
+            <tr><td class="cn">repeat_of_finding_id <span class="pill fk tiny">FK</span></td><td class="ty">varchar(80)</td><td class="nt">→ findings (self, SET NULL)</td></tr>
+            <tr><td class="cn">identified_date · due_date</td><td class="ty">date</td><td class="nt"></td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample row</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>finding_id</th><th>type</th><th>severity</th><th>status</th><th>due_date</th></tr></thead>
+          <tbody><tr><td>FND-2026-014</td><td>MRA</td><td>high</td><td>open</td><td>2026-12-15</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">finding_history</span><span class="mig">FK → findings (CASCADE)</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Field-level audit.</b> One row per field change on a finding (who, when, old→new) — the defensible trail of how an MRA moved from open to closed.</div></div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>finding_id</th><th>changed_by</th><th>field</th><th>old_value</th><th>new_value</th></tr></thead>
+          <tbody><tr><td>FND-2026-014</td><td>d.osei</td><td>status</td><td>open</td><td>pending_validation</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">change_record_dispositions</span><span class="mig">FK → bank_officers · uq(bank_id,change_ref)</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Acting on regulatory change.</b> When P1 publishes a <code>regulatory_change_records</code> entry (by <code>change_ref</code>), the bank records its disposition — acknowledged / requires_action / not_applicable — with an owner and implementation link, stamped with the frozen <code>vocab_version</code>.</div></div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>change_ref (→ P1)</th><th>bank_id</th><th>disposition</th><th>status</th><th>vocab_version</th></tr></thead>
+          <tbody><tr><td>CHG-2026-0412</td><td>firstnational</td><td>requires_action</td><td>open</td><td>vocab-2026.02</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== P2 EXPORTS ===================== -->
+  <section id="p2-exports">
+    <div class="sec-head"><span class="sec-num">12</span><h2>P2 · Examination exports</h2></div>
+    <p class="sec-intro">WORM-tracked export artifacts with an e-signature chain and an access log — the regulator-facing evidence packages, built to be tamper-evident.</p>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">export_artifacts</span><span class="mig">migration 042 · WORM</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Immutable exam package.</b> A generated PDF/CSV (e.g. OFAC attestation, CCO readiness report) written once to S3 with Object-Lock retention, a content SHA-256 and a canonical-snapshot hash so the exact data behind the document can be re-proven.</div></div>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">artifact_id <span class="pill pk tiny">PK</span></td><td class="ty">uuid</td><td class="nt"></td></tr>
+            <tr><td class="cn">bank_id · type · as_of · format · version_hash</td><td class="ty">varchar · date</td><td class="nt">uq together</td></tr>
+            <tr><td class="cn">s3_bucket · s3_key · s3_version_id · kms_key_arn</td><td class="ty">text</td><td class="nt">object-locked storage</td></tr>
+            <tr><td class="cn">sha256 · snapshot_canonical_sha256</td><td class="ty">varchar(64)</td><td class="nt">tamper evidence</td></tr>
+            <tr><td class="cn">object_lock_retain_until</td><td class="ty">tstz</td><td class="nt">WORM retention</td></tr>
+            <tr><td class="cn">template_version · vocab_version · app_commit</td><td class="ty">varchar</td><td class="nt">reproducibility</td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample row</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>type</th><th>as_of</th><th>format</th><th>version_hash</th><th>retain_until</th></tr></thead>
+          <tbody><tr><td>ofac_attestation</td><td>2026-09-30</td><td>pdf</td><td>a1c93f0</td><td>2033-09-30</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">export_signoffs</span><span class="mig">FK → export_artifacts, bank_officers</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>E-signature chain.</b> One row per required signer per artifact — method (SSO/JWT/manual), IP, user-agent, JWT id and typed name. <code>uq(artifact, signer, role)</code> guarantees each role signs once.</div></div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>artifact_id</th><th>signer_role</th><th>signature_method</th><th>signed_at</th></tr></thead>
+          <tbody>
+            <tr><td>…a1c9</td><td>bsa_officer</td><td>sso_session</td><td>2026-10-01T15:04Z</td></tr>
+            <tr><td>…a1c9</td><td>cco</td><td>jwt_jti</td><td>2026-10-01T16:20Z</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">export_access_log</span><span class="mig">FK → export_artifacts</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Who opened the evidence.</b> Append-only access trail (user, IP, JWT id, HTTP status) for each download of a locked artifact.</div></div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>artifact_id</th><th>accessed_by</th><th>accessed_at</th><th>http_status</th></tr></thead>
+          <tbody><tr><td>…a1c9</td><td>examiner.occ</td><td>2026-10-05T10:11Z</td><td class="num">200</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== P2 READINESS ===================== -->
+  <section id="p2-readiness">
+    <div class="sec-head"><span class="sec-num">13</span><h2>P2 · Readiness mappings &amp; governance</h2></div>
+    <p class="sec-intro">The numerators behind the CCO dashboard's readiness dimensions. Each degrades gracefully: when unpopulated, the widget falls back to a proxy label instead of showing a false 100%.</p>
+
+    <div class="card shared">
+      <div class="card-head"><span class="pill shared">SYNC</span><span class="tbl-name">control_obligation_mappings</span><span class="mig">migration 044 · FK crosses pipelines</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Obligation coverage — the key cross-pipeline link.</b> Maps a bank's control to a P1 <code>obligation_id</code>. This is the only enforced FK from P2 into P1-authored data, and it's the numerator for <code>pct(distinct_obligations_mapped, obligations_total)</code> on the dashboard.</div></div>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span></td><td class="ty">bigint</td><td class="nt"></td></tr>
+            <tr><td class="cn">control_id <span class="pill fk tiny">FK</span></td><td class="ty">varchar(80)</td><td class="nt">→ controls (CASCADE)</td></tr>
+            <tr><td class="cn">obligation_id <span class="pill fk tiny">FK</span></td><td class="ty">varchar(200)</td><td class="nt">→ obligations (CASCADE) — <b>crosses to P1</b></td></tr>
+            <tr><td class="cn">mapping_strength · rationale</td><td class="ty">varchar · text</td><td class="nt"></td></tr>
+            <tr><td class="cn">effective_from/to · superseded_at</td><td class="ty">date · tstz</td><td class="nt">live window; never hard-delete</td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample row &nbsp;<span class="muted">· uq(bank_id, control_id, obligation_id)</span></div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>control_id</th><th>obligation_id (→ P1)</th><th>mapping_strength</th></tr></thead>
+          <tbody><tr><td>CTRL-CTR-01</td><td>OB-1010.311-001</td><td>full</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">governance_evidence</span><span class="mig">migration 045</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Governance artifacts.</b> Canonical store of board-approval / independent-test / training evidence. Live row = <code>superseded_at IS NULL</code> and inside its effective window; a partial unique index enforces one live row per (bank, evidence_type). Numerator for the governance readiness dimension.</div></div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>evidence_type</th><th>artifact_ref</th><th>attested_by</th><th>effective_from</th></tr></thead>
+          <tbody>
+            <tr><td>board_bsa_approval</td><td>minutes-2026-02.pdf</td><td>board_chair</td><td>2026-02-20</td></tr>
+            <tr><td>independent_test</td><td>audit-fy25.pdf</td><td>internal_audit</td><td>2026-01-31</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">ofac_validations</span><span class="mig">FK → bank_officers</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Periodic OFAC program validation.</b> Records each independent validation of the OFAC screening program — scope, methodology, findings summary and next-due date — with an S3 attestation. Feeds the OFAC attestation export alongside P1's <code>ofac_list_versions</code> freshness anchor.</div></div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>performed_on</th><th>scope</th><th>next_due</th><th>attestation_s3_uri</th></tr></thead>
+          <tbody><tr><td>2026-06-30</td><td>Full SDN + consolidated list screening</td><td>2026-12-31</td><td>s3://…/ofac/val-2026H1.pdf</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== P2 TEST FACTORY WORKFLOW ===================== -->
+  <section id="p2-workflow">
+    <div class="sec-head"><span class="sec-num">14</span><h2>P2 · Agent workflow (test factory)</h2></div>
+    <div class="card p2">
+      <div class="card-head"><span class="pill p2">P2</span><span class="tbl-name">workflow_executions</span><span class="mig">+ checkpoint_approvals (FK)</span></div>
+      <div class="card-body">
+        <div class="usecase"><span class="tag">Use case</span><div><b>Human-in-the-loop test generation.</b> A JIRA story kicks off the 6-agent pipeline; <code>workflow_executions</code> tracks status (pending→running→waiting_approval→completed) and <code>checkpoint_approvals</code> captures each gate a human approved/rejected before code is committed.</div></div>
+        <div class="scroll"><table class="cols">
+          <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="cn">id <span class="pill pk tiny">PK</span></td><td class="ty">uuid</td><td class="nt"></td></tr>
+            <tr><td class="cn">jira_story_id · jira_story_key</td><td class="ty">varchar</td><td class="nt"></td></tr>
+            <tr><td class="cn">rule_id</td><td class="ty">varchar(100)</td><td class="nt">→ P1 rule driving the test</td></tr>
+            <tr><td class="cn">status</td><td class="ty">enum workflowstatus</td><td class="nt">pending · running · waiting_approval · completed · failed</td></tr>
+            <tr><td class="cn">context_data · artifacts</td><td class="ty">json</td><td class="nt">agent I/O</td></tr>
+            <tr><td class="cn">checkpoints</td><td class="ty">→ checkpoint_approvals</td><td class="nt">1-to-many</td></tr>
+          </tbody>
+        </table></div>
+        <div class="data-label">Sample row</div>
+        <div class="scroll"><table class="data">
+          <thead><tr><th>jira_story_key</th><th>rule_id</th><th>status</th></tr></thead>
+          <tbody><tr><td>BSA-312</td><td>OCC-BSA-CTR-001</td><td>completed</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== RELATIONSHIPS ===================== -->
+  <section id="rel">
+    <div class="sec-head"><span class="sec-num">15</span><h2>Relationships</h2></div>
+    <p class="sec-intro">Two kinds of link. <b>Enforced FKs</b> live inside a pipeline (and one crosses into P1 data). <b>Logical joins</b> on business keys (<code>rule_id</code>, <code>obligation_id</code>, <code>sync_version</code>, <code>change_ref</code>) connect P1→P2 across the replication boundary, where a hard FK is impossible because the tables live in different databases.</p>
+
+    <h3 class="grp">Enforced foreign keys</h3>
+    <div class="scroll"><table class="relfk">
+      <thead><tr><th>Child</th><th></th><th>Parent</th><th>On delete</th><th>Pipeline</th></tr></thead>
+      <tbody>
+        <tr><td class="src">checkpoint_approvals.workflow_id</td><td class="arrow">→</td><td class="dst">workflow_executions.id</td><td class="onreq">—</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">change_record_comments.change_record_id</td><td class="arrow">→</td><td class="dst">regulatory_change_records.id</td><td class="onreq">—</td><td><span class="pill p1 tiny">P1</span></td></tr>
+        <tr><td class="src">screening_cases.first_event_id / last_event_id</td><td class="arrow">→</td><td class="dst">screening_events.id</td><td class="onreq">—</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">screening_cases.matched_rule_id</td><td class="arrow">→</td><td class="dst">screening_rules.rule_id</td><td class="onreq">SET NULL</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">screening_case_events.case_id</td><td class="arrow">→</td><td class="dst">screening_cases.id</td><td class="onreq">CASCADE</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">screening_case_events.event_id</td><td class="arrow">→</td><td class="dst">screening_events.id</td><td class="onreq">—</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">bank_officers.bank_id</td><td class="arrow">→</td><td class="dst">bank_profile.bank_id</td><td class="onreq">RESTRICT</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">controls.bank_id</td><td class="arrow">→</td><td class="dst">bank_profile.bank_id</td><td class="onreq">RESTRICT</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">controls.owner_person_id</td><td class="arrow">→</td><td class="dst">bank_officers.person_id</td><td class="onreq">SET NULL</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">control_rule_mappings.control_id</td><td class="arrow">→</td><td class="dst">controls.control_id</td><td class="onreq">CASCADE</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">control_tests.control_id</td><td class="arrow">→</td><td class="dst">controls.control_id</td><td class="onreq">CASCADE</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">test_executions.test_id</td><td class="arrow">→</td><td class="dst">control_tests.test_id</td><td class="onreq">RESTRICT</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">findings.owner_person_id</td><td class="arrow">→</td><td class="dst">bank_officers.person_id</td><td class="onreq">SET NULL</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">findings.repeat_of_finding_id</td><td class="arrow">→</td><td class="dst">findings.finding_id (self)</td><td class="onreq">SET NULL</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">finding_history.finding_id</td><td class="arrow">→</td><td class="dst">findings.finding_id</td><td class="onreq">CASCADE</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">change_record_dispositions.owner_person_id</td><td class="arrow">→</td><td class="dst">bank_officers.person_id</td><td class="onreq">SET NULL</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">ofac_validations.performed_by_person_id</td><td class="arrow">→</td><td class="dst">bank_officers.person_id</td><td class="onreq">SET NULL</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">export_signoffs.artifact_id</td><td class="arrow">→</td><td class="dst">export_artifacts.artifact_id</td><td class="onreq">RESTRICT</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">export_signoffs.signer_person_id</td><td class="arrow">→</td><td class="dst">bank_officers.person_id</td><td class="onreq">RESTRICT</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">export_access_log.artifact_id</td><td class="arrow">→</td><td class="dst">export_artifacts.artifact_id</td><td class="onreq">RESTRICT</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr><td class="src">control_obligation_mappings.control_id</td><td class="arrow">→</td><td class="dst">controls.control_id</td><td class="onreq">CASCADE</td><td><span class="pill p2 tiny">P2</span></td></tr>
+        <tr class="cross"><td class="src">control_obligation_mappings.obligation_id</td><td class="arrow">→</td><td class="dst">obligations.obligation_id</td><td class="onreq">CASCADE</td><td><span class="pill shared tiny">P2→P1</span></td></tr>
+      </tbody>
+    </table></div>
+
+    <h3 class="grp">Logical joins across the sync boundary (no enforced FK)</h3>
+    <div class="scroll"><table class="relfk">
+      <thead><tr><th>From (P2)</th><th></th><th>To (P1)</th><th>Join key</th></tr></thead>
+      <tbody>
+        <tr><td class="src">control_rule_mappings.rule_id</td><td class="arrow">⇢</td><td class="dst">compliance_rules.rule_id</td><td class="onreq">rule_id</td></tr>
+        <tr><td class="src">control_tests.threshold_source_rule_id</td><td class="arrow">⇢</td><td class="dst">compliance_rules.rule_id</td><td class="onreq">rule_id</td></tr>
+        <tr><td class="src">workflow_executions.rule_id</td><td class="arrow">⇢</td><td class="dst">compliance_rules.rule_id</td><td class="onreq">rule_id</td></tr>
+        <tr><td class="src">change_record_dispositions.change_ref</td><td class="arrow">⇢</td><td class="dst">regulatory_change_records.change_ref</td><td class="onreq">change_ref</td></tr>
+        <tr><td class="src">local_sync_status.sync_version</td><td class="arrow">⇢</td><td class="dst">sync_versions.current_version</td><td class="onreq">sync_version</td></tr>
+        <tr><td class="src">screening_cases.sdn_number</td><td class="arrow">⇢</td><td class="dst">ofac_sdn_entries.sdn_number</td><td class="onreq">sdn_number</td></tr>
+        <tr><td class="src">applicable_obligation_registry (denominator)</td><td class="arrow">⇢</td><td class="dst">obligations (numerator via control_obligation_mappings)</td><td class="onreq">cfr_citation</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3 class="grp">Within P1 — logical joins on business keys</h3>
+    <div class="scroll"><table class="relfk">
+      <thead><tr><th>From</th><th></th><th>To</th><th>Join key</th></tr></thead>
+      <tbody>
+        <tr><td class="src">obligations.regulation_id</td><td class="arrow">⇢</td><td class="dst">compliance_rules.rule_id</td><td class="onreq">rule_id</td></tr>
+        <tr><td class="src">compliance_rule_changes.rule_id</td><td class="arrow">⇢</td><td class="dst">compliance_rules.rule_id</td><td class="onreq">rule_id</td></tr>
+        <tr><td class="src">deleted_rules.rule_id</td><td class="arrow">⇢</td><td class="dst">compliance_rules.rule_id</td><td class="onreq">rule_id</td></tr>
+        <tr><td class="src">regulatory_change_records.rule_id</td><td class="arrow">⇢</td><td class="dst">compliance_rules.rule_id</td><td class="onreq">rule_id</td></tr>
+        <tr><td class="src">enforcement_risk_scores.regulation_id</td><td class="arrow">⇢</td><td class="dst">compliance_rules / enforcement_actions.regulations_cited</td><td class="onreq">regulation_id</td></tr>
+        <tr><td class="src">ofac_sdn_vectors.sdn_number</td><td class="arrow">⇢</td><td class="dst">ofac_sdn_entries.sdn_number</td><td class="onreq">sdn_number</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- ===================== RULEGEN ===================== -->
+  <section id="rulegen">
+    <div class="sec-head"><span class="sec-num">16</span><h2>Appendix · <code>rulegen</code> staging schema</h2></div>
+    <p class="sec-intro">A separate schema (migration 048) that turns CFR sections into testable rules under SME review, then promotes clean rows into <code>public.compliance_rules</code> via <code>rulegen.promote()</code>. Kept out of <code>public</code> so unreviewed rules can never leak to a customer query. <b>This is the recommended landing zone for an SME-authored BSA/AML xlsx ingest.</b></p>
+
+    <div class="scroll"><table class="relfk">
+      <thead><tr><th>Table</th><th>Grain</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td class="src">rulegen.regulations</td><td>per regulation head</td><td class="nt">REG-31-1020 · regulator, charter applicability</td></tr>
+        <tr><td class="src">rulegen.cfr_sections</td><td>per fetched section</td><td class="nt">verbatim text + content_hash + source_url (drift anchor)</td></tr>
+        <tr><td class="src">rulegen.obligations</td><td>per duty</td><td class="nt">one row per duty — NOT one per rule (watch the 1:1 collapse)</td></tr>
+        <tr><td class="src">rulegen.rules</td><td>per rule</td><td class="nt">rule_logic, evidence_source, span_verified, route, reviewed</td></tr>
+        <tr><td class="src">rulegen.runs</td><td>per batch</td><td class="nt">recall vs golden set + promote/hold verdict</td></tr>
+        <tr><td class="src">rulegen.change_records</td><td>per hash drift</td><td class="nt">nightly re-check; spans surviving/broken</td></tr>
+      </tbody>
+    </table></div>
+    <div class="note"><b>Guardrails:</b> <code>ck_law_span_verified</code> blocks any LAW rule with no verified verbatim span; <code>route ∈ {auto_promote, review, block}</code>; a trigger forbids promoting a <code>block</code> row. Views <code>v_review_queue</code>, <code>v_stale_anchors</code> and <code>v_decomposition_health</code> drive SME review and catch the 1-rule-per-obligation collapse.</div>
+  </section>
+
+  <footer>
+    <p>Derived from <code>src/models/database.py</code>, <code>scrapping/rulegen/schema/ingest.sql</code> and migrations 007–048. Sample data is illustrative and BSA/AML-grounded — not live records. Pipelines share one schema; "P1 / P2" denotes the author of record. Regenerate after any migration that alters a table above.</p>
+  </footer>
+
+</div>

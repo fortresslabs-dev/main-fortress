@@ -1,0 +1,203 @@
+name,expected_sdn,variant_class,notes
+NAJAFI HOSSEIN REZA,TBD_OPS_FILL_001,individual,synthetic seed - ops verify
+SHIRAZI FARIDEH MAHNAZ,TBD_OPS_FILL_002,individual,synthetic seed - ops verify
+KARIMI REZA MOHSEN,TBD_OPS_FILL_003,individual,synthetic seed - ops verify
+RAHIMI ESFANDIAR BAHMAN,TBD_OPS_FILL_004,individual,synthetic seed - ops verify
+JABBARI MEHRDAD HASSAN,TBD_OPS_FILL_005,individual,synthetic seed - ops verify
+ESLAMI DAVOUD BEHNAM,TBD_OPS_FILL_006,individual,synthetic seed - ops verify
+MOTAHARI FARID DARIUSH,TBD_OPS_FILL_007,individual,synthetic seed - ops verify
+KOZLOV DMITRI SERGEYEVICH,TBD_OPS_FILL_008,individual,synthetic seed - ops verify
+PETROV ALEKSEI MIKHAILOVICH,TBD_OPS_FILL_009,individual,synthetic seed - ops verify
+KIROV BORIS ANATOLYEVICH,TBD_OPS_FILL_010,individual,synthetic seed - ops verify
+VOLKOV PAVEL NIKOLAYEVICH,TBD_OPS_FILL_011,individual,synthetic seed - ops verify
+ORLOV VYACHESLAV IGOREVICH,TBD_OPS_FILL_012,individual,synthetic seed - ops verify
+SOKOLOV YURI ALEKSANDROVICH,TBD_OPS_FILL_013,individual,synthetic seed - ops verify
+RODRIGUEZ ORTIZ CARLOS EDUARDO,TBD_OPS_FILL_014,individual,synthetic seed - ops verify
+SANCHEZ MORENO ROBERTO,TBD_OPS_FILL_015,individual,synthetic seed - ops verify
+GUERRERO LOPEZ MANUEL ANTONIO,TBD_OPS_FILL_016,individual,synthetic seed - ops verify
+RAMIREZ DELGADO FERNANDO,TBD_OPS_FILL_017,individual,synthetic seed - ops verify
+VARGAS HERRERA RAFAEL,TBD_OPS_FILL_018,individual,synthetic seed - ops verify
+CHEN WEI LIANG,TBD_OPS_FILL_019,individual,synthetic seed - ops verify
+PARK JONG HWAN,TBD_OPS_FILL_020,individual,synthetic seed - ops verify
+NGUYEN TRAN VAN HUNG,TBD_OPS_FILL_021,individual,synthetic seed - ops verify
+ABDULLAH AHMED BIN SALEM,TBD_OPS_FILL_022,individual,synthetic seed - ops verify
+HASSAN MAHMOUD SAID,TBD_OPS_FILL_023,individual,synthetic seed - ops verify
+AL-SHARIF KHALID JAMAL,TBD_OPS_FILL_024,individual,synthetic seed - ops verify
+AL-MAHMOUDI BASHIR AHMED,TBD_OPS_FILL_025,individual,synthetic seed - ops verify
+SMITH JOHN ROBERT,,individual,clean counterparty - common US name
+JOHNSON MARY ELIZABETH,,individual,clean counterparty - common US name
+WILLIAMS DAVID ANDREW,,individual,clean counterparty - common US name
+BROWN JENNIFER LYNN,,individual,clean counterparty - common US name
+JONES MICHAEL JAMES,,individual,clean counterparty - common US name
+GARCIA MARIA ISABEL,,individual,clean counterparty - common Hispanic name
+MILLER ROBERT WILLIAM,,individual,clean counterparty - common US name
+DAVIS PATRICIA ANNE,,individual,clean counterparty - common US name
+WILSON CHRISTOPHER MARK,,individual,clean counterparty - common US name
+ANDERSON LINDA SUSAN,,individual,clean counterparty - common US name
+TAYLOR MATTHEW JAMES,,individual,clean counterparty - common US name
+MOORE BARBARA JEAN,,individual,clean counterparty - common US name
+JACKSON DANIEL THOMAS,,individual,clean counterparty - common US name
+MARTIN ELIZABETH ANNE,,individual,clean counterparty - common US name
+LEE BENJAMIN HOWARD,,individual,clean counterparty - common US name
+THOMPSON KAREN MICHELLE,,individual,clean counterparty - common US name
+WHITE GREGORY STEVEN,,individual,clean counterparty - common US name
+HARRIS NICOLE MARIE,,individual,clean counterparty - common US name
+CLARK JONATHAN PHILIP,,individual,clean counterparty - common US name
+LEWIS SAMANTHA ROSE,,individual,clean counterparty - common US name
+WALKER ANTHONY JOSEPH,,individual,clean counterparty - common US name
+HALL REBECCA LYNN,,individual,clean counterparty - common US name
+ALLEN STEVEN MICHAEL,,individual,clean counterparty - common US name
+YOUNG ASHLEY NICOLE,,individual,clean counterparty - common US name
+KING WILLIAM EDWARD,,individual,clean counterparty - common US name
+WRIGHT EMILY ROSE,,individual,clean counterparty - common US name
+TEHRAN MARITIME TRADING CO LTD,TBD_OPS_FILL_026,entity,synthetic seed - ops verify
+PERSIAN GULF SHIPPING HOLDINGS,TBD_OPS_FILL_027,entity,synthetic seed - ops verify
+KARAJ INDUSTRIAL DEVELOPMENT GROUP,TBD_OPS_FILL_028,entity,synthetic seed - ops verify
+ISFAHAN PETROCHEMICAL EXPORT CO,TBD_OPS_FILL_029,entity,synthetic seed - ops verify
+SHIRAZ TRADING ENTERPRISES LIMITED,TBD_OPS_FILL_030,entity,synthetic seed - ops verify
+BANDAR ABBAS LOGISTICS COMPANY,TBD_OPS_FILL_031,entity,synthetic seed - ops verify
+MAZANDARAN HOLDING GROUP,TBD_OPS_FILL_032,entity,synthetic seed - ops verify
+TABRIZ MINERALS EXPORT LLC,TBD_OPS_FILL_033,entity,synthetic seed - ops verify
+PYONGYANG GENERAL TRADING CORP,TBD_OPS_FILL_034,entity,synthetic seed - ops verify
+HAMHUNG SHIPPING ENTERPRISE,TBD_OPS_FILL_035,entity,synthetic seed - ops verify
+WONSAN MARITIME LOGISTICS,TBD_OPS_FILL_036,entity,synthetic seed - ops verify
+CHONGJIN MINERALS EXPORT GROUP,TBD_OPS_FILL_037,entity,synthetic seed - ops verify
+DAMASCUS COMMERCIAL HOLDINGS,TBD_OPS_FILL_038,entity,synthetic seed - ops verify
+ALEPPO INDUSTRIAL CORPORATION,TBD_OPS_FILL_039,entity,synthetic seed - ops verify
+LATAKIA PORT SERVICES LIMITED,TBD_OPS_FILL_040,entity,synthetic seed - ops verify
+HOMS TRADE AND INVESTMENT CO,TBD_OPS_FILL_041,entity,synthetic seed - ops verify
+CARACAS GOLD MINING CONSORTIUM,TBD_OPS_FILL_042,entity,synthetic seed - ops verify
+MARACAIBO OIL VENTURES SA,TBD_OPS_FILL_043,entity,synthetic seed - ops verify
+HAVANA COMMERCIAL EXPORTS GROUP,TBD_OPS_FILL_044,entity,synthetic seed - ops verify
+MINSK INDUSTRIAL EQUIPMENT JSC,TBD_OPS_FILL_045,entity,synthetic seed - ops verify
+ST PETERSBURG SHIPYARD LLC,TBD_OPS_FILL_046,entity,synthetic seed - ops verify
+NOVOROSSIYSK MARITIME CORP,TBD_OPS_FILL_047,entity,synthetic seed - ops verify
+KAZAN AVIATION HOLDINGS,TBD_OPS_FILL_048,entity,synthetic seed - ops verify
+YEKATERINBURG METALS GROUP OAO,TBD_OPS_FILL_049,entity,synthetic seed - ops verify
+KHARTOUM TRADING AND LOGISTICS,TBD_OPS_FILL_050,entity,synthetic seed - ops verify
+ACME WIDGETS LLC,,entity,clean counterparty - generic US small business
+SUNRISE BAKERIES INC,,entity,clean counterparty - generic US small business
+BLUE MOUNTAIN COFFEE ROASTERS,,entity,clean counterparty - generic US small business
+CASCADE TIMBER HOLDINGS LLC,,entity,clean counterparty - generic US small business
+GREENFIELD AGRICULTURAL CO-OP,,entity,clean counterparty - generic US small business
+NORTHSTAR ELECTRONICS CORPORATION,,entity,clean counterparty - generic US small business
+PACIFIC SEAFOOD DISTRIBUTORS INC,,entity,clean counterparty - generic US small business
+SUMMIT CONSULTING GROUP LLC,,entity,clean counterparty - generic US small business
+EVERGREEN PROPERTIES TRUST,,entity,clean counterparty - generic US small business
+HIGHLAND DAIRY FARMS INC,,entity,clean counterparty - generic US small business
+RIVERBEND MANUFACTURING LLC,,entity,clean counterparty - generic US small business
+QUANTUM SOFTWARE SOLUTIONS,,entity,clean counterparty - generic tech business
+GLOBAL SHIPPING SERVICES LIMITED,,entity,clean counterparty - generic with high-frequency tokens
+INTERNATIONAL TRADING CO LTD,,entity,clean counterparty - generic boilerplate-heavy
+PREMIER LOGISTICS HOLDINGS,,entity,clean counterparty - generic boilerplate-heavy
+STAR EXPORT IMPORT CORPORATION,,entity,clean counterparty - generic boilerplate-heavy
+EAGLE INDUSTRIAL ENTERPRISES,,entity,clean counterparty - generic boilerplate-heavy
+PHOENIX MARITIME GROUP INC,,entity,clean counterparty - generic boilerplate-heavy
+GOLDEN GATE FINANCIAL SERVICES,,entity,clean counterparty - generic financial business
+CAPITAL PARTNERS INVESTMENTS LLC,,entity,clean counterparty - generic financial business
+HERITAGE BANK AND TRUST,,entity,clean counterparty - generic bank
+LIBERTY MUTUAL HOLDINGS INC,,entity,clean counterparty - generic financial business
+ATLANTIC PACIFIC LOGISTICS LLC,,entity,clean counterparty - generic logistics
+CENTURY DIGITAL MEDIA CORP,,entity,clean counterparty - generic media
+HORIZON BIOTECH RESEARCH INC,,entity,clean counterparty - generic biotech
+M/V CASPIAN STAR,TBD_OPS_FILL_051,vessel,synthetic seed - ops verify
+M/V PERSIAN VOYAGER,TBD_OPS_FILL_052,vessel,synthetic seed - ops verify
+M/T GULF NAVIGATOR,TBD_OPS_FILL_053,vessel,synthetic seed - ops verify
+M/T ARABIAN DAWN,TBD_OPS_FILL_054,vessel,synthetic seed - ops verify
+M/V STRAIT OF HORMUZ,TBD_OPS_FILL_055,vessel,synthetic seed - ops verify
+M/V BUSHEHR MARINER,TBD_OPS_FILL_056,vessel,synthetic seed - ops verify
+M/T KISH ISLAND,TBD_OPS_FILL_057,vessel,synthetic seed - ops verify
+M/V QESHM TRADER,TBD_OPS_FILL_058,vessel,synthetic seed - ops verify
+M/V PYONGYANG STAR,TBD_OPS_FILL_059,vessel,synthetic seed - ops verify
+M/V WONSAN GLORY,TBD_OPS_FILL_060,vessel,synthetic seed - ops verify
+M/T NAMPO TRADER,TBD_OPS_FILL_061,vessel,synthetic seed - ops verify
+M/V CHONGJIN VOYAGER,TBD_OPS_FILL_062,vessel,synthetic seed - ops verify
+M/V LATAKIA EXPRESS,TBD_OPS_FILL_063,vessel,synthetic seed - ops verify
+M/T DAMASCUS DAWN,TBD_OPS_FILL_064,vessel,synthetic seed - ops verify
+M/V ALEPPO MARINER,TBD_OPS_FILL_065,vessel,synthetic seed - ops verify
+M/V TARTUS NAVIGATOR,TBD_OPS_FILL_066,vessel,synthetic seed - ops verify
+M/V CARACAS VOYAGER,TBD_OPS_FILL_067,vessel,synthetic seed - ops verify
+M/T ORINOCO PRIDE,TBD_OPS_FILL_068,vessel,synthetic seed - ops verify
+M/V LA GUAIRA STAR,TBD_OPS_FILL_069,vessel,synthetic seed - ops verify
+M/V MARACAIBO TRADER,TBD_OPS_FILL_070,vessel,synthetic seed - ops verify
+M/V HAVANA DAWN,TBD_OPS_FILL_071,vessel,synthetic seed - ops verify
+M/T CIENFUEGOS EXPRESS,TBD_OPS_FILL_072,vessel,synthetic seed - ops verify
+M/V VLADIVOSTOK STAR,TBD_OPS_FILL_073,vessel,synthetic seed - ops verify
+M/V SEVASTOPOL MARINER,TBD_OPS_FILL_074,vessel,synthetic seed - ops verify
+M/T KERCH NAVIGATOR,TBD_OPS_FILL_075,vessel,synthetic seed - ops verify
+M/V PACIFIC HORIZON,,vessel,clean counterparty - generic vessel
+M/V ATLANTIC VOYAGER,,vessel,clean counterparty - generic vessel
+M/T NORTH STAR,,vessel,clean counterparty - generic vessel
+M/V COASTAL TRADER,,vessel,clean counterparty - generic vessel
+M/V HARBOR MASTER,,vessel,clean counterparty - generic vessel
+M/T BLUE WAVE,,vessel,clean counterparty - generic vessel
+M/V SEA PRINCESS,,vessel,clean counterparty - generic vessel
+M/V OCEAN BREEZE,,vessel,clean counterparty - generic vessel
+M/T SUNRISE TANKER,,vessel,clean counterparty - generic vessel
+M/V GULF EXPLORER,,vessel,clean counterparty - generic vessel
+M/V BAY NAVIGATOR,,vessel,clean counterparty - generic vessel
+M/T CAPE ENDEAVOR,,vessel,clean counterparty - generic vessel
+M/V PORT ENTERPRISE,,vessel,clean counterparty - generic vessel
+M/V ISLAND VOYAGER,,vessel,clean counterparty - generic vessel
+M/T REEF MARINER,,vessel,clean counterparty - generic vessel
+M/V LAGOON STAR,,vessel,clean counterparty - generic vessel
+M/V STRAIT RUNNER,,vessel,clean counterparty - generic vessel
+M/T BAYOU TRADER,,vessel,clean counterparty - generic vessel
+M/V CHANNEL CROSSING,,vessel,clean counterparty - generic vessel
+M/V DELTA MARINER,,vessel,clean counterparty - generic vessel
+M/T SOUND EXPRESS,,vessel,clean counterparty - generic vessel
+M/V FJORD VOYAGER,,vessel,clean counterparty - generic vessel
+M/V INLET TRADER,,vessel,clean counterparty - generic vessel
+M/T BASIN STAR,,vessel,clean counterparty - generic vessel
+M/V REGION RUNNER,,vessel,clean counterparty - generic vessel
+TEHRAN MARITIME,TBD_OPS_FILL_026,alias,alias of row 51 - same expected_sdn
+TEHRAN MAR TRADING,TBD_OPS_FILL_026,alias,truncated alias of row 51
+TMTC,TBD_OPS_FILL_026,alias,acronym alias of row 51
+KARAJ INDUSTRIAL DEV,TBD_OPS_FILL_028,alias,truncated alias of row 53
+KARAJ IND DEVELOPMENT,TBD_OPS_FILL_028,alias,abbreviated alias of row 53
+ISFAHAN PETROCHEM,TBD_OPS_FILL_029,alias,truncated alias of row 54
+ISFAHAN PETRO EXPORT,TBD_OPS_FILL_029,alias,abbreviated alias of row 54
+SHIRAZ TRADING,TBD_OPS_FILL_030,alias,truncated alias of row 55
+BANDAR ABBAS LOG CO,TBD_OPS_FILL_031,alias,abbreviated alias of row 56
+PYONGYANG GTC,TBD_OPS_FILL_034,alias,acronym alias of row 59
+PYONGYANG GEN TRADING,TBD_OPS_FILL_034,alias,abbreviated alias of row 59
+HAMHUNG SHIPPING,TBD_OPS_FILL_035,alias,truncated alias of row 60
+WONSAN MARITIME,TBD_OPS_FILL_036,alias,truncated alias of row 61
+DAMASCUS COMMERCIAL,TBD_OPS_FILL_038,alias,truncated alias of row 63
+ALEPPO INDUSTRIAL,TBD_OPS_FILL_039,alias,truncated alias of row 64
+LATAKIA PORT SVC,TBD_OPS_FILL_040,alias,abbreviated alias of row 65
+HOMS TRADE INVEST,TBD_OPS_FILL_041,alias,abbreviated alias of row 66
+CARACAS GOLD MINING,TBD_OPS_FILL_042,alias,truncated alias of row 67
+MARACAIBO OIL,TBD_OPS_FILL_043,alias,truncated alias of row 68
+HAVANA COMMERCIAL,TBD_OPS_FILL_044,alias,truncated alias of row 69
+MINSK IND EQUIP,TBD_OPS_FILL_045,alias,abbreviated alias of row 70
+ST PETERSBURG SHPYRD,TBD_OPS_FILL_046,alias,abbreviated alias of row 71
+NOVOROSSIYSK MARITIME,TBD_OPS_FILL_047,alias,truncated alias of row 72
+KAZAN AVIATION,TBD_OPS_FILL_048,alias,truncated alias of row 73
+YEKATERINBURG METALS,TBD_OPS_FILL_049,alias,truncated alias of row 74
+KHARTOUM TRADING,TBD_OPS_FILL_050,alias,truncated alias of row 75
+ACME WIDGET CO,,alias,clean - looks like alias but unrelated to row 76
+SUNRISE BAKERY INC,,alias,clean - looks like alias but unrelated to row 77
+BLUE MTN COFFEE,,alias,clean - looks like alias but unrelated to row 78
+CASCADE TIMBER,,alias,clean - looks like alias but unrelated to row 79
+GREENFIELD AG CO-OP,,alias,clean - looks like alias but unrelated to row 80
+NORTHSTAR ELEC,,alias,clean - looks like alias but unrelated to row 81
+PACIFIC SEAFOOD DIST,,alias,clean - looks like alias but unrelated to row 82
+SUMMIT CONSULTING,,alias,clean - looks like alias but unrelated to row 83
+EVERGREEN PROPERTIES,,alias,clean - looks like alias but unrelated to row 84
+HIGHLAND DAIRY,,alias,clean - looks like alias but unrelated to row 85
+RIVERBEND MFG,,alias,clean - looks like alias but unrelated to row 86
+QUANTUM SW SOLUTIONS,,alias,clean - looks like alias but unrelated to row 87
+GLOBAL SHIPPING SVCS,,alias,clean - generic boilerplate that may look like alias
+INTL TRADING CO,,alias,clean - generic boilerplate that may look like alias
+PREMIER LOGISTICS,,alias,clean - generic boilerplate that may look like alias
+STAR EXPORT IMPORT,,alias,clean - generic boilerplate that may look like alias
+EAGLE INDUSTRIAL,,alias,clean - generic boilerplate that may look like alias
+PHOENIX MARITIME,,alias,clean - generic boilerplate that may look like alias
+GOLDEN GATE FINANCIAL,,alias,clean - generic boilerplate that may look like alias
+CAPITAL PARTNERS,,alias,clean - generic boilerplate that may look like alias
+HERITAGE BANK,,alias,clean - generic boilerplate that may look like alias
+LIBERTY MUTUAL,,alias,clean - generic boilerplate that may look like alias
+ATLANTIC PACIFIC LOG,,alias,clean - generic boilerplate that may look like alias
+CENTURY DIGITAL MEDIA,,alias,clean - generic boilerplate that may look like alias
+HORIZON BIOTECH,,alias,clean - generic boilerplate that may look like alias

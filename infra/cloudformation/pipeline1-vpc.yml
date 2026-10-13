@@ -1,0 +1,451 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Fortress Labs — Pipeline 1 VPC
+  Creates VPC, public/private subnets, NAT Gateway, security groups,
+  and all VPC endpoints required by the P1 scraper ECS task.
+  No EC2 instances — Fargate only.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: [production, staging]
+  VpcCidr:
+    Type: String
+    Default: "10.1.0.0/16"
+  PublicSubnetACidr:
+    Type: String
+    Default: "10.1.0.0/24"
+  PublicSubnetBCidr:
+    Type: String
+    Default: "10.1.1.0/24"
+  PrivateSubnetACidr:
+    Type: String
+    Default: "10.1.10.0/24"
+  PrivateSubnetBCidr:
+    Type: String
+    Default: "10.1.11.0/24"
+
+Resources:
+
+  # ── VPC ────────────────────────────────────────────────────────────
+  FortressVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p1-vpc-${Environment}
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p1-igw-${Environment}
+
+  GatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref FortressVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # ── Subnets ────────────────────────────────────────────────────────
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref FortressVPC
+      CidrBlock: !Ref PublicSubnetACidr
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p1-public-a-${Environment}
+
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref FortressVPC
+      CidrBlock: !Ref PublicSubnetBCidr
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p1-public-b-${Environment}
+
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref FortressVPC
+      CidrBlock: !Ref PrivateSubnetACidr
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p1-private-a-${Environment}
+
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref FortressVPC
+      CidrBlock: !Ref PrivateSubnetBCidr
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p1-private-b-${Environment}
+
+  # ── NAT Gateway (for scraper egress to regulatory sites) ───────────
+  EipNat:
+    Type: AWS::EC2::EIP
+    DependsOn: GatewayAttachment
+    Properties:
+      Domain: vpc
+
+  NatGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt EipNat.AllocationId
+      SubnetId: !Ref PublicSubnetA
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p1-nat-${Environment}
+
+  # ── Route tables ───────────────────────────────────────────────────
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref FortressVPC
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: GatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetARouteAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetBRouteAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetB
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref FortressVPC
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: "0.0.0.0/0"
+      NatGatewayId: !Ref NatGateway
+
+  PrivateSubnetARouteAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetA
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnetBRouteAssoc:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetB
+      RouteTableId: !Ref PrivateRouteTable
+
+  # ── Security Groups ────────────────────────────────────────────────
+  SgAlb:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: P1 ALB - sync API inbound
+      VpcId: !Ref FortressVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: "0.0.0.0/0"
+          Description: HTTPS from bank P2 instances
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: "0.0.0.0/0"
+          Description: HTTP redirect only
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p1-sg-alb-${Environment}
+
+  # SgEcs declares only the rules that do NOT cross-reference other SGs in this
+  # template. Cross-SG rules (to SgAurora / SgRedis) are declared below as
+  # standalone AWS::EC2::SecurityGroupEgress resources to avoid a CFN cycle.
+  SgEcs:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: P1 ECS Fargate task
+      VpcId: !Ref FortressVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
+          SourceSecurityGroupId: !Ref SgAlb
+          Description: API from ALB only
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: "0.0.0.0/0"
+          Description: Outbound HTTPS (regulatory sites via NAT + VPC endpoints)
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p1-sg-ecs-${Environment}
+
+  SgEcsEgressToAurora:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref SgEcs
+      IpProtocol: tcp
+      FromPort: 5432
+      ToPort: 5432
+      DestinationSecurityGroupId: !Ref SgAurora
+      Description: Aurora PostgreSQL
+
+  SgEcsEgressToRedis:
+    Type: AWS::EC2::SecurityGroupEgress
+    Properties:
+      GroupId: !Ref SgEcs
+      IpProtocol: tcp
+      FromPort: 6379
+      ToPort: 6379
+      DestinationSecurityGroupId: !Ref SgRedis
+      Description: ElastiCache Redis (TLS-in-transit on default port 6379)
+
+  SgAurora:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: P1 Aurora PostgreSQL
+      VpcId: !Ref FortressVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref SgEcs
+          Description: ECS task only
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p1-sg-aurora-${Environment}
+
+  SgRedis:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: P1 ElastiCache Redis
+      VpcId: !Ref FortressVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 6379
+          ToPort: 6379
+          SourceSecurityGroupId: !Ref SgEcs
+          Description: ECS task only (ElastiCache default port; TransitEncryption enabled on cluster)
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p1-sg-redis-${Environment}
+
+  SgVpcEndpoints:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: VPC Interface Endpoints
+      VpcId: !Ref FortressVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !Ref SgEcs
+          Description: ECS to AWS services via endpoints
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p1-sg-endpoints-${Environment}
+
+  # ── VPC Endpoints (keeps AWS API calls off NAT, saves cost) ────────
+  VpcEndpointS3:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      VpcEndpointType: Gateway
+      VpcId: !Ref FortressVPC
+      RouteTableIds:
+        - !Ref PrivateRouteTable
+
+  VpcEndpointBedrock:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.bedrock-runtime
+      VpcEndpointType: Interface
+      VpcId: !Ref FortressVPC
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref SgVpcEndpoints]
+      PrivateDnsEnabled: true
+
+  VpcEndpointSsm:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ssm
+      VpcEndpointType: Interface
+      VpcId: !Ref FortressVPC
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref SgVpcEndpoints]
+      PrivateDnsEnabled: true
+
+  VpcEndpointSecrets:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.secretsmanager
+      VpcEndpointType: Interface
+      VpcId: !Ref FortressVPC
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref SgVpcEndpoints]
+      PrivateDnsEnabled: true
+
+  VpcEndpointCwLogs:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.logs
+      VpcEndpointType: Interface
+      VpcId: !Ref FortressVPC
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref SgVpcEndpoints]
+      PrivateDnsEnabled: true
+
+  VpcEndpointEcrDkr:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.dkr
+      VpcEndpointType: Interface
+      VpcId: !Ref FortressVPC
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref SgVpcEndpoints]
+      PrivateDnsEnabled: true
+
+  VpcEndpointEcrApi:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.ecr.api
+      VpcEndpointType: Interface
+      VpcId: !Ref FortressVPC
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref SgVpcEndpoints]
+      PrivateDnsEnabled: true
+
+  VpcEndpointSts:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.sts
+      VpcEndpointType: Interface
+      VpcId: !Ref FortressVPC
+      SubnetIds: [!Ref PrivateSubnetA, !Ref PrivateSubnetB]
+      SecurityGroupIds: [!Ref SgVpcEndpoints]
+      PrivateDnsEnabled: true
+
+  # ── VPC Flow Logs (FTR §13.1 B1; tracker #11) ──────────────────────
+  # Captures ACCEPT + REJECT at 1-min aggregation. 365d retention matches
+  # the org-wide CW retention target (tracker Phase 3 #17). Default
+  # CW-managed encryption — switch to CMK if FTR reviewers ask.
+  FlowLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/vpc/flowlogs/fortress-p1-${Environment}
+      RetentionInDays: 365
+
+  FlowLogRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: vpc-flow-logs.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: vpc-flow-logs-cwl
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !GetAtt FlowLogGroup.Arn
+              - Effect: Allow
+                Action:
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                Resource: "*"
+
+  FlowLog:
+    Type: AWS::EC2::FlowLog
+    Properties:
+      ResourceType: VPC
+      ResourceId: !Ref FortressVPC
+      TrafficType: ALL
+      LogDestinationType: cloud-watch-logs
+      LogGroupName: !Ref FlowLogGroup
+      DeliverLogsPermissionArn: !GetAtt FlowLogRole.Arn
+      MaxAggregationInterval: 60
+      Tags:
+        - Key: Name
+          Value: !Sub fortress-p1-flowlog-${Environment}
+
+Outputs:
+  VpcId:
+    Value: !Ref FortressVPC
+    Export:
+      Name: !Sub FortressP1-${Environment}-VpcId
+  PublicSubnetA:
+    Value: !Ref PublicSubnetA
+    Export:
+      Name: !Sub FortressP1-${Environment}-PublicSubnetA
+  PublicSubnetB:
+    Value: !Ref PublicSubnetB
+    Export:
+      Name: !Sub FortressP1-${Environment}-PublicSubnetB
+  PrivateSubnetA:
+    Value: !Ref PrivateSubnetA
+    Export:
+      Name: !Sub FortressP1-${Environment}-PrivateSubnetA
+  PrivateSubnetB:
+    Value: !Ref PrivateSubnetB
+    Export:
+      Name: !Sub FortressP1-${Environment}-PrivateSubnetB
+  SgAlb:
+    Value: !Ref SgAlb
+    Export:
+      Name: !Sub FortressP1-${Environment}-SgAlb
+  SgEcs:
+    Value: !Ref SgEcs
+    Export:
+      Name: !Sub FortressP1-${Environment}-SgEcs
+  SgAurora:
+    Value: !Ref SgAurora
+    Export:
+      Name: !Sub FortressP1-${Environment}-SgAurora
+  SgRedis:
+    Value: !Ref SgRedis
+    Export:
+      Name: !Sub FortressP1-${Environment}-SgRedis
+  FlowLogGroup:
+    Value: !Ref FlowLogGroup
+    Description: VPC Flow Logs CloudWatch log group
+    Export:
+      Name: !Sub FortressP1-${Environment}-FlowLogGroup
+  FlowLogGroupArn:
+    Value: !GetAtt FlowLogGroup.Arn
+    Export:
+      Name: !Sub FortressP1-${Environment}-FlowLogGroupArn

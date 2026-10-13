@@ -1,0 +1,193 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Fortress Labs - P2 per-bank exports bucket (WORM)
+  S3 + Object Lock COMPLIANCE + per-bank KMS CMK + CloudTrail data events.
+  Per design doc §5.3 (Q4, Q7, Q8, Q22). One stack per bank — naming
+  fortress-p2-exports-{bank}-{env}. COMPLIANCE mode means even root cannot
+  delete inside the retention window (default 5y / 1825 days, FFIEC BSA +
+  OFAC 5-year recordkeeping).
+
+Parameters:
+  BankId:
+    Type: String
+    AllowedPattern: "[a-z0-9]+"
+    Description: Bank slug (matches existing P2 stack BankId).
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: [production, staging]
+  RetentionDays:
+    Type: Number
+    Default: 1825
+    MinValue: 1
+    Description: >
+      Default Object Lock retention in days. 1825 = 5 years per FFIEC BSA
+      + OFAC 5-yr recordkeeping. Per-object retention may extend this but
+      cannot reduce it.
+  CloudTrailLogBucket:
+    Type: String
+    Description: >
+      Existing CloudTrail bucket name to receive data-events from this
+      exports bucket (audit trail outside DB per Q22). Pass empty string
+      to skip the data-events config (e.g. shared trail in another stack).
+    Default: ""
+
+Conditions:
+  HasCloudTrailBucket: !Not [!Equals [!Ref CloudTrailLogBucket, ""]]
+
+Resources:
+  ExportsKmsKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: !Sub "Per-bank KMS CMK for ${BankId} P2 exports — revoke on offboarding"
+      EnableKeyRotation: true
+      PendingWindowInDays: 30
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: EnableRoot
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: AllowExportsWorker
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::ImportValue: !Sub "fortress-p2-${BankId}-${Environment}-exports-worker-role"
+            Action:
+              - kms:Decrypt
+              - kms:Encrypt
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+
+  ExportsKmsKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: !Sub "alias/fortress-p2-exports-${BankId}-${Environment}"
+      TargetKeyId: !Ref ExportsKmsKey
+
+  ExportsBucket:
+    Type: AWS::S3::Bucket
+    # Retain so a stack delete does not wipe immutable evidence. Once
+    # Object Lock COMPLIANCE is set, S3 will refuse deletes anyway, but
+    # belt + suspenders.
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub "fortress-p2-exports-${BankId}-${Environment}"
+      # Object Lock requires Versioning Enabled — non-negotiable.
+      VersioningConfiguration:
+        Status: Enabled
+      ObjectLockEnabled: true
+      ObjectLockConfiguration:
+        ObjectLockEnabled: Enabled
+        Rule:
+          DefaultRetention:
+            Mode: COMPLIANCE
+            Days: !Ref RetentionDays
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !Ref ExportsKmsKey
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          # Keep object-lock-locked versions but transition older versions
+          # to cheaper storage. STANDARD_IA after 30d, GLACIER_IR after 1y.
+          - Id: TierOldVersions
+            Status: Enabled
+            NoncurrentVersionTransitions:
+              - StorageClass: STANDARD_IA
+                TransitionInDays: 30
+              - StorageClass: GLACIER_IR
+                TransitionInDays: 365
+          # Pending (un-signed) drafts live under pending/ with a 30-day
+          # cap so half-finished artifacts don't accumulate. Final
+          # (post-sign-off) keys live outside this prefix and are NOT
+          # affected by this rule.
+          - Id: ExpirePendingDrafts
+            Status: Enabled
+            Prefix: pending/
+            ExpirationInDays: 30
+
+  ExportsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ExportsBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          # Defence-in-depth — code can't accidentally PUT an object
+          # without COMPLIANCE lock or without KMS.
+          - Sid: DenyPutWithoutObjectLock
+            Effect: Deny
+            Principal: "*"
+            Action: s3:PutObject
+            Resource: !Sub "${ExportsBucket.Arn}/*"
+            Condition:
+              StringNotEquals:
+                s3:object-lock-mode: COMPLIANCE
+          - Sid: DenyPutWithoutKMS
+            Effect: Deny
+            Principal: "*"
+            Action: s3:PutObject
+            Resource: !Sub "${ExportsBucket.Arn}/*"
+            Condition:
+              StringNotEquals:
+                s3:x-amz-server-side-encryption: aws:kms
+          - Sid: DenyHTTPS
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt ExportsBucket.Arn
+              - !Sub "${ExportsBucket.Arn}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+
+  # CloudTrail data events on this bucket — independent audit trail (Q22).
+  # Only created if a trail bucket was passed in; otherwise the bank
+  # already routes data events through a shared trail.
+  ExportsDataEventTrail:
+    Type: AWS::CloudTrail::Trail
+    Condition: HasCloudTrailBucket
+    DependsOn: ExportsBucketPolicy
+    Properties:
+      TrailName: !Sub "fortress-p2-exports-trail-${BankId}-${Environment}"
+      S3BucketName: !Ref CloudTrailLogBucket
+      IsLogging: true
+      EnableLogFileValidation: true
+      IsMultiRegionTrail: false
+      EventSelectors:
+        - ReadWriteType: All
+          IncludeManagementEvents: false
+          DataResources:
+            - Type: AWS::S3::Object
+              Values:
+                - !Sub "${ExportsBucket.Arn}/"
+
+Outputs:
+  BucketName:
+    Value: !Ref ExportsBucket
+    Export:
+      Name: !Sub "fortress-p2-${BankId}-${Environment}-exports-bucket"
+  BucketArn:
+    Value: !GetAtt ExportsBucket.Arn
+    Export:
+      Name: !Sub "fortress-p2-${BankId}-${Environment}-exports-bucket-arn"
+  KmsKeyArn:
+    Value: !GetAtt ExportsKmsKey.Arn
+    Export:
+      Name: !Sub "fortress-p2-${BankId}-${Environment}-exports-kms-arn"

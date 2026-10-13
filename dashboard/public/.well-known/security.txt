@@ -1,0 +1,34 @@
+# Fortress Labs — security disclosure policy (RFC 9116)
+# Served at /.well-known/security.txt on every per-bank dashboard.
+# Authoritative copy: https://fortresslabs.dev/.well-known/security.txt
+
+Contact: mailto:security@fortresslabs.dev
+Contact: https://fortresslabs.dev/security
+Expires: 2027-06-26T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://fortresslabs.dev/.well-known/security.txt
+Policy: https://fortresslabs.dev/security
+
+# Acknowledgements: https://fortresslabs.dev/security/acknowledgements
+# Encryption (PGP): not yet published — TODO before FTR submission
+# Hiring: https://fortresslabs.dev/careers
+
+# Reporting guidance
+# ──────────────────
+# Please include in your report:
+#   - Affected URL or endpoint (e.g. dashboard.{bank}.com, api.fortresslabs.dev, fortressapi.{bank}.com)
+#   - Steps to reproduce, including any payloads
+#   - Impact assessment
+#   - Whether you intend public disclosure, and your preferred timeline
+#
+# Initial acknowledgement SLA: 24 hours.
+# We commit to a coordinated-disclosure timeline of 90 days for non-critical
+# findings, or sooner by mutual agreement. Active exploitation gets escalated
+# to the on-call rotation immediately.
+#
+# We do NOT currently operate a paid bug bounty. Recognition on
+# /security/acknowledgements is offered for valid, novel findings.
+#
+# Per AWS Marketplace customer expectations, all security findings affecting
+# bank-deployed Pipeline 2 stacks are remediated in the CloudFormation
+# templates we publish; banks pull updates on next deploy.

@@ -1,0 +1,32 @@
+# GitHub CODEOWNERS
+# Each line: path pattern → GitHub team or user who must approve PRs touching those files.
+# Patterns are matched in order — last match wins.
+# Teams must exist in the GitHub organisation under fortress-labs.
+
+# ── Default: Jamie approves everything ────────────────────────────────
+*                                   @fortress-labs/fortress-core
+
+# ── P1 proprietary code — core team only ──────────────────────────────
+src/connectors/                     @fortress-labs/fortress-core
+src/services/scraper_scheduler.py   @fortress-labs/fortress-core
+src/services/obligation_extractor.py @fortress-labs/fortress-core
+src/services/opensearch_client.py   @fortress-labs/fortress-core
+src/api/sync_api.py                 @fortress-labs/fortress-core
+src/main_pipeline1.py               @fortress-labs/fortress-core
+Dockerfile.pipeline1                @fortress-labs/fortress-core
+requirements-pipeline1.txt          @fortress-labs/fortress-core
+
+# ── Infrastructure — devops team reviews ──────────────────────────────
+infra/                              @fortress-labs/fortress-devops
+.github/workflows/                  @fortress-labs/fortress-devops
+
+# ── P2 code — AI developer can review (their own repo has write access)
+# They work from fortress-agent-p2 repo, not here — no CODEOWNERS needed for them.
+# AI developer PRs to p2 repo are reviewed by @fortress-labs/fortress-core.
+
+# ── Alembic migrations — core only (schema changes are sensitive) ──────
+alembic/                            @fortress-labs/fortress-core
+
+# ── Config — core reviews any config/env changes ──────────────────────
+src/utils/config.py                 @fortress-labs/fortress-core
+.env.example                        @fortress-labs/fortress-core
