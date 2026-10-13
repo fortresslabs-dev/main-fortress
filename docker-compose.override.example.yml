@@ -1,0 +1,37 @@
+# ─────────────────────────────────────────────────────────────────────────
+# LOCAL DEV ONLY — copy to docker-compose.override.yml and fill the values.
+#
+#     cp docker-compose.override.example.yml docker-compose.override.yml
+#
+# The real docker-compose.override.yml is .gitignored (it carries a dev auth
+# token). None of this is used in production — prod uses separate Auroras and
+# real Cognito auth. See docs/setup/local-dev.md.
+# ─────────────────────────────────────────────────────────────────────────
+services:
+  pipeline2:
+    environment:
+      # Which DB Pipeline 2 reads/writes. Two common choices:
+      #   fortress_dev — shared with P1; every dashboard panel has data (simplest).
+      #   fortress_p2  — P2's own replica, to demo a real cross-DB P1→P2 sync.
+      DATABASE_URL: postgresql+asyncpg://fortress:fortress_dev@postgres:5432/fortress_dev
+
+      # Where P2's UpdateService pulls the corpus from (P1, by compose service name).
+      FORTRESS_API_URL: http://pipeline1:8000
+
+      # Sync client identity. CUSTOMER_ID must be a client registered in P1's
+      # client_credentials table; FORTRESS_API_KEY is that client's raw key
+      # (P1 stores only its SHA-256). Register one with scripts/register-bank.sh
+      # (or the dev snippet in docs/setup/local-dev.md §4).
+      CUSTOMER_ID: devbank
+      FORTRESS_API_KEY: <YOUR_DEV_API_KEY>        # e.g. devkey-123456 (local only)
+
+      # 0 disables the 24h background sync loop so you trigger syncs manually
+      # via POST /internal/sync/trigger. Set >0 to re-enable the daemon.
+      SYNC_INTERVAL_HOURS: "0"
+
+      # Local dashboard auth bypass (NO Cognito pool locally). The frontend sends
+      # "Bearer <token>" when started with VITE_E2E_AUTH_BYPASS=1; this value must
+      # MATCH that token. The frontend default is "e2e-bypass".
+      # ⚠ LOCAL ONLY — never set DEV_MODE=true in production.
+      DEV_MODE: "true"
+      PIPELINE2_API_TOKEN: <LOCAL_DEV_BYPASS_TOKEN>   # must equal the frontend token (default: e2e-bypass)
