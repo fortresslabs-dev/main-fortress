@@ -79,7 +79,7 @@ async def get_overview(user: CurrentUser = Depends(get_current_user)) -> Dict:
             SELECT COUNT(DISTINCT r.rule_id)
             FROM compliance_rules r
             JOIN workflow_executions w ON w.rule_id = r.rule_id
-            WHERE r.is_active=TRUE AND w.status='COMPLETED'
+            WHERE r.is_active=TRUE AND w.status='completed'
         """)) or 0
 
         excluded = await session.scalar(text(
@@ -193,7 +193,7 @@ async def get_rules(
                    ro.status AS bank_status,
                    ro.threshold_override, ro.na_reason,
                    (SELECT COUNT(*) FROM workflow_executions
-                    WHERE rule_id = cr.rule_id AND status='COMPLETED')
+                    WHERE rule_id = cr.rule_id AND status='completed')
                      AS test_count
             FROM compliance_rules cr
             LEFT JOIN rule_overrides ro
@@ -377,7 +377,7 @@ async def get_coverage(user: CurrentUser = Depends(get_current_user)) -> Dict:
             FROM compliance_rules cr
             LEFT JOIN workflow_executions we
               ON we.rule_id = cr.rule_id
-              AND we.status='COMPLETED'
+              AND we.status='completed'
             WHERE cr.is_active=TRUE
             GROUP BY cr.regulator
             ORDER BY total_rules DESC
@@ -1205,7 +1205,7 @@ async def _dimension_scores(
             SELECT COUNT(DISTINCT r.rule_id)
             FROM compliance_rules r
             JOIN workflow_executions w ON w.rule_id = r.rule_id
-            WHERE r.is_active=TRUE AND w.status='COMPLETED'
+            WHERE r.is_active=TRUE AND w.status='completed'
         """)) or 0
 
         obl_total = await session.scalar(text(
@@ -1245,7 +1245,7 @@ async def _dimension_scores(
         )) or 0
         wf_ok = await session.scalar(text(
             "SELECT COUNT(*) FROM workflow_executions "
-            "WHERE started_at >= NOW() - INTERVAL '7 days' AND status='COMPLETED'"
+            "WHERE started_at >= NOW() - INTERVAL '7 days' AND status='completed'"
         )) or 0
 
         sdn_total = await session.scalar(text(
@@ -1535,10 +1535,10 @@ async def get_risk_matrix(
                  COALESCE(cr.enforcement_risk_score, 0)   AS risk,
                  COALESCE(ro.status,'active')             AS bank_status,
                  (SELECT COUNT(*) FROM workflow_executions
-                    WHERE rule_id = cr.rule_id AND status='COMPLETED') AS tested_n,
+                    WHERE rule_id = cr.rule_id AND status='completed') AS tested_n,
                  (SELECT COUNT(*) FROM workflow_executions
                     WHERE rule_id = cr.rule_id
-                      AND status IN ('RUNNING','WAITING_APPROVAL')) AS partial_n
+                      AND status IN ('running','waiting_approval')) AS partial_n
           FROM compliance_rules cr
           LEFT JOIN rule_overrides ro ON ro.rule_id = cr.rule_id
           WHERE cr.is_active=TRUE
@@ -1619,7 +1619,7 @@ async def get_cro(
               AND COALESCE(cr.enforcement_risk_score,0) >= 0.8
               AND NOT EXISTS (
                 SELECT 1 FROM workflow_executions w
-                WHERE w.rule_id = cr.rule_id AND w.status='COMPLETED'
+                WHERE w.rule_id = cr.rule_id AND w.status='completed'
               )
         """)) or 0
         avg_remediation = await session.scalar(text("""
@@ -1684,16 +1684,16 @@ async def get_cio(
         )) or 0
         wf_ok = await session.scalar(text(
             "SELECT COUNT(*) FROM workflow_executions "
-            "WHERE started_at >= NOW() - INTERVAL '7 days' AND status='COMPLETED'"
+            "WHERE started_at >= NOW() - INTERVAL '7 days' AND status='completed'"
         )) or 0
         wf_open_failures = await session.scalar(text(
-            "SELECT COUNT(*) FROM workflow_executions WHERE status='FAILED'"
+            "SELECT COUNT(*) FROM workflow_executions WHERE status='failed'"
         )) or 0
         avg_dur = await session.scalar(text("""
             SELECT COALESCE(AVG(EXTRACT(EPOCH FROM
                    (completed_at - started_at))),0)::int
             FROM workflow_executions
-            WHERE status='COMPLETED' AND completed_at IS NOT NULL
+            WHERE status='completed' AND completed_at IS NOT NULL
               AND started_at >= NOW() - INTERVAL '30 days'
         """)) or 0
         sdn_total = await session.scalar(text(
@@ -1845,7 +1845,7 @@ async def _gather_export_payload(
                        cr.rule_text,
                        cr.enforcement_risk_score,
                        (SELECT COUNT(*) FROM workflow_executions
-                          WHERE rule_id=cr.rule_id AND status='COMPLETED')
+                          WHERE rule_id=cr.rule_id AND status='completed')
                          AS tested_n
                 FROM compliance_rules cr
                 WHERE cr.is_active=TRUE
@@ -1882,7 +1882,7 @@ async def _gather_export_payload(
                 SELECT COUNT(DISTINCT r.rule_id)
                 FROM compliance_rules r
                 JOIN workflow_executions w ON w.rule_id = r.rule_id
-                WHERE r.is_active=TRUE AND w.status='COMPLETED'
+                WHERE r.is_active=TRUE AND w.status='completed'
             """)) or 0
             total = await session.scalar(text(
                 "SELECT COUNT(*) FROM compliance_rules WHERE is_active=TRUE"
