@@ -75,30 +75,30 @@ aws logs tail /ecs/fortress-pipeline1-production --since 48h \
 
 ## 3. Backfill on P1 — choose one
 
-### Option A — surgical: embed only, on the running API task (recommended)
-No scrape, no network crawl — just heal the NULL rows. Uses ECS Exec into the
-running P1 API container (which has `scraper_scheduler`).
+### Option A — surgical: run the backfill script (recommended)
+No scrape, no network crawl — just heal the NULL rows. `scripts/backfill_embeddings.py`
+is idempotent/additive (only `embedding IS NULL` rows) and covers **both**
+`compliance_rules` and `obligations` (the latter needs migration 052). It uses
+the app DB layer, so it runs unchanged on P1, on a bank's P2, or locally.
 
 ```bash
+# locally / in any container with DB + Bedrock access:
+python -m scripts.backfill_embeddings --target both          # or: --target rules
+python -m scripts.backfill_embeddings --target both --dry-run # count only
+
+# on prod P1 via ECS Exec into the running API task:
 TASK=$(aws ecs list-tasks --cluster fortress-pipeline1-production \
   --service-name fortress-pipeline1-api-production \
   --desired-status RUNNING --query 'taskArns[0]' --output text)
-
 aws ecs execute-command --cluster fortress-pipeline1-production \
   --task "$TASK" --container pipeline1 --interactive \
-  --command 'python -c "
-import asyncio
-from src.services.database import get_db
-from src.services.scraper_scheduler import ScraperScheduler
-asyncio.run(ScraperScheduler._embed_and_store_rules(get_db, 0))
-"'
+  --command 'python -m scripts.backfill_embeddings --target both'
 ```
-`_embed_and_store_rules` logs `embedding_start count=N` then
-`embedding_complete embedded=N`. The `sync_version` arg (`0` here) is only a
-log/label; the function selects purely on `embedding IS NULL`.
+Logs `backfill_start … missing=N` then `backfill_complete … embedded=N failed=M`,
+and exits non-zero if any embed call failed.
 
-> Requires ECS Exec enabled on the service (`enableExecuteCommand`) and the SSM
-> permissions on the task role. If Exec isn't available, use Option B.
+> ECS Exec needs `enableExecuteCommand` on the service + SSM perms on the task
+> role. If Exec isn't available, use Option B.
 
 ### Option B — run the scraper task (full cycle; heals NULLs as a side effect)
 Fire the same task EventBridge uses. Heavier (it also crawls connectors) but
