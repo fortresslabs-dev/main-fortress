@@ -68,6 +68,7 @@ class UnderstandingAgent(BaseAgent):
             jira_key = input_data.get("jira_key", "")
             workflow_id = input_data.get("workflow_id")
             discovery = input_data.get("discovery", {})
+            trigger_rule_id = input_data.get("rule_id")
             
             self.logger.info(
                 "understanding_started",
@@ -105,7 +106,7 @@ class UnderstandingAgent(BaseAgent):
             #    Threaded into ExecutionAgent so it can flip
             #    obligations.has_test_coverage on PR-open success — REQ-010.
             obligation_ids, rule_ids = await self._resolve_obligation_ids(
-                discovery, jira_story
+                discovery, jira_story, trigger_rule_id
             )
 
             result = {
@@ -146,7 +147,7 @@ class UnderstandingAgent(BaseAgent):
         return self._fallback_rag_context(discovery)
 
     async def _resolve_obligation_ids(
-        self, discovery: Dict, jira_story: str = ""
+        self, discovery: Dict, jira_story: str = "", trigger_rule_id: str = None
     ) -> tuple[List[str], List[str]]:
         """Resolve concrete obligation_id values for the story.
 
@@ -192,6 +193,13 @@ class UnderstandingAgent(BaseAgent):
             " ".join(discovery.get("compliance_requirements") or []),
         ]))
         rule_ids.extend(await self._hybrid_search_rule_ids(hybrid_query))
+
+        # Always include the rule the CCO triggered the story on, so its
+        # obligations are covered even when domain/semantic retrieval misses it
+        # (e.g. Part 1010 rules with no embedding or domain tag). Without this,
+        # coverage lands only on RAG-neighbour rules, not the clicked rule.
+        if trigger_rule_id:
+            rule_ids.append(trigger_rule_id)
 
         if not rule_ids:
             return [], []

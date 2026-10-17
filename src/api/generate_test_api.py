@@ -105,7 +105,7 @@ async def generate_test_for_rule(
         await session.commit()
 
     # Kick off the 6-agent pipeline without waiting for a JIRA webhook callback.
-    background.add_task(process_workflow, workflow_id, issue["key"], description)
+    background.add_task(process_workflow, workflow_id, issue["key"], description, rule_id)
 
     logger.info("generate_test_requested",
                 rule_id=rule_id, jira_key=issue["key"],

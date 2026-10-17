@@ -225,7 +225,7 @@ async def jira_webhook(request: Request, background: BackgroundTasks):
         logger.error("webhook_failed", error=str(e))
         raise HTTPException(500, f"Webhook processing failed: {str(e)}")
 
-async def process_workflow(workflow_id: str, jira_key: str, story_text: str):
+async def process_workflow(workflow_id: str, jira_key: str, story_text: str, rule_id: str = None):
     """Background task to execute workflow.
 
     Holds a cluster-wide pg_advisory_lock for the duration of the
@@ -257,11 +257,20 @@ async def process_workflow(workflow_id: str, jira_key: str, story_text: str):
 
             logger.info("workflow_processing_started", workflow_id=workflow_id)
 
+            # Resolve the trigger rule from the workflow row when not passed in
+            # (the JIRA webhook path doesn't carry it). Threaded to Agent 2 so
+            # the clicked rule's own obligations are always in the covered set.
+            if rule_id is None:
+                async with get_db() as db:
+                    wf = await db.get(WorkflowExecution, workflow_id)
+                    rule_id = wf.rule_id if wf else None
+
             orchestrator = WorkflowOrchestrator()
             result = await orchestrator.execute_workflow({
                 "workflow_id": workflow_id,
                 "key": jira_key,
-                "description": story_text
+                "description": story_text,
+                "rule_id": rule_id
             })
 
             # Hoist the PR URL to artifacts.github_pr_url so the dashboard's

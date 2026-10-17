@@ -28,6 +28,7 @@ class WorkflowOrchestrator:
         workflow_id = jira_story.get("workflow_id")
         jira_key = jira_story.get("key", "")
         story_text = jira_story.get("description", "")
+        rule_id = jira_story.get("rule_id")
         
         context = {
             "workflow_id": workflow_id,
@@ -56,7 +57,8 @@ class WorkflowOrchestrator:
                     "workflow_id": workflow_id,
                     "jira_key": jira_key,
                     "jira_story": story_text,
-                    "discovery": discovery_result
+                    "discovery": discovery_result,
+                    "rule_id": rule_id
                 }
             )
             
