@@ -3,6 +3,7 @@
 UPDATED: Now uses AWS Bedrock (Claude Sonnet) instead of OpenAI
 """
 from typing import Dict, Any, List
+import ast
 import os
 import json
 import structlog
@@ -32,24 +33,20 @@ class GenerationAgent(BaseAgent):
             grounding = await self._build_grounding(trigger_rule_id) if trigger_rule_id else ""
             prompt = self._build_prompt(jira_key, scenarios, understanding, grounding)
             
-            test_code = await self.bedrock.generate_code(
-                prompt=prompt,
-                max_tokens=16000,
-                temperature=0.3,
-            )
-            
-            test_code = self._clean_code(test_code)
+            test_code, syntax_ok = await self._generate_valid_code(prompt, workflow_id)
             result = {
                 "test_code": test_code,
                 "language": "python",
                 "framework": "pytest",
                 "scenario_count": len(scenarios),
-                "lines_of_code": len(test_code.split("\n"))
+                "lines_of_code": len(test_code.split("\n")),
+                "syntax_valid": syntax_ok,
             }
             self.logger.info(
                 "generation_completed",
                 workflow_id=workflow_id,
-                lines=result["lines_of_code"]
+                lines=result["lines_of_code"],
+                syntax_valid=syntax_ok,
             )
             return result
         except Exception as e:
@@ -66,6 +63,45 @@ class GenerationAgent(BaseAgent):
         "ofac_fuzzy_threshold": 85,
         "beneficial_ownership_pct": 20,
     }
+
+    async def _generate_valid_code(self, prompt: str, workflow_id: str = "",
+                                   max_retries: int = 2) -> tuple:
+        """Generate pytest and self-heal syntax errors.
+
+        Bedrock occasionally emits pytest that fails ``ast.parse`` (truncation,
+        stray prose, an unterminated string). Parse the cleaned output; on
+        SyntaxError, re-prompt with the error up to ``max_retries`` times so an
+        unparseable generation doesn't reach validation/PR as a broken file.
+        Returns (code, syntax_ok); the caller still records syntax_valid so a
+        persistent failure surfaces instead of silently opening a PR.
+        """
+        code = self._clean_code(await self.bedrock.generate_code(
+            prompt=prompt, max_tokens=16000, temperature=0.3))
+        for attempt in range(max_retries + 1):
+            try:
+                ast.parse(code)
+                if attempt:
+                    self.logger.info("generation_syntax_recovered",
+                                     workflow_id=workflow_id, attempt=attempt)
+                return code, True
+            except SyntaxError as exc:
+                if attempt >= max_retries:
+                    self.logger.warning("generation_syntax_unresolved",
+                                        workflow_id=workflow_id,
+                                        attempts=attempt, error=str(exc)[:160])
+                    return code, False
+                self.logger.info("generation_syntax_retry",
+                                 workflow_id=workflow_id,
+                                 attempt=attempt + 1, error=str(exc)[:160])
+                fix_prompt = (
+                    prompt
+                    + f"\n\nIMPORTANT: your previous output was NOT valid Python — "
+                    f"ast.parse failed with: {exc}. Return ONLY a complete, "
+                    f"syntactically valid pytest module: no prose, no markdown "
+                    f"fences, no truncation."
+                )
+                code = self._clean_code(await self.bedrock.generate_code(
+                    prompt=fix_prompt, max_tokens=16000, temperature=0.2))
 
     async def _build_grounding(self, trigger_rule_id: str) -> str:
         """Deterministic compliance grounding for the rule the CCO clicked.
