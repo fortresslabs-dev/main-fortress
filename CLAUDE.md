@@ -23,6 +23,7 @@ vector + BM25 store (OpenSearch Serverless was removed from the budget
 | Agent 4 — P2 sync + workflow monitor (UpdateService, JIRA webhooks, dashboard) | `docs/runbooks/agent-4-sync.md` |
 | Scraper architecture (storage, S3-first, S3-diff, rule validity, MCP scrape monitor) | `docs/runbooks/scraper-architecture.md` |
 | Scraper extraction architecture (LLM + Pydantic tool_use, golden set, backfill) | `docs/runbooks/scraper-extraction-architecture.md` |
+| Embedding backfill — heal `compliance_rules.embedding IS NULL` (Titan v2) on P1, propagate to P2 | `docs/runbooks/embedding-backfill.md` |
 | Operations — IDE/CLI setup, P1 auto-deploy, bank registration, MCP servers, connectors | `docs/setup/operations.md` |
 | Local dev & debug — run P1/P2/dashboard locally, hot-reload, P1→P2 sync, debugging | `docs/setup/local-dev.md` |
 | BSA/AML onboarding — end-to-end SME/dev guide (code walkthrough, 6-agent pipeline, CCO validation, rule→test, bank handoff, dashboard pending actions) | `docs/runbooks/bsa-aml-onboarding.md` |
