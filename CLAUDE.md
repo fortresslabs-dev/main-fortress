@@ -25,6 +25,7 @@ vector + BM25 store (OpenSearch Serverless was removed from the budget
 | Scraper extraction architecture (LLM + Pydantic tool_use, golden set, backfill) | `docs/runbooks/scraper-extraction-architecture.md` |
 | Embedding backfill — heal `compliance_rules.embedding IS NULL` (Titan v2) on P1, propagate to P2 | `docs/runbooks/embedding-backfill.md` |
 | 6-agent test-generation pipeline — how it works, real `FINCEN-1010-660-R3` example, failure analysis (as-is baseline) | `docs/design/6-agent-test-generation-pipeline.md` |
+| Dashboard data map — every page → API endpoint → Postgres tables → aggregation, with flow + ER diagrams | `docs/design/dashboard-data-map.md` |
 | Operations — IDE/CLI setup, P1 auto-deploy, bank registration, MCP servers, connectors | `docs/setup/operations.md` |
 | Local dev & debug — run P1/P2/dashboard locally, hot-reload, P1→P2 sync, debugging | `docs/setup/local-dev.md` |
 | BSA/AML onboarding — end-to-end SME/dev guide (code walkthrough, 6-agent pipeline, CCO validation, rule→test, bank handoff, dashboard pending actions) | `docs/runbooks/bsa-aml-onboarding.md` |
