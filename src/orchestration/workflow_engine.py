@@ -82,7 +82,8 @@ class WorkflowOrchestrator:
                     "workflow_id": workflow_id,
                     "jira_key": jira_key,
                     "scenarios": scenarios,
-                    "understanding": understanding_result
+                    "understanding": understanding_result,
+                    "rule_id": rule_id
                 }
             )
             
