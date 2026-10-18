@@ -1,9 +1,9 @@
 bank_id,evidence_type,artifact_ref,source,attested_by,effective_from,effective_to,notes
-testbank,board_bsa_acknowledgement,s3://fortress-p2-evidence-testbank/governance/2026/board_bsa_ack_2026Q1.pdf,2026 Q1 board meeting minutes,BSA Officer,2026-02-15,2027-02-14,Annual board acknowledgement of BSA program status. Rotates annually.
-testbank,board_ofac_acknowledgement,s3://fortress-p2-evidence-testbank/governance/2026/board_ofac_ack_2026Q1.pdf,2026 Q1 board meeting minutes,BSA Officer,2026-02-15,2027-02-14,Annual board acknowledgement of OFAC sanctions program status.
-testbank,bsa_officer_designation,s3://fortress-p2-evidence-testbank/governance/2024/bsa_officer_appointment.pdf,Board resolution 2024-01-15,Board of Directors,2024-01-15,,Standing appointment; supersede on officer change.
-testbank,bsa_committee_charter,s3://fortress-p2-evidence-testbank/governance/2025/bsa_committee_charter_v3.pdf,Compliance committee 2025-11-01,BSA Officer,2025-11-01,,Charter v3.0 — reviewed annually; supersede on next revision.
-testbank,bsa_committee_minutes,s3://fortress-p2-evidence-testbank/governance/2026/bsa_committee_minutes_2026Q1.pdf,BSA/AML compliance committee,BSA Officer,2026-03-30,2026-06-29,Current-quarter minutes on file. Rotates quarterly.
-testbank,bsa_training_records,s3://fortress-p2-evidence-testbank/governance/2026/bsa_training_completion_2026.pdf,LMS export 2026-Q1,HR Compliance,2026-01-15,2027-01-14,100% bank-wide completion for 2026 training cycle.
-testbank,bsa_policy_manual,s3://fortress-p2-evidence-testbank/governance/2026/bsa_policy_manual_v7.pdf,Policy management system,BSA Officer,2026-01-01,,Policy manual v7.0 — reviewed annually; supersede on next revision.
-testbank,enterprise_risk_assessment,s3://fortress-p2-evidence-testbank/governance/2026/enterprise_risk_assessment_2026.pdf,ERM annual cycle,Chief Risk Officer,2026-03-01,2027-02-28,Signed ERA covering BSA/AML/OFAC risk domains.
+testbank,board_bsa_acknowledgement,s3://testbank-governance/board/bsa_ack_2026.pdf,board_resolution,Board of Directors,2026-01-15,,Annual board approval of the BSA/AML program
+testbank,board_ofac_acknowledgement,s3://testbank-governance/board/ofac_ack_2026.pdf,board_resolution,Board of Directors,2026-01-15,,Annual board approval of the OFAC program
+testbank,bsa_officer_designation,s3://testbank-governance/officer/bsa_officer_designation.pdf,board_resolution,Board of Directors,2026-01-15,,BSA Officer appointment resolution
+testbank,bsa_committee_charter,s3://testbank-governance/committee/charter.pdf,committee_charter,BSA/AML Committee,2026-01-15,,BSA/AML oversight committee charter
+testbank,bsa_committee_minutes,s3://testbank-governance/committee/minutes_2026Q1.pdf,committee_minutes,BSA/AML Committee,2026-03-31,,Q1 2026 committee meeting minutes
+testbank,bsa_training_records,s3://testbank-governance/training/annual_2026.pdf,training_system,Training Department,2026-02-01,,Annual BSA/AML training completion records
+testbank,bsa_policy_manual,s3://testbank-governance/policy/bsa_aml_manual_v7.pdf,policy_manual,Compliance Department,2026-01-01,,BSA/AML policy manual version 7
+testbank,enterprise_risk_assessment,s3://testbank-governance/risk/era_2026.pdf,risk_assessment,Compliance Department,2026-01-20,,2026 enterprise-wide BSA/AML risk assessment

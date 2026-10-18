@@ -1738,10 +1738,26 @@ async def get_cio(
 async def get_findings(
     user: CurrentUser = Depends(get_current_user),
 ) -> Dict:
-    """Findings / MRA tracker. No backing table yet (DB unchanged) — empty
-    list with the contract shape so the UI renders the empty state. Hook up
-    when a `findings` table is added in a future migration."""
-    return {"findings": [], "count": 0, "overdue": 0}
+    """Findings / MRA tracker — reads the findings table (migration 042) for
+    the caller's bank. Open items (status <> validated_closed) sort first, then
+    by due date; `overdue` counts open findings past their due date."""
+    async with get_db() as session:
+        rows = (await session.execute(text("""
+            SELECT finding_id, type::text AS type, severity::text AS severity,
+                   regulatory_source, concern, corrective_action,
+                   status::text AS status, identified_date, due_date, repeat_flag
+            FROM findings
+            WHERE bank_id = :bid
+            ORDER BY (status::text <> 'validated_closed') DESC,
+                     due_date ASC NULLS LAST, severity DESC
+        """), {"bid": user.bank_id})).mappings().all()
+        overdue = await session.scalar(text("""
+            SELECT COUNT(*) FROM findings
+            WHERE bank_id = :bid AND status::text <> 'validated_closed'
+              AND due_date IS NOT NULL AND due_date < CURRENT_DATE
+        """), {"bid": user.bank_id}) or 0
+    findings = [dict(r) for r in rows]
+    return {"findings": findings, "count": len(findings), "overdue": int(overdue)}
 
 
 @architecture_router.get("/data-flow")

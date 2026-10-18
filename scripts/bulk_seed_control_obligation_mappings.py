@@ -190,7 +190,7 @@ async def main() -> int:
         database=os.environ["DB_NAME"],
         user=os.environ.get("DB_USER", "fortress_testbank"),
         password=os.environ["DB_PASSWORD"],
-        ssl="require",
+        ssl=(None if os.environ.get("DB_SSL") == "disable" else "require"),
     )
 
     try:
