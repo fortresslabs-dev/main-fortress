@@ -50,6 +50,21 @@ def put_artifact(
     Re-upload of an existing key returns is_new=False. We HEAD first to
     avoid spending a full body upload only to be refused by Object Lock.
     """
+    # Local filesystem fallback for dev (no S3/KMS/Object-Lock). Prod leaves
+    # EXPORTS_LOCAL_DIR unset and uses the S3 WORM path below.
+    local = os.getenv("EXPORTS_LOCAL_DIR")
+    if local:
+        import hashlib
+        import pathlib
+        dest = pathlib.Path(local) / key
+        is_new = not dest.exists()
+        if is_new:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(body)
+        return PutResult(bucket=f"local://{local}", key=key,
+                         etag=hashlib.md5(body).hexdigest(),
+                         version_id=None, is_new=is_new)
+
     s3 = s3 or boto3.client("s3", region_name=os.getenv("AWS_REGION", "us-east-1"))
 
     # Fast path — does the object already exist?
@@ -84,6 +99,11 @@ def put_artifact(
 def get_artifact(*, bucket: str, key: str, s3=None) -> bytes:
     """Stream object bytes through the API per design doc §11.2 Q21 — no
     pre-signed URLs are exposed externally."""
+    local = os.getenv("EXPORTS_LOCAL_DIR")
+    if local:
+        import pathlib
+        return (pathlib.Path(local) / key).read_bytes()
+
     s3 = s3 or boto3.client("s3", region_name=os.getenv("AWS_REGION", "us-east-1"))
     resp = s3.get_object(Bucket=bucket, Key=key)
     return resp["Body"].read()
