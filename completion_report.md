@@ -4,7 +4,7 @@
 **Purpose:** a plain-language record of what has been fixed/completed, what
 remains, and the honest gaps — for review now that the dashboard-completion
 work is done.
-**Status:** living document · last updated 2026-10-21.
+**Status:** living document · last updated 2026-10-22.
 
 > **One-line summary.** The automated compliance **test-generation pipeline**
 > was broken end-to-end and is now working *and* grounded on the correct rule;
@@ -62,7 +62,7 @@ Final end-to-end verification: **all 17 endpoints return HTTP 200.**
 | Rules Performance | ✅ data | 4 screening rules, alert/precision stats |
 | Vector Intel | ✅ data | embedding coverage + score histogram (Admin/CRO role) |
 | Executive Today | ✅ data | 6 same-day OFAC tiles |
-| **Changes** | ⚠️ default-empty | works with "include OFAC" (20 shown); default CCO inbox hides OFAC and there are **no non-OFAC rule changes** locally (needs P1 change-detector) |
+| **Changes** | ✅ data | seeded 5 representative non-OFAC rule-change records (incl. the real FinCEN beneficial-ownership 25%→20% change) across fresh/aging/overdue; review→sign-off workflow exercised (3 signed, 2 open) → `change_mgmt`=60. Local demo data standing in for P1's change-detector |
 
 ### 2a. Exam Readiness detail (score 57, 9/10 dims measured)
 | Dimension | Score | Basis |
@@ -87,7 +87,7 @@ The score is **honest** — the low dimensions are real posture gaps, not displa
 | Gap | Effect on dashboard | Root cause / fix |
 |---|---|---|
 | **Enforcement risk not scored** | Readiness "risk-assessment currency" = 0; Risk view thin | `enforcement_actions.regulations_cited` is empty for all 2,150 rows. **Resolution BUILT (step 8 / option a):** a grounded LLM citation extractor + automatic scrape-path fallback + backfill script (committed). Runs **globally in P1** (bank-agnostic — no bank_id), then every bank's P2 pulls the result via the existing sync. Remaining = the P1/AWS run over real BSA enforcement data. No fabrication. See §6. |
-| **No non-OFAC regulatory changes** | Changes default inbox empty; readiness "change management" = neutral default | Only OFAC SDN changes exist locally (52k). Real rule-change records come from the P1 scraper's change detector. |
+| **No *production* non-OFAC changes** | demo-seeded locally | The 5 change records are local demo data; in production the inbox + change-management dim populate from P1's rule-change detector (only the OFAC SDN feed arrives otherwise). |
 | **Substantive test correctness** | n/a | Tests target the right rule but assertions aren't SME-verified. Needs the golden-set review layer. |
 | **Low coverage / testing dims** | Readiness testing≈10, execution≈0 | Real — only a handful of rules have generated tests so far; rises as the pipeline runs. |
 
@@ -99,6 +99,8 @@ The score is **honest** — the low dimensions are real posture gaps, not displa
 - Test-gen pipeline fixed + accuracy (grounding, Fix A, embeddings, self-heal)
 - Readiness dimensions seeded to registry mode (inventory/control/governance/findings)
 - Findings endpoint fixed; Reports generated+signed; Screening domain populated; Rules applicability; Changes drawer comments
+- Changes inbox populated (5 non-OFAC rule-change records) + review→sign-off workflow demonstrated
+- **Real bug fixed:** change sign-off 500'd for every bank (asyncpg `AmbiguousParameterError` — reused `:status` bind); fixed with distinct params (commit `c1042f2`)
 - Full end-to-end verification (17/17 endpoints 200)
 
 **Next (requires production data feeds or further work):**
