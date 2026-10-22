@@ -697,16 +697,20 @@ async def sign_off_change(
             400, f"decision must be one of {list(_DECISION_TO_STATUS)}"
         )
     async with get_db() as session:
+        # NOTE: bind the status value under two distinct names. Reusing one
+        # named param in both the SET (varchar column) and the CASE…IN (text
+        # literals) makes asyncpg deduce inconsistent types for the same
+        # positional parameter → AmbiguousParameterError. Two params avoid it.
         await session.execute(text("""
             UPDATE regulatory_change_records
             SET status=:status, client_id=:bank_id, updated_at=NOW(),
                 signed_off_at = CASE
-                    WHEN :status IN ('signed_off','closed') AND signed_off_at IS NULL
+                    WHEN :status_gate IN ('signed_off','closed') AND signed_off_at IS NULL
                     THEN NOW()
                     ELSE signed_off_at
                 END
             WHERE change_ref=:ref
-        """), {"status": db_status,
+        """), {"status": db_status, "status_gate": db_status,
                "bank_id": user.bank_id, "ref": change_ref})
         await session.commit()
 
