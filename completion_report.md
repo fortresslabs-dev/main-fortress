@@ -86,7 +86,7 @@ The score is **honest** — the low dimensions are real posture gaps, not displa
 
 | Gap | Effect on dashboard | Root cause / fix |
 |---|---|---|
-| **Enforcement risk not scored** | Readiness "risk-assessment currency" = 0; Risk view thin | `enforcement_actions.regulations_cited` is empty for all 2,150 rows — P1 never extracted which CFRs each action cited. The scorer works but has nothing to attribute. **Fix = P1 enforcement-citation extraction.** We did **not** fabricate citations. |
+| **Enforcement risk not scored** | Readiness "risk-assessment currency" = 0; Risk view thin | `enforcement_actions.regulations_cited` is empty for all 2,150 rows. **Resolution BUILT (step 8 / option a):** a grounded LLM citation extractor + automatic scrape-path fallback + backfill script (committed). Runs **globally in P1** (bank-agnostic — no bank_id), then every bank's P2 pulls the result via the existing sync. Remaining = the P1/AWS run over real BSA enforcement data. No fabrication. See §6. |
 | **No non-OFAC regulatory changes** | Changes default inbox empty; readiness "change management" = neutral default | Only OFAC SDN changes exist locally (52k). Real rule-change records come from the P1 scraper's change detector. |
 | **Substantive test correctness** | n/a | Tests target the right rule but assertions aren't SME-verified. Needs the golden-set review layer. |
 | **Low coverage / testing dims** | Readiness testing≈10, execution≈0 | Real — only a handful of rules have generated tests so far; rises as the pipeline runs. |
@@ -102,14 +102,44 @@ The score is **honest** — the low dimensions are real posture gaps, not displa
 - Full end-to-end verification (17/17 endpoints 200)
 
 **Next (requires production data feeds or further work):**
-1. **P1 enforcement-citation extraction** → unblocks Risk view + readiness risk-currency
+1. **Enforcement-citation extraction — BUILT (step 8 / option a), pending P1 run** → deploy branch; P1 scrape+scorer populate citations globally; P2 sync pulls `enforcement_risk_score` → Risk view + readiness risk-currency populate. See §6.
 2. **P1 rule-change detection** → populates the Changes inbox + change-management dim
 3. **SME golden-set review layer** → measures *substantive* test correctness
 4. **Production rollout** → fixes live on branch `code_cleanup`; runbook at `docs/runbooks/prod-rollout-testgen.md`
 
 ---
 
-## 5. Deployment note
+## 6. Step 8 — enforcement risk (option a): built, pending P1 run
+
+**Problem.** Enforcement-driven risk (`ra_currency`, Risk view) needs to know
+*which regulations each enforcement action concerns*. Enforcement press releases
+rarely cite CFRs in parseable form, so `regulations_cited` was empty → the risk
+scorer had nothing to attribute → scores stayed 0.
+
+**What was built (committed on `code_cleanup`):**
+- `extract_regulations_cited_llm` — a grounded Bedrock extractor that, when the
+  regex finds nothing, picks which regulations the action concerns **only from
+  the corpus' own CFR vocabulary** (so output maps to a rule and nothing is
+  invented); returns `[]` when none clearly apply.
+- **Automatic fallback in the scrape path** (`EnforcementActionService.run`) so
+  future P1 scrapes populate citations inline (gated by `ENFORCEMENT_LLM_CITATIONS`).
+- `scripts/backfill_enforcement_citations.py` for a one-time historical backfill.
+
+**Verified locally:** OCC BSA penalty → 4 correct CFRs; FinCEN CTR/AML → 2;
+CFPB RESPA kickback → `[]` (no BSA match). No hallucination.
+
+**Bank-agnostic by design.** Zero `bank_id` in the enforcement pipeline or
+tables — enforcement is **shared regulatory intelligence computed once in P1**,
+and every bank's P2 pulls the *same* `enforcement_risk_score` via
+`/sync/postgres` + `/sync/risk-scores`. No per-bank enforcement logic in P1.
+
+**Remaining = the P1/AWS run only:** deploy branch → P1 scrape+scorer over real
+enforcement data → P2 sync → `ra_currency` + Risk view populate. Not run locally
+because the local sample is CFPB-consumer with no BSA overlap (honest 0).
+
+---
+
+## 7. Deployment note
 All code fixes are committed on the `code_cleanup` branch (not merged to `main`
 or deployed to AWS). The data population here is in the **local** validation
 environment — production requires the documented migration + backfill + rollout

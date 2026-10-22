@@ -247,10 +247,52 @@ flowchart LR
 
 ---
 
+## 8 · Enforcement risk — regulation attribution (built, pending P1)
+
+**Business use case.** The CCO's readiness "risk-assessment currency" and the
+Risk view answer *"which regulations are drawing the most enforcement heat right
+now?"* — so the bank prioritizes the rules regulators are actively penalizing.
+
+**What was wrong.** That needs each enforcement action tagged with the
+regulations it concerns. Enforcement press releases rarely cite CFRs in a
+machine-readable way, so `regulations_cited` was empty → the risk scorer had
+nothing to attribute → scores stayed 0.
+
+**The fix (built, committed).** A grounded LLM extractor reads the enforcement
+text and selects which regulations it concerns **only from the bank corpus' own
+CFR list** — so it maps to a real rule and cannot invent a citation; it returns
+nothing when no corpus regulation clearly applies. It runs automatically in the
+P1 scrape (with a one-time backfill script for history).
+
+**Shared, not bank-specific.** This is public regulatory intelligence computed
+**once in P1** (no `bank_id` anywhere) — every bank's P2 pulls the *same*
+enforcement risk via the normal sync. No per-bank enforcement logic.
+
+**SME verification (after the P1 run).** Enforcement risk scores appear per
+regulation; rules tied to heavily-enforced CFRs show a higher risk; the Risk
+view and readiness "risk-assessment currency" populate.
+
+```mermaid
+flowchart LR
+  subgraph P1[P1 — shared, computed once]
+    SC[Enforcement scrape] --> LLM[LLM citation extractor<br/>grounded to corpus CFRs]
+    LLM --> RS[Risk scorer] --> ERS[enforcement_risk_score]
+  end
+  ERS -->|sync: /sync/postgres + /sync/risk-scores| P2[(Each bank's P2)]
+  P2 --> RA[Readiness: risk-assessment currency]
+  P2 --> RV[Risk view]
+```
+
+> Not run locally: the sample enforcement data is CFPB-consumer with no BSA
+> overlap, so it honestly scores 0 here. Real attribution needs the P1 run over
+> BSA enforcement actions. **No citations were fabricated.**
+
+---
+
 ## Honest gaps (for SME awareness — not defects, not faked)
 | Area | State | Needs |
 |---|---|---|
-| **Risk-assessment currency** / Risk view | thin (score 0) | P1 to extract which CFRs each enforcement action cited (`enforcement_actions.regulations_cited` is empty) — **not fabricated** |
+| **Risk-assessment currency** / Risk view | extractor **built** (§8); 0 locally | the P1/AWS run over real BSA enforcement data → syncs to every P2 — **not fabricated** |
 | **Changes** default inbox | empty | P1 rule-change detector to produce non-OFAC change records |
 | **Substantive test correctness** | unverified | SME golden-set: rules with officer-reviewed *expected* assertions |
 
