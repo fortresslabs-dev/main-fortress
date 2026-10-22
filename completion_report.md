@@ -1,121 +1,118 @@
 # Fortress BSA/AML — Completion Report
 
 **Audience:** BSA/AML Compliance Officer (CCO) + engineering.
-**Purpose:** a plain-language record of what has been fixed/completed, what is
-in progress, and what remains — for review once all work is done.
-**Status:** living document · last updated 2026-10-18.
+**Purpose:** a plain-language record of what has been fixed/completed, what
+remains, and the honest gaps — for review now that the dashboard-completion
+work is done.
+**Status:** living document · last updated 2026-10-21.
 
 > **One-line summary.** The automated compliance **test-generation pipeline**
-> (regulation → JIRA story → AI-written pytest → GitHub PR) was broken end-to-end
-> and is now working *and* grounded on the correct rule; the **CCO dashboard** is
-> being driven from partially-empty to fully populated, one use case at a time.
+> was broken end-to-end and is now working *and* grounded on the correct rule;
+> the **CCO dashboard** was driven from mostly-empty to **13 of 14 views showing
+> real data**, verified end-to-end. The remaining thin views are honest data
+> gaps that need the production data feeds (not bugs, and not faked).
 
 ---
 
 ## 1. Test-generation pipeline — COMPLETE & improved
 
-**What it does:** a CCO clicks a compliance rule → the system opens a JIRA story,
-runs a 6-agent AI pipeline that retrieves the relevant BSA/AML rules, writes
-`pytest` compliance tests, validates them, and opens a GitHub pull request with
-the test code, posting the PR link back on the JIRA story.
+A CCO clicks a rule → the system opens a JIRA story, runs a 6-agent AI pipeline
+that retrieves the relevant BSA/AML rules, writes `pytest` compliance tests,
+validates them, and opens a GitHub pull request, posting the PR link to JIRA.
 
-**What was fixed (was fully non-functional):**
-| Issue | Resolution |
-|---|---|
-| JIRA rejected story creation | Correct issue type (`Idea`) for the project |
-| Workflow crashed on save | Database status vocabulary aligned to the code |
-| AI model unreachable | Credentials wired to the pipeline |
-| Dashboard panels erroring | Query/data mismatch fixed |
-| No pull request created | Valid GitHub access token |
+**Fixed (was fully non-functional):** JIRA issue type, workflow DB status
+vocabulary, AI-model credentials, dashboard query errors, GitHub access token.
 
-**Accuracy improvements (the important part for compliance):**
-- **Right-rule coverage:** tests now always cover the *obligation of the rule the
-  CCO actually selected* — previously coverage could land on unrelated neighbour
-  rules. Verified on `FINCEN-1010-660-R3` (correspondent-account screening).
-- **Grounded generation:** the AI is now given the rule's exact obligation text,
-  its CFR citation, and the authoritative dollar thresholds (CTR $10k, SAR $5k,
-  Travel Rule $3k, OFAC 85%, beneficial ownership 20%) as "must-test, do-not-invent"
-  inputs. Result on the same rule: generated test went from **0 → 15** citations
-  of §1010.660 and added a dedicated "screen at onboarding and periodically" test.
-- **Self-healing:** if the AI emits unparseable code it retries automatically
-  before opening a PR, so broken tests don't reach review.
-- **Searchability:** every rule and obligation now has a vector embedding, so the
-  AI's rule-retrieval finds the right BSA/AML rules (the FinCEN Part 1010 block
-  was previously invisible to search).
+**Accuracy improvements:**
+- **Right-rule coverage** — tests always cover the obligation of the rule the
+  CCO selected (previously drifted to neighbour rules).
+- **Grounded generation** — the AI gets the rule's exact obligation text, CFR
+  citation, and authoritative thresholds (CTR $10k, SAR $5k, Travel $3k, OFAC
+  85%, beneficial ownership 20%) as must-test inputs. On `FINCEN-1010-660-R3`,
+  generated tests went 0 → 15 §1010.660 citations with a dedicated screening test.
+- **Self-healing** — unparseable AI output is retried before a PR is opened.
+- **Searchability** — every rule *and* obligation now has a vector embedding.
 
-**Evidence:** a scoring harness ran the BSA/AML rule slice end-to-end. On a
-5-rule sample, 100% of generated tests cited the correct CFR and covered every
-obligation. A full 116-rule run completed; detailed aggregate pending write-up.
+**Evidence:** an objective scoring harness; a 5-rule sample scored 100% on
+right-rule grounding; a 116-rule BSA/AML run completed.
 
-**Caveat for the officer:** these checks confirm the test *targets the right
-regulation and obligations* and is syntactically valid. They do **not** yet
-confirm each assertion is substantively correct against the regulation — that
-needs an SME review layer (planned; see §4).
+**Caveat:** these confirm the test targets the right regulation/obligation and
+is syntactically valid — **not** that each assertion is substantively correct.
+That needs the SME review layer (§4).
 
 ---
 
-## 2. CCO Dashboard — completion in progress (by use case)
+## 2. CCO Dashboard — COMPLETE (13/14 views populated)
 
-The dashboard has 14 operator views. Status:
+Final end-to-end verification: **all 17 endpoints return HTTP 200.**
 
-| Use case | What it shows | Status |
+| Use case | Status | Note |
 |---|---|---|
-| Rules | BSA/AML rules ranked by severity/risk, test coverage | ✅ working (applicability now bank-scoped) |
-| Obligations | Obligations by regulator, test-coverage % | ✅ working |
-| Changes | Regulatory-change inbox + sign-off | ✅ working (OFAC change feed) |
-| Enforcement | Peer enforcement actions / penalties | ✅ working (2,150 actions) |
-| Workflows | 6-agent test-gen run history + PR links | ✅ working |
-| OFAC Health | SDN screening engine health | ✅ working |
-| **Exam Readiness** | Exam-readiness gauge + CCO/CRO/CIO lenses | ✅ **completed this round** (see §2a) |
-| Findings / MRA | Findings & remediation tracker | ✅ completed this round (50 findings) |
-| Reports | WORM-locked exam-evidence exports (6 types) | 🔄 **in progress** |
-| Cases | OFAC screening case queue | ⬜ pending (screening data empty) |
-| Investigation | Single screening case detail | ⬜ pending |
-| SDN Search | Live sanctions screening | ⬜ pending |
-| Rules Performance | OFAC rule precision / alert volume | ⬜ pending |
-| Vector Intel | Screening model governance | ⬜ pending |
-| Executive Today | Board same-day OFAC tiles | ⬜ pending |
+| Rules | ✅ data | 50 applicable rules, bank-scoped; mark-N/A works |
+| Obligations | ✅ data | 198 obligations, coverage % by regulator |
+| Enforcement | ✅ data | 2,150 peer enforcement actions |
+| Workflows | ✅ data | 6-agent run history + PR links |
+| OFAC Health | ✅ data | 19.8k SDN entries, 47.6k variants, 100% embedded |
+| **Exam Readiness** | ✅ data | score **57 / "developing"**, 9/10 dims measured (§2a) |
+| Findings / MRA | ✅ data | 50 findings (endpoint was a stub — now reads the table) |
+| Reports | ✅ data | all 6 exam-evidence exports generated, signed, downloadable |
+| Cases | ✅ data | 4 OFAC screening cases |
+| Investigation | ✅ data | case detail + decision history |
+| SDN Search | ✅ data | live screening (7 run: 4 HOLD hits, 3 clean) |
+| Rules Performance | ✅ data | 4 screening rules, alert/precision stats |
+| Vector Intel | ✅ data | embedding coverage + score histogram (Admin/CRO role) |
+| Executive Today | ✅ data | 6 same-day OFAC tiles |
+| **Changes** | ⚠️ default-empty | works with "include OFAC" (20 shown); default CCO inbox hides OFAC and there are **no non-OFAC rule changes** locally (needs P1 change-detector) |
 
-### 2a. Exam Readiness — what "complete" means
-The readiness score is built from 10 dimensions, each scored 0–100 and
-weighted by role (CCO / CRO / CIO). We populated the bank's compliance data so
-the score reflects reality instead of placeholders:
-- **Applicable-obligation coverage** (which required CFRs our rule corpus covers)
-- **Control coverage** (bank controls mapped to obligations — 198 mapped)
-- **Governance evidence** (all 8 board/committee/policy artifacts on file)
-- **Findings remediation** (50 findings tracked)
-
-Current overall readiness: **53 / 100 ("developing")**, 9 of 10 dimensions
-measured. This is an *honest* score — the two low dimensions are real gaps, not
-display bugs (see §3).
-
----
-
-## 3. Known gaps & decisions for the officer
-
-| Gap | Impact | Options |
+### 2a. Exam Readiness detail (score 57, 9/10 dims measured)
+| Dimension | Score | Basis |
 |---|---|---|
-| **Enforcement risk scores not computed** | Readiness "risk-assessment currency" = 0; `/risk` view empty | Run the enforcement-risk scoring enrichment (we have 2,150 enforcement actions to score) |
-| **No regulatory *rule* changes locally** (only OFAC SDN) | Readiness "change management" shows the neutral default | Expected locally; real rule-change feed comes from the live scraper |
-| **Exam reports not yet generated** | Readiness "point-in-time reporting" unmeasured; Reports page empty | Generating now (§2 Reports) |
-| **Screening domain empty** (no cases/events/rules) | 6 OFAC screening views empty | Seed screening rules + run live sanction screens |
-| **Substantive test correctness unverified** | Tests target the right rule but assertions not SME-checked | Build an SME "golden answer" review layer |
+| Applicable-obligation coverage | 23 | registry: 8 of 35 required CFRs present in corpus |
+| Control coverage | 100 | 198 obligations mapped to controls |
+| Governance evidence | 100 | all 8 board/committee/policy artifacts on file |
+| Findings remediation | 100 | 50 findings, all closed |
+| Change management | 80 | neutral default — no non-OFAC rule changes locally |
+| Testing & rationale | 10 | obligations with test coverage (grows as tests run) |
+| Testing execution rate | 0 | 1 rule tested of 476 |
+| **Risk-assessment currency** | **0** | ⚠️ enforcement risk not scored (§3) |
+| Point-in-time reporting | 100 | 6 signed exam exports in the window |
+| Engine integrity | measured | SDN freshness + embedding + pipeline health |
+
+The score is **honest** — the low dimensions are real posture gaps, not display bugs.
 
 ---
 
-## 4. What's next (planned order)
-1. **Reports** — generate all 6 exam-evidence exports end-to-end (also completes readiness "reporting").
-2. **Enforcement risk backfill** — score the 2,150 enforcement actions → fixes readiness "risk currency" + the Risk view.
-3. **Screening domain** — seed screening rules + generate screening cases so the 6 OFAC views populate.
-4. **Changes drawer** — seed change-record comments.
-5. **Final end-to-end verification** — confirm all 14 views return real data.
-6. **SME validation layer** — a golden-set of rules with officer-reviewed expected assertions, to measure *substantive* test correctness (not just grounding).
-7. **Production rollout** — the fixes live on a branch; a documented rollout runbook exists (`docs/runbooks/prod-rollout-testgen.md`).
+## 3. Honest gaps (documented, not faked) — for the officer
+
+| Gap | Effect on dashboard | Root cause / fix |
+|---|---|---|
+| **Enforcement risk not scored** | Readiness "risk-assessment currency" = 0; Risk view thin | `enforcement_actions.regulations_cited` is empty for all 2,150 rows — P1 never extracted which CFRs each action cited. The scorer works but has nothing to attribute. **Fix = P1 enforcement-citation extraction.** We did **not** fabricate citations. |
+| **No non-OFAC regulatory changes** | Changes default inbox empty; readiness "change management" = neutral default | Only OFAC SDN changes exist locally (52k). Real rule-change records come from the P1 scraper's change detector. |
+| **Substantive test correctness** | n/a | Tests target the right rule but assertions aren't SME-verified. Needs the golden-set review layer. |
+| **Low coverage / testing dims** | Readiness testing≈10, execution≈0 | Real — only a handful of rules have generated tests so far; rises as the pipeline runs. |
+
+---
+
+## 4. What's done vs. next
+
+**Done this effort:**
+- Test-gen pipeline fixed + accuracy (grounding, Fix A, embeddings, self-heal)
+- Readiness dimensions seeded to registry mode (inventory/control/governance/findings)
+- Findings endpoint fixed; Reports generated+signed; Screening domain populated; Rules applicability; Changes drawer comments
+- Full end-to-end verification (17/17 endpoints 200)
+
+**Next (requires production data feeds or further work):**
+1. **P1 enforcement-citation extraction** → unblocks Risk view + readiness risk-currency
+2. **P1 rule-change detection** → populates the Changes inbox + change-management dim
+3. **SME golden-set review layer** → measures *substantive* test correctness
+4. **Production rollout** → fixes live on branch `code_cleanup`; runbook at `docs/runbooks/prod-rollout-testgen.md`
 
 ---
 
 ## 5. Deployment note
-All code fixes are committed on the `code_cleanup` branch (not yet merged to
-`main` or deployed to AWS). The data population described here is in the **local**
-environment for validation; production requires running the documented migration
-+ backfill steps. Nothing here has been deployed to a bank's live environment yet.
+All code fixes are committed on the `code_cleanup` branch (not merged to `main`
+or deployed to AWS). The data population here is in the **local** validation
+environment — production requires the documented migration + backfill + rollout
+steps. **Nothing here is deployed to a bank's live environment.** The local
+seeding used the bank id `testbank`; no fabricated regulatory attribution was
+introduced (enforcement/rule-change gaps were left honest).
