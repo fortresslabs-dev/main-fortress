@@ -6,6 +6,7 @@ and upserts them into the enforcement_actions table.
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 from datetime import date, datetime
 from decimal import Decimal
@@ -154,6 +155,26 @@ class EnforcementActionService:
             Count of new actions inserted.
         """
         inserted = 0
+
+        # LLM citation fallback vocabulary — load the corpus' distinct CFR
+        # citations once per run. The regex (_extract_regulations_cited) rarely
+        # matches enforcement prose, so when it comes back empty we ask the
+        # model which of these the action concerns (constrained → no invented
+        # citations). Gated by ENFORCEMENT_LLM_CITATIONS (default on); the
+        # extractor itself soft-fails to [] if Bedrock is unavailable.
+        llm_citations = os.getenv("ENFORCEMENT_LLM_CITATIONS", "1") != "0"
+        candidate_citations: List[str] = []
+        if llm_citations:
+            try:
+                from sqlalchemy import text as _sql
+                candidate_citations = [
+                    r[0] for r in (await session.execute(_sql(
+                        "SELECT DISTINCT cfr_citation FROM compliance_rules "
+                        "WHERE cfr_citation IS NOT NULL AND cfr_citation <> ''"))).all()
+                ]
+            except Exception as exc:
+                logger.warning("enforcement_citation_candidates_failed", error=str(exc))
+
         for regulator, url in _SOURCE_URLS.items():
             try:
                 actions = self._scrape_agency(regulator, url)
@@ -166,6 +187,19 @@ class EnforcementActionService:
                         action["action_ref"],
                         action.get("_penalty_text", ""),
                     )
+                    # Citation fallback — only when the regex found nothing.
+                    if (llm_citations and candidate_citations
+                            and not action.get("regulations_cited")):
+                        try:
+                            action["regulations_cited"] = await extract_regulations_cited_llm(
+                                action.get("_penalty_text", "") or action.get("violation_summary", ""),
+                                candidate_citations,
+                                regulator=action.get("regulator"),
+                                action_type=action.get("action_type"),
+                            )
+                        except Exception as exc:
+                            logger.warning("enforcement_citation_llm_failed",
+                                           action_ref=action.get("action_ref"), error=str(exc))
                     action.pop("_penalty_text", None)
                     upserted = await self._upsert_action(session, action)
                     if upserted:
