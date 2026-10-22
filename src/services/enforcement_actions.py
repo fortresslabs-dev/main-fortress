@@ -75,6 +75,65 @@ def _extract_regulations_cited(text: str) -> List[str]:
     return list(dict.fromkeys(m.group(0).strip() for m in _REG_CITE_RE.finditer(text)))
 
 
+async def extract_regulations_cited_llm(
+    text: str,
+    candidate_citations: List[str],
+    *,
+    regulator: Optional[str] = None,
+    action_type: Optional[str] = None,
+    model_id: Optional[str] = None,
+) -> List[str]:
+    """LLM fallback for `regulations_cited` when the regex finds nothing.
+
+    Enforcement press releases rarely cite CFRs verbatim, so the regex above
+    usually returns []. This asks the model which regulations the action
+    *clearly concerns*, CONSTRAINED to a supplied candidate vocabulary (the
+    distinct ``compliance_rules.cfr_citation`` values) so the output always
+    maps back to a rule via the scorer's normalized join — and so the model
+    cannot invent a citation outside the corpus. Returns [] when nothing
+    clearly applies (grounded, not fabricated). Provenance is the caller's to
+    record (method='llm_inferred').
+    """
+    text = (text or "").strip()
+    if not text or not candidate_citations:
+        return []
+    candidates = candidate_citations[:200]
+    listing = "\n".join(f"- {c}" for c in candidates)
+    prompt = (
+        "You are a U.S. banking enforcement analyst. Decide which regulations "
+        "the enforcement action below clearly concerns or alleges a violation of.\n\n"
+        f"Regulator: {regulator or 'unknown'}   Action type: {action_type or 'unknown'}\n"
+        f'Enforcement action:\n"""\n{text[:4000]}\n"""\n\n'
+        "Choose ONLY from this candidate list, returning each citation EXACTLY as written:\n"
+        f"{listing}\n\n"
+        "Rules:\n"
+        "- Return a JSON array of the citations clearly implicated by the text.\n"
+        "- If none clearly apply, return [].\n"
+        "- Never invent a citation outside the candidate list.\n"
+        "Return ONLY the JSON array."
+    )
+    try:
+        from src.services.bedrock_service import BedrockService
+        from src.utils.config import settings
+        model = (model_id or getattr(settings, "P1_OBLIGATION_EXTRACTION_MODEL", None)
+                 or settings.BEDROCK_MODEL)
+        raw = await BedrockService(model_id=model).generate_code(
+            prompt=prompt, max_tokens=500, temperature=0.0)
+    except Exception as exc:  # Bedrock unavailable / throttled → safe no-op
+        logger.warning("enforcement_llm_cite_failed", error=str(exc)[:160])
+        return []
+    import json as _json
+    m = re.search(r"\[.*\]", raw or "", re.DOTALL)
+    if not m:
+        return []
+    try:
+        parsed = _json.loads(m.group(0))
+    except Exception:
+        return []
+    allowed = set(candidates)
+    return [c for c in parsed if isinstance(c, str) and c in allowed]
+
+
 def _action_ref(regulator: str, institution: str, action_date: str) -> str:
     """Generate a stable unique key for an enforcement action."""
     raw = f"{regulator}::{institution}::{action_date}".lower()
