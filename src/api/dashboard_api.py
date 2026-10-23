@@ -483,7 +483,12 @@ async def get_enforcement(
 # ── Obligation coverage breakdown ─────────────────────────────────────
 
 @router.get("/obligations")
-async def get_obligations(user: CurrentUser = Depends(get_current_user)) -> Dict:
+async def get_obligations(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, ge=1, le=100),
+    regulator: Optional[str] = Query(None),
+    user: CurrentUser = Depends(get_current_user),
+) -> Dict:
     async with get_db() as session:
         rows = await session.execute(text("""
             SELECT
@@ -509,18 +514,26 @@ async def get_obligations(user: CurrentUser = Depends(get_current_user)) -> Dict
         """))
         t = totals.fetchone()
 
-        # Individual obligations for the expandable read-list. Bounded so the
-        # payload stays small as the corpus grows; the KPIs above are the
-        # authoritative totals.
-        items_rows = await session.execute(text("""
+        # Individual obligations for the read-list — paginated server-side
+        # (page/page_size) with an optional regulator filter. The KPIs/
+        # breakdown above stay global (authoritative totals).
+        where = "WHERE is_active = TRUE"
+        qp: Dict[str, Any] = {}
+        if regulator:
+            where += " AND regulator = :reg"
+            qp["reg"] = regulator
+        total_items = await session.scalar(
+            text(f"SELECT COUNT(*) FROM obligations {where}"), qp) or 0
+        offset = (page - 1) * page_size
+        items_rows = await session.execute(text(f"""
             SELECT obligation_id, regulation_id, regulator, category,
                    source_text, obligation_type, section_reference,
                    cfr_citation, has_test_coverage
             FROM obligations
-            WHERE is_active = TRUE
+            {where}
             ORDER BY regulator, cfr_citation NULLS LAST, obligation_id
-            LIMIT 1000
-        """))
+            LIMIT :limit OFFSET :offset
+        """), {**qp, "limit": page_size, "offset": offset})
         items = [dict(r._mapping) for r in items_rows.fetchall()]
 
     total = (t.total or 0) if t else 0
@@ -531,6 +544,11 @@ async def get_obligations(user: CurrentUser = Depends(get_current_user)) -> Dict
         "total":        total,
         "covered":      covered,
         "coverage_pct": round((covered / total * 100) if total else 0, 1),
+        "page":         page,
+        "page_size":    page_size,
+        "total_items":  total_items,
+        "total_pages":  max(1, (total_items + page_size - 1) // page_size),
+        "regulator":    regulator,
     }
 
 
