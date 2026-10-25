@@ -22,6 +22,16 @@ logger = structlog.get_logger(__name__)
 
 DEFAULT_BEDROCK_MODEL = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
 
+# One variable — LLM_PROVIDER — selects the backend. Friendly aliases map to
+# the canonical names so `claude`/`gpt` work as well as `anthropic`/`openai`.
+_PROVIDER_ALIASES = {"claude": "anthropic", "gpt": "openai"}
+
+
+def normalize_provider(provider: Optional[str]) -> str:
+    """Canonical provider: anthropic (Claude API) | openai (GPT) | bedrock (AWS)."""
+    p = (provider or "bedrock").lower()
+    return _PROVIDER_ALIASES.get(p, p)
+
 
 def to_anthropic_model_id(bedrock_id: str) -> str:
     """Translate a Bedrock inference-profile ID to a direct Anthropic API ID.
@@ -46,7 +56,7 @@ class BedrockService:
         self.region = os.getenv('AWS_REGION', settings.AWS_REGION or 'us-east-1')
         # Resolution order: explicit constructor arg → settings (env/SSM/Secrets) → built-in default
         self.model_id = model_id or settings.BEDROCK_MODEL or DEFAULT_BEDROCK_MODEL
-        self.provider = (settings.LLM_PROVIDER or "bedrock").lower()
+        self.provider = normalize_provider(settings.LLM_PROVIDER)
 
         if self.provider == "anthropic":
             # Direct Claude API — no AWS. An explicit ANTHROPIC_MODEL overrides;
@@ -56,6 +66,15 @@ class BedrockService:
             self.anthropic_model = settings.ANTHROPIC_MODEL or to_anthropic_model_id(self.model_id)
             self.client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
             logger.info("llm_service_initialized", provider="anthropic", model_id=self.anthropic_model)
+            return
+
+        if self.provider == "openai":
+            # Direct OpenAI API (GPT) — no AWS. Model is OPENAI_MODEL (a
+            # chat-completions model, default gpt-4o); the Bedrock ID is not used.
+            from openai import OpenAI
+            self.openai_model = settings.OPENAI_MODEL or "gpt-4o"
+            self.client = OpenAI(api_key=settings.OPENAI_API_KEY or settings.GPT_API_KEY)
+            logger.info("llm_service_initialized", provider="openai", model_id=self.openai_model)
             return
 
         # boto3 defaults: read_timeout=60s, max_attempts=3. Sonnet 4.5 with
@@ -88,6 +107,11 @@ class BedrockService:
             return await self._generate_code_anthropic(
                 prompt, max_tokens, temperature,
                 to_anthropic_model_id(model_id) if model_id else self.anthropic_model,
+            )
+
+        if self.provider == "openai":
+            return await self._generate_code_openai(
+                prompt, max_tokens, temperature, model_id or self.openai_model,
             )
 
         try:
@@ -159,4 +183,29 @@ class BedrockService:
             return code
         except Exception as e:
             logger.error("anthropic_generation_failed", error=str(e))
+            raise
+
+    async def _generate_code_openai(
+        self,
+        prompt: str,
+        max_tokens: int,
+        temperature: float,
+        model_id: str,
+    ) -> str:
+        """Generate via the direct OpenAI API (GPT, chat completions). No AWS."""
+        try:
+            def _call():
+                resp = self.client.chat.completions.create(
+                    model=model_id,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    messages=[{"role": "user", "content": prompt}],
+                )
+                return resp.choices[0].message.content or ""
+
+            code = await asyncio.to_thread(_call)
+            logger.info("openai_code_generated", model_id=model_id)
+            return code
+        except Exception as e:
+            logger.error("openai_generation_failed", error=str(e))
             raise

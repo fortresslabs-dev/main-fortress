@@ -78,7 +78,46 @@ $env:LLM_MOCK_MODE = "true"
 ```
 
 > `LLM_MOCK_MODE=true` stubs all Bedrock/LLM calls so the scraper and agents run
-> with **no AWS credentials**. Drop it only when you intend to hit real Bedrock.
+> with **no AWS credentials**. Drop it only when you want real LLM output.
+
+---
+
+## 2b. LLM provider — Claude or GPT (one variable, no AWS)
+
+For **real** LLM output locally (test generation, extraction, enforcement
+summarization) without AWS/Bedrock, one variable — **`LLM_PROVIDER`** — selects
+the backend. Set it in `.env` (copied from `.env.example`) and turn the mock
+off.
+
+| `LLM_PROVIDER` | Backend | Key to set | AWS? |
+|---|---|---|---|
+| `anthropic` (or `claude`) | Direct **Claude API** (`api.anthropic.com`) | `ANTHROPIC_API_KEY=sk-ant-...` | No |
+| `openai` (or `gpt`) | Direct **OpenAI/GPT API** (`api.openai.com`) | `OPENAI_API_KEY=sk-...` + `OPENAI_MODEL=gpt-4o` | No |
+| `bedrock` | AWS Bedrock (prod parity) | — (needs `fortress-local` AWS profile) | Yes |
+
+**Setup (both OSes):**
+```bash
+cp .env.example .env          # if you don't have .env yet
+# then edit .env — pick ONE:
+#   LLM_PROVIDER=claude   + ANTHROPIC_API_KEY=sk-ant-...
+#   LLM_PROVIDER=gpt      + OPENAI_API_KEY=sk-...   (OPENAI_MODEL=gpt-4o)
+
+make install                  # installs anthropic + openai SDKs (in a venv)
+make p2-live                  # runs P2 with the mock OFF; provider comes from .env
+#   make p1-live              # same for P1
+```
+
+**Trigger test generation** and confirm which provider ran — the log line is:
+- Claude: `anthropic_code_generated model_id=claude-sonnet-4-5-20250929`
+- GPT: `openai_code_generated model_id=gpt-4o`
+
+Switching providers is just editing `LLM_PROVIDER` in `.env` and restarting —
+no code change. Keys and model IDs live in `.env` (see `.env.example` for all
+fields). Get keys from console.anthropic.com (Claude) or platform.openai.com (GPT).
+
+> **One AWS-only exception:** Titan **embeddings** (vector search) have no
+> direct-API equivalent. With `anthropic`/`openai`, embedding-dependent features
+> fall back to `LLM_MOCK_MODE=true`; only Bedrock provides real embeddings.
 
 ---
 

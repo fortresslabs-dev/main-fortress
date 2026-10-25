@@ -50,7 +50,8 @@ Key env vars (defaults baked into the Makefile targets):
 | Goal | Set | AWS needed? |
 |---|---|---|
 | Wire/pipeline/UI work, stubbed LLM | `LLM_MOCK_MODE=true` (the `make p1`/`p2` default) | None |
-| **Real test generation via the direct Claude API** | `LLM_MOCK_MODE=false` + `LLM_PROVIDER=anthropic` + `ANTHROPIC_API_KEY` | **None** — use `make p2-live` |
+| **Real LLM via direct Claude API** | `LLM_MOCK_MODE=false` + `LLM_PROVIDER=anthropic` + `ANTHROPIC_API_KEY` | **None** — use `make p2-live` |
+| **Real LLM via direct GPT API** | `LLM_MOCK_MODE=false` + `LLM_PROVIDER=openai` + `OPENAI_API_KEY` | **None** — use `make p2-live` |
 | Real LLM via Bedrock (prod parity) | `LLM_MOCK_MODE=false` + `LLM_PROVIDER=bedrock` + `fortress-local` profile | Bedrock invoke |
 
 ---
@@ -175,44 +176,44 @@ background loop so you drive it manually.
 - Agent pipeline: `src/agents/*`; validators: `src/services/validators.py`;
   sync: `src/services/update_service.py`; dashboard API: `src/api/dashboard_api.py`.
 
-### Real test generation via the direct Claude API (no AWS)
+### Real test generation via a direct LLM API — Claude or GPT (no AWS)
 
-The 6-agent test-generation pipeline normally calls Bedrock. For local dev you
-can run it against the **direct Claude API** (`https://api.anthropic.com`) with
-no AWS credentials, no `fortress-local` profile, and no Bedrock access.
+The 6-agent pipeline normally calls Bedrock. For local dev you can run it
+against a **direct LLM API** — Claude or GPT — with no AWS credentials, no
+`fortress-local` profile, no Bedrock. **One variable (`LLM_PROVIDER`) selects
+the backend**; both LLM call sites honor it: `BedrockService` (Agent 4 test-gen
++ enforcement summarization, plain-text) and `BedrockExtractor`
+(`src/extraction/bedrock_extractor.py`, forced tool_use → OpenAI function
+calling — penalty/obligation/enforcement extraction).
 
-`BedrockService` (the shared LLM call site for Agent 4 and enforcement
-summarization) switches on `LLM_PROVIDER`: set it to `anthropic` and it builds
-an `anthropic.Anthropic` client instead of a boto3 Bedrock client. The
-configured Bedrock inference-profile model ID is auto-translated to its direct
-form (`us.anthropic.claude-sonnet-4-5-20250929-v1:0` → `claude-sonnet-4-5-20250929`).
+| `LLM_PROVIDER` | SDK / endpoint | Key | Model var |
+|---|---|---|---|
+| `anthropic` / `claude` | `anthropic` → `api.anthropic.com` | `ANTHROPIC_API_KEY` | `ANTHROPIC_MODEL` (else translated from `BEDROCK_MODEL`) |
+| `openai` / `gpt` | `openai` → `api.openai.com` | `OPENAI_API_KEY` (or `GPT_API_KEY`) | `OPENAI_MODEL` (default `gpt-4o`) |
 
 ```bash
-# 1. Put your key in .env (read via pydantic SettingsConfigDict):
-#      LLM_PROVIDER=anthropic
-#      ANTHROPIC_API_KEY=sk-ant-...
-#    (.env.example already defaults LLM_PROVIDER=anthropic — just add the key)
+# 1. In .env, pick ONE provider + its key (read via pydantic SettingsConfigDict):
+#      LLM_PROVIDER=claude   + ANTHROPIC_API_KEY=sk-ant-...
+#    or
+#      LLM_PROVIDER=gpt      + OPENAI_API_KEY=sk-...   (OPENAI_MODEL=gpt-4o)
 
-# 2. Run P2 with the LLM live (mock off, direct Claude API):
-make p2-live            # → :8002, LLM_MOCK_MODE=false LLM_PROVIDER=anthropic
+# 2. Run with the LLM live (mock off; provider comes from .env):
+make p2-live            # → :8002, LLM_MOCK_MODE=false
 #   make p1-live        # same for P1
 
-# 3. Trigger generation and watch it call the Claude API:
+# 3. Trigger generation:
 #    - Dashboard: Rules page → "Generate test" (POST /rules/{id}/generate-test)
 #    - JIRA webhook: POST /webhooks  (Vite proxies /webhooks → :8002)
-#    Log line `anthropic_code_generated model_id=claude-sonnet-4-5-20250929`
-#    confirms the direct API ran (vs `bedrock_code_generated` on the AWS path).
+#    Log line confirms which backend ran:
+#      Claude → `anthropic_code_generated model_id=claude-sonnet-4-5-20250929`
+#      GPT    → `openai_code_generated model_id=gpt-4o`
+#      (AWS path logs `bedrock_code_generated`)
 ```
 
-To pin a specific model regardless of the Bedrock ID, set
-`ANTHROPIC_MODEL=claude-sonnet-4-5-20250929` (or another temperature-capable
-model — the generator passes `temperature`, which newer tiers like Opus 4.7+ /
-Sonnet 5 reject).
-
-`LLM_PROVIDER=anthropic` covers **both** generation call sites:
-`BedrockService` (Agent 4 test-gen + enforcement summarization, plain-text) and
-`BedrockExtractor` (`src/extraction/bedrock_extractor.py`, forced tool_use —
-penalty/obligation/enforcement extraction). Both route to the direct Claude API.
+Claude model IDs: the configured Bedrock inference-profile ID is auto-translated
+to its direct form (`us.anthropic.claude-sonnet-4-5-20250929-v1:0` →
+`claude-sonnet-4-5-20250929`); pin with `ANTHROPIC_MODEL`. GPT uses `OPENAI_MODEL`
+verbatim (any chat-completions model).
 
 **Still Bedrock-only locally:** Titan **embeddings** have no Claude-API
 equivalent, so vector search (`compliance_rules.embedding`, OFAC vectors,

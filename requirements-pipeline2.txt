@@ -26,6 +26,7 @@ botocore==1.34.34
 
 # AI (code generation agent)
 anthropic>=0.25.0
+openai>=1.0.0           # LLM_PROVIDER=openai/gpt (direct GPT API, local, no AWS)
 
 # HTTP client (for sync API calls to Fortress Cloud)
 httpx>=0.27.0,<1.0.0

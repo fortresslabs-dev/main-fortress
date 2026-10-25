@@ -31,7 +31,7 @@ from botocore.config import Config
 from pydantic import ValidationError
 
 from src.extraction.models import ExtractionMethod, ExtractionResult
-from src.services.bedrock_service import to_anthropic_model_id
+from src.services.bedrock_service import normalize_provider, to_anthropic_model_id
 
 logger = structlog.get_logger(__name__)
 
@@ -142,7 +142,7 @@ class BedrockExtractor:
             or getattr(settings, _DEFAULT_EXTRACTION_MODEL_ENV, None)
             or settings.BEDROCK_MODEL
         )
-        self.provider = (settings.LLM_PROVIDER or "bedrock").lower()
+        self.provider = normalize_provider(settings.LLM_PROVIDER)
 
         if self.provider == "anthropic":
             # Direct Claude API — no AWS. tool_use works identically on the
@@ -155,6 +155,19 @@ class BedrockExtractor:
                 "extractor_initialized",
                 provider="anthropic",
                 model_id=self.anthropic_model,
+            )
+            return
+
+        if self.provider == "openai":
+            # Direct OpenAI API (GPT) — no AWS. Forced tool_use maps to OpenAI
+            # function calling (see _invoke_tool). Model is OPENAI_MODEL.
+            from openai import OpenAI
+            self.openai_model = settings.OPENAI_MODEL or "gpt-4o"
+            self.client = OpenAI(api_key=settings.OPENAI_API_KEY or settings.GPT_API_KEY)
+            logger.info(
+                "extractor_initialized",
+                provider="openai",
+                model_id=self.openai_model,
             )
             return
 
@@ -314,6 +327,42 @@ class BedrockExtractor:
                     "output_tokens": message.usage.output_tokens,
                 },
                 "stop_reason": message.stop_reason,
+            }
+
+        if self.provider == "openai":
+            # OpenAI function calling: Anthropic's tool (name/description/
+            # input_schema) maps to a function tool with `parameters`; the
+            # forced tool_choice pins that function. Normalize the response to
+            # the same {content:[tool_use], usage, stop_reason} envelope.
+            def _call():
+                return self.client.chat.completions.create(
+                    model=model_id or self.openai_model,
+                    max_tokens=1024,
+                    temperature=0.0,
+                    tools=[{
+                        "type": "function",
+                        "function": {
+                            "name": tool_name,
+                            "description": tool.get("description", ""),
+                            "parameters": tool["input_schema"],
+                        },
+                    }],
+                    tool_choice={"type": "function", "function": {"name": tool_name}},
+                    messages=[{"role": "user", "content": user_msg}],
+                )
+
+            resp = await asyncio.to_thread(_call)
+            choice = resp.choices[0]
+            tool_calls = choice.message.tool_calls or []
+            args = json.loads(tool_calls[0].function.arguments) if tool_calls else {}
+            usage = resp.usage
+            return {
+                "content": [{"type": "tool_use", "name": tool_name, "input": args}],
+                "usage": {
+                    "input_tokens": getattr(usage, "prompt_tokens", None),
+                    "output_tokens": getattr(usage, "completion_tokens", None),
+                },
+                "stop_reason": choice.finish_reason,
             }
 
         body = json.dumps(

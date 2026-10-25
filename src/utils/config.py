@@ -130,7 +130,12 @@ else:
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env" if PIPELINE_MODE == "pipeline1" else None,
+        # Read .env for P1 (as before) and for LOCAL P2 (so a single .env drives
+        # LLM_PROVIDER/keys for `make p2-live`). Prod P2 sets SECRETS_SOURCE=aws
+        # and injects via SSM → no .env there. Real env vars still take
+        # precedence over .env, so inline Makefile vars win.
+        env_file=".env" if (PIPELINE_MODE == "pipeline1"
+                            or os.environ.get("SECRETS_SOURCE", "") != "aws") else None,
         case_sensitive=True,
         extra="ignore",
     )
@@ -164,6 +169,7 @@ class Settings(BaseSettings):
     ANTHROPIC_MODEL: str = Field(default="claude-sonnet-4-20250514")
     GPT_API_KEY: str = Field(default="")
     OPENAI_API_KEY: str = Field(default="")
+    OPENAI_MODEL: str = Field(default="gpt-4o")  # chat-completions model when LLM_PROVIDER=openai/gpt
     AWS_REGION: str = Field(default="us-east-1")
     # Bedrock model IDs MUST be valid inference profile IDs in the target region.
     # Sonnet 4/4.5/4.6 and Haiku 4.5 are INFERENCE_PROFILE-only — they require the

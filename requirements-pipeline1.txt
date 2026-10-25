@@ -25,6 +25,7 @@ botocore>=1.34.131
 
 # Anthropic direct API (alternative to Bedrock)
 anthropic>=0.40.0
+openai>=1.0.0           # LLM_PROVIDER=openai/gpt (direct GPT API, local, no AWS)
 
 # LangGraph Agentic Framework (scraper agents)
 langgraph==0.2.73
