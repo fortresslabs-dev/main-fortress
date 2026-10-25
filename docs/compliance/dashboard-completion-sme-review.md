@@ -328,6 +328,34 @@ regulator filter and penalties.
 
 ---
 
+## 10 · Business value of the other always-on views
+
+Short "why it matters to the CCO" for the remaining core views.
+
+**Rules** — the bank's obligation inventory, ranked by severity + enforcement risk; the CCO's worklist.
+- One source of truth for *what applies to **this** bank* (scoped by charter/asset size, not a generic list).
+- **Prioritized** by severity then enforcement risk — work the riskiest rules first.
+- Shows **test-coverage gaps** at a glance and is the launch point for "generate test".
+- **Mark Not-Applicable with a documented reason** → exam-defensible scoping (why a rule doesn't apply).
+
+**Obligations** — the decomposed, individually-testable requirements extracted from the rules, by regulator, with coverage %.
+- The **unit of compliance**: each obligation can be independently tested and evidenced.
+- **Coverage %** shows precisely what's tested vs. awaiting a test — the real measure of readiness.
+- **Every obligation is attributed to a regulator** (no "unknown" bucket) — nothing falls through the cracks.
+- It's the **denominator** for the exam-readiness coverage score.
+
+**Workflows** — the 6-agent test-generation run history: status, duration, PR links, success rate.
+- **Operational assurance** the automation is actually working (throughput, failures, speed).
+- **Audit trail**: every run links rule → JIRA story → GitHub PR — traceable evidence for examiners.
+- A **productivity metric** — how many compliance tests the pipeline is producing.
+
+**OFAC Health** — sanctions-screening engine health: SDN entry/variant counts, embedding coverage, list freshness.
+- **List freshness** = proof you're screening against *today's* SDN list — a hard regulatory requirement, not optional.
+- **Embedding coverage** = the fuzzy/vector name-matching is fully operational (so near-match aliases aren't missed).
+- **Early warning** of a stale or degraded screening engine *before* it causes a missed sanctions hit.
+
+---
+
 ## Honest gaps (for SME awareness — not defects, not faked)
 | Area | State | Needs |
 |---|---|---|
