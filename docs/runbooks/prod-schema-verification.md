@@ -47,6 +47,12 @@ SELECT 'rcr.updated_at',
                          WHERE table_name='regulatory_change_records' AND column_name='updated_at')
             THEN 'PASS' ELSE 'FAIL → sign-off will 500' END
 UNION ALL
+-- 3b. regulatory_change_records.remediation_jira_key (migration 053)
+SELECT 'rcr.remediation_jira_key',
+       CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns
+                         WHERE table_name='regulatory_change_records' AND column_name='remediation_jira_key')
+            THEN 'PASS' ELSE 'FAIL → requires-action epic key not persisted (migration 053)' END
+UNION ALL
 -- 4. compliance_rules enrichment columns (retrieval + ranking + risk)
 SELECT 'compliance_rules.'||c,
        CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns
@@ -94,6 +100,12 @@ embedding backfill runs). Any **FAIL** → see the matching item below.
   Confirm the owning migration includes these; if not, add a migration so fresh DBs get them.
 - **Note:** the separate sign-off `AmbiguousParameterError` was a *code* bug — already fixed on the branch (`c1042f2`); it ships with the deploy.
 
+## 3b. `regulatory_change_records.remediation_jira_key` — migration 053  🟠 requires-action epic
+- **Expectation:** `remediation_jira_key varchar(50)` exists.
+- **Symptom:** "Requires action" sign-off opens the JIRA epic but can't persist/surface its key (the write silently no-ops or errors depending on path).
+- **Fix:** `alembic upgrade head` (applies **053**), or `ALTER TABLE regulatory_change_records ADD COLUMN IF NOT EXISTS remediation_jira_key varchar(50);`
+- **Also set (config, not schema):** `JIRA_CHANGE_ISSUE_TYPE` in SSM — the epic issue type (defaults to `JIRA_ISSUE_TYPE`; set to `Epic` only if the bank's JIRA project allows it, else leave it to the project's accepted type to avoid a 502).
+
 ## 4. `compliance_rules` enrichment columns  🟠 retrieval / ranking / risk
 - **Expectation:** `embedding vector(1024)`, `tsv`, `severity`, `enforcement_risk_score`, `cfr_citation`, `domain` (migrations 013/023/051).
 - **Symptom:** hybrid search, severity ranking, or the Risk view degrade.
@@ -116,6 +128,7 @@ embedding backfill runs). Any **FAIL** → see the matching item below.
 | Enum labels uppercase | 🔴 | `ALTER TYPE … RENAME VALUE` (coordinate w/ deploy) |
 | `obligations.embedding` | 🟠 | `alembic upgrade head` (052) + backfill |
 | `rcr.client_id` / `updated_at` | 🔴 | `ALTER TABLE … ADD COLUMN` (+ ensure a migration carries them) |
+| `rcr.remediation_jira_key` | 🟠 | `alembic upgrade head` (053) + set `JIRA_CHANGE_ISSUE_TYPE` in SSM |
 | `compliance_rules` enrichment cols | 🟠 | `alembic upgrade head` + embedding backfill |
 | Readiness/Reports/Findings tables | 🟠 | `alembic upgrade head` |
 | `control_rule_mappings` seeder | 🟡 | reconcile demo seeder (non-runtime) |
