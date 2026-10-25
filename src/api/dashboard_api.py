@@ -36,6 +36,7 @@ import html as _html
 import io
 import csv
 import json
+import os
 from datetime import datetime, timezone, date as _date
 from typing import Any, Dict, List, Optional
 
@@ -271,6 +272,7 @@ async def get_changes(
             SELECT change_ref, rule_id, regulator,
                    change_summary, semantic_diff,
                    impact_rating, change_type, status,
+                   remediation_jira_key,
                    created_at, detected_at,
                    EXTRACT(EPOCH FROM (NOW() - detected_at)) / 86400.0 AS age_days
             FROM regulatory_change_records
@@ -625,6 +627,7 @@ async def get_change_detail(
                 rec.previous_hash, rec.new_hash,
                 rec.created_at, rec.signed_off_at,
                 rec.reviewer_name, rec.reviewer_role, rec.notes,
+                rec.remediation_jira_key,
                 cr.rule_text, cr.previous_content,
                 cr.cfr_citation, cr.source_url, cr.effective_date
             FROM regulatory_change_records rec
@@ -714,14 +717,53 @@ async def sign_off_change(
         raise HTTPException(
             400, f"decision must be one of {list(_DECISION_TO_STATUS)}"
         )
+    jira_epic_key = None
+    jira_error = None
     async with get_db() as session:
-        # NOTE: bind the status value under two distinct names. Reusing one
+        rec = (await session.execute(text("""
+            SELECT rcr.rule_id, rcr.regulator, rcr.change_summary,
+                   COALESCE(rcr.semantic_diff, '') AS diff,
+                   (SELECT cfr_citation FROM compliance_rules cr
+                     WHERE cr.rule_id = rcr.rule_id LIMIT 1) AS cfr
+            FROM regulatory_change_records rcr WHERE change_ref = :ref
+        """), {"ref": change_ref})).first()
+        if rec is None:
+            raise HTTPException(404, f"change_ref {change_ref} not found")
+
+        # "Requires action" opens a JIRA remediation epic via the same client
+        # the generate-test flow uses. Issue type is configurable because a
+        # project may not allow 'Epic' (e.g. MDP only accepts 'Idea'):
+        # JIRA_CHANGE_ISSUE_TYPE → JIRA_ISSUE_TYPE → 'Task'. JIRA failure is
+        # non-fatal — the disposition is still recorded and the error surfaced.
+        if body.decision == "requires_action":
+            try:
+                from src.integrations.jira_client import JIRAClient
+                project = os.getenv("JIRA_PROJECT_KEY", "MDP")
+                etype = (os.getenv("JIRA_CHANGE_ISSUE_TYPE")
+                         or os.getenv("JIRA_ISSUE_TYPE") or "Task")
+                title = f"[Reg change {change_ref}] Remediate {rec.rule_id} ({rec.regulator})"
+                desc = (f"Regulatory change {change_ref} on rule {rec.rule_id} "
+                        f"({rec.cfr or '—'}) requires remediation.\n\n"
+                        f"Summary: {rec.change_summary}\n\nDiff: {rec.diff}\n\n"
+                        f"Dispositioned by {user.email} via the CCO dashboard.")
+                result = JIRAClient().create_story(
+                    project=project, title=title, description=desc,
+                    issue_type=etype,
+                    labels=["compliance", "reg-change", change_ref],
+                )
+                jira_epic_key = result.get("key")
+            except Exception as exc:
+                jira_error = str(exc)[:300]
+                logger.warning("change_epic_create_failed",
+                               ref=change_ref, error=jira_error)
+
+        # NOTE: bind the status value under two distinct names — reusing one
         # named param in both the SET (varchar column) and the CASE…IN (text
-        # literals) makes asyncpg deduce inconsistent types for the same
-        # positional parameter → AmbiguousParameterError. Two params avoid it.
+        # literals) makes asyncpg deduce inconsistent types → AmbiguousParameterError.
         await session.execute(text("""
             UPDATE regulatory_change_records
             SET status=:status, client_id=:bank_id, updated_at=NOW(),
+                remediation_jira_key = COALESCE(:epic, remediation_jira_key),
                 signed_off_at = CASE
                     WHEN :status_gate IN ('signed_off','closed') AND signed_off_at IS NULL
                     THEN NOW()
@@ -729,16 +771,18 @@ async def sign_off_change(
                 END
             WHERE change_ref=:ref
         """), {"status": db_status, "status_gate": db_status,
-               "bank_id": user.bank_id, "ref": change_ref})
+               "bank_id": user.bank_id, "ref": change_ref, "epic": jira_epic_key})
         await session.commit()
 
-    logger.info("change_signoff", ref=change_ref,
-                decision=body.decision, by=user.email)
+    logger.info("change_signoff", ref=change_ref, decision=body.decision,
+                by=user.email, jira_epic=jira_epic_key)
     return {
         "change_ref": change_ref,
         "decision": body.decision,
         "signed_by": user.email,
         "role": user.role,
+        "jira_epic_key": jira_epic_key,
+        "jira_error": jira_error,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 

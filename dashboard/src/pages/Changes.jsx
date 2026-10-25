@@ -70,9 +70,15 @@ export default function Changes() {
     setSaving(true)
     const ref = signOff.change_ref
     try {
-      await dashboardApi.signOff(ref, { decision, note })
+      const r = await dashboardApi.signOff(ref, { decision, note })
+      const epic = r?.data?.jira_epic_key
+      const jerr = r?.data?.jira_error
       setSignOff(null)
-      setToast({ kind:'ok', text:`Signed off ${ref} (${decision.replace(/_/g,' ')})` })
+      setToast(epic
+        ? { kind:'ok',  text:`Signed off ${ref} — JIRA remediation ${epic} created` }
+        : jerr
+        ? { kind:'err', text:`${ref} marked requires-action, but JIRA epic was NOT created: ${jerr}` }
+        : { kind:'ok',  text:`Signed off ${ref} (${decision.replace(/_/g,' ')})` })
       load()
       if (detailRef === ref) setDetailRef(null)
     } catch (e) {
@@ -232,6 +238,12 @@ export default function Changes() {
                       <span className="ftr-badge">{c.regulator}</span>
                       {c.rule_id && <span className="ftr-badge">{c.rule_id}</span>}
                       <span className="ftr-badge">{(c.status || 'detected').replace(/_/g,' ')}</span>
+                      {c.remediation_jira_key && (
+                        <span className="ftr-badge" title="JIRA remediation epic"
+                              style={{background:'#2d4a7a', color:'#cfe0ff'}}>
+                          🎫 {c.remediation_jira_key}
+                        </span>
+                      )}
                       {age && (
                         <span className={`ftr-age ${age}`}
                               title={c.age_days != null ? `${c.age_days.toFixed(1)} days since detected` : ''}>
