@@ -36,6 +36,7 @@ export const dashboardApi = {
   getEnforcement:  (params) => api.get('/api/v1/dashboard/enforcement', { params }),
   getObligations:  (params) => api.get('/api/v1/dashboard/obligations', { params }),
   updateRule:      (id, b)  => api.patch(`/api/v1/dashboard/rules/${id}/status`, b),
+  genTestForChange:(ref)    => api.post(`/api/v1/dashboard/changes/${ref}/generate-test`, {}),
   signOff:         (ref, b) => api.post(`/api/v1/dashboard/changes/${ref}/signoff`, b),
   signOffBulk:     (b)      => api.post('/api/v1/dashboard/changes/signoff/bulk', b),
 }

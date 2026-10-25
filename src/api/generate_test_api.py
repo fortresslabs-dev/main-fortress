@@ -41,14 +41,22 @@ class BulkGenerateRequest(BaseModel):
     priority: str = "High"
 
 
-@router.post("/{rule_id}/generate-test")
-async def generate_test_for_rule(
+async def start_test_generation(
     rule_id: str,
-    body: GenerateTestRequest,
     background: BackgroundTasks,
-    user: CurrentUser = Depends(require_cco),
+    user: CurrentUser,
+    *,
+    jira_project: Optional[str] = None,
+    story_title: Optional[str] = None,
+    threshold_override=None,
+    priority: str = "High",
+    extra_labels: Optional[List[str]] = None,
 ) -> dict:
-    """CCO triggers test generation. Creates JIRA story + kicks off 6-agent pipeline inline."""
+    """Shared core: create the JIRA story + kick off the 6-agent pipeline for a
+    rule. Reused by the Rules 'generate test' route and the Changes
+    'generate/refresh test' route, so a regulatory change produces a test + PR
+    exactly like a rule does. ``extra_labels`` tags the story for traceability
+    (e.g. the originating change_ref)."""
     async with get_db() as session:
         row = await session.execute(text("""
             SELECT rule_id, rule_text, regulator, cfr_citation,
@@ -62,30 +70,25 @@ async def generate_test_for_rule(
         raise HTTPException(404, f"Rule {rule_id} not found or inactive")
 
     rule = dict(rule._mapping)
-    project = body.jira_project or _JIRA_PROJECT
-    title = body.story_title or _default_title(rule)
-    description = _build_description(rule, body.threshold_override, user)
+    project = jira_project or _JIRA_PROJECT
+    title = story_title or _default_title(rule)
+    description = _build_description(rule, threshold_override, user)
+    labels = ["compliance", "fortress-generated",
+              rule["regulator"].lower().replace(" ", "-")]
+    if extra_labels:
+        labels += extra_labels
 
     try:
-        client = JIRAClient()
-        issue = client.create_story(
-            project=project,
-            title=title,
-            description=description,
-            priority=body.priority,
-            labels=["compliance", "fortress-generated",
-                    rule["regulator"].lower().replace(" ", "-")],
+        issue = JIRAClient().create_story(
+            project=project, title=title, description=description,
+            priority=priority, labels=labels,
         )
     except Exception as exc:
         logger.error("jira_create_failed", rule_id=rule_id, error=str(exc))
         raise HTTPException(502, f"JIRA story creation failed: {exc}")
 
-    # Insert workflow row in RUNNING state and capture the id so the background
-    # task uses the same workflow_id (and the webhook handler, if JIRA also
-    # round-trips, finds and reuses this row instead of duplicating it).
-    # NOTE: use CAST(:ctx AS json), not :ctx::json — SQLAlchemy's text() bind
-    # parser doesn't tolerate the PostgreSQL `::type` cast directly after a
-    # named bind parameter (it fails to substitute `:ctx`).
+    # Insert workflow row in RUNNING state; the background task reuses this id.
+    # CAST(:ctx AS json) (not :ctx::json) — SQLAlchemy text() can't bind after ::.
     ctx_json = json.dumps({"jira_story": description or "", "summary": title or ""})
     async with get_db() as session:
         row = await session.execute(text("""
@@ -96,19 +99,12 @@ async def generate_test_for_rule(
                 (gen_random_uuid(), :jira_key, :jira_key, :rule_id, 'running',
                  CAST(:ctx AS json), CAST('{}' AS json))
             RETURNING id
-        """), {
-            "jira_key": issue["key"],
-            "rule_id": rule_id,
-            "ctx": ctx_json,
-        })
+        """), {"jira_key": issue["key"], "rule_id": rule_id, "ctx": ctx_json})
         workflow_id = str(row.scalar_one())
         await session.commit()
 
-    # Kick off the 6-agent pipeline without waiting for a JIRA webhook callback.
     background.add_task(process_workflow, workflow_id, issue["key"], description, rule_id)
-
-    logger.info("generate_test_requested",
-                rule_id=rule_id, jira_key=issue["key"],
+    logger.info("generate_test_requested", rule_id=rule_id, jira_key=issue["key"],
                 workflow_id=workflow_id, by=user.email)
     return {
         "rule_id": rule_id,
@@ -118,6 +114,21 @@ async def generate_test_for_rule(
         "status": "pipeline_started",
         "message": "6-agent pipeline will open a GitHub PR within ~5 minutes",
     }
+
+
+@router.post("/{rule_id}/generate-test")
+async def generate_test_for_rule(
+    rule_id: str,
+    body: GenerateTestRequest,
+    background: BackgroundTasks,
+    user: CurrentUser = Depends(require_cco),
+) -> dict:
+    """CCO triggers test generation. Creates JIRA story + kicks off 6-agent pipeline inline."""
+    return await start_test_generation(
+        rule_id, background, user,
+        jira_project=body.jira_project, story_title=body.story_title,
+        threshold_override=body.threshold_override, priority=body.priority,
+    )
 
 
 @router.post("/bulk-generate")

@@ -41,7 +41,7 @@ from datetime import datetime, timezone, date as _date
 from typing import Any, Dict, List, Optional
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import text
@@ -272,7 +272,7 @@ async def get_changes(
             SELECT change_ref, rule_id, regulator,
                    change_summary, semantic_diff,
                    impact_rating, change_type, status,
-                   remediation_jira_key,
+                   remediation_jira_key, test_jira_key,
                    created_at, detected_at,
                    EXTRACT(EPOCH FROM (NOW() - detected_at)) / 86400.0 AS age_days
             FROM regulatory_change_records
@@ -627,7 +627,7 @@ async def get_change_detail(
                 rec.previous_hash, rec.new_hash,
                 rec.created_at, rec.signed_off_at,
                 rec.reviewer_name, rec.reviewer_role, rec.notes,
-                rec.remediation_jira_key,
+                rec.remediation_jira_key, rec.test_jira_key,
                 cr.rule_text, cr.previous_content,
                 cr.cfr_citation, cr.source_url, cr.effective_date
             FROM regulatory_change_records rec
@@ -785,6 +785,40 @@ async def sign_off_change(
         "jira_error": jira_error,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+
+@router.post("/changes/{change_ref}/generate-test")
+async def generate_test_for_change(
+    change_ref: str,
+    background: BackgroundTasks,
+    user: CurrentUser = Depends(require_cco),
+) -> Dict:
+    """Route a regulatory change into the SAME 6-agent test-generation pipeline
+    as the Rules flow, using the change's linked rule_id — so a changed rule
+    gets a refreshed compliance test + GitHub PR. Both entry points (rule or
+    change) therefore converge on one artifact: a test. The JIRA story is
+    tagged with the change_ref for traceability, and its key is stored on the
+    change record (test_jira_key)."""
+    async with get_db() as session:
+        rec = (await session.execute(text(
+            "SELECT rule_id FROM regulatory_change_records WHERE change_ref=:r"
+        ), {"r": change_ref})).first()
+    if rec is None:
+        raise HTTPException(404, f"change_ref {change_ref} not found")
+    if not rec.rule_id:
+        raise HTTPException(400, f"change {change_ref} has no linked rule to test")
+
+    from src.api.generate_test_api import start_test_generation
+    result = await start_test_generation(
+        rec.rule_id, background, user, extra_labels=["reg-change", change_ref],
+    )
+    async with get_db() as session:
+        await session.execute(text(
+            "UPDATE regulatory_change_records SET test_jira_key=:k, updated_at=NOW() "
+            "WHERE change_ref=:r"
+        ), {"k": result["jira_key"], "r": change_ref})
+        await session.commit()
+    return {**result, "change_ref": change_ref}
 
 
 @router.post("/changes/signoff/bulk")

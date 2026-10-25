@@ -93,6 +93,18 @@ export default function Changes() {
     }
   }
 
+  const handleGenTest = async (c) => {
+    try {
+      const r = await dashboardApi.genTestForChange(c.change_ref)
+      const key = r?.data?.jira_key
+      setToast({ kind:'ok', text:`Test generation started for ${c.rule_id} — JIRA ${key} · PR in ~5 min` })
+      load()
+    } catch (e) {
+      const detail = e.response?.data?.detail || e.response?.statusText || e.message || 'unknown error'
+      setToast({ kind:'err', text:`Generate-test failed for ${c.change_ref}: ${detail}` })
+    }
+  }
+
   const handleBulkSignOff = async () => {
     setSaving(true)
     const refs = Array.from(selected)
@@ -244,6 +256,12 @@ export default function Changes() {
                           🎫 {c.remediation_jira_key}
                         </span>
                       )}
+                      {c.test_jira_key && (
+                        <span className="ftr-badge" title="Test-generation JIRA story"
+                              style={{background:'#1f5e3a', color:'#cfeedd'}}>
+                          🧪 {c.test_jira_key}
+                        </span>
+                      )}
                       {age && (
                         <span className={`ftr-age ${age}`}
                               title={c.age_days != null ? `${c.age_days.toFixed(1)} days since detected` : ''}>
@@ -259,6 +277,13 @@ export default function Changes() {
                     <button className="ftr-btn"
                       onClick={() => { setSignOff(c); setDecision('acknowledged'); setNote('') }}>
                       Sign off
+                    </button>
+                  )}
+                  {canApprove && c.rule_id && (
+                    <button className="ftr-btn sm"
+                      title="Generate/refresh the compliance test for this rule (opens a GitHub PR)"
+                      onClick={(e) => { e.stopPropagation(); handleGenTest(c) }}>
+                      Generate test
                     </button>
                   )}
                 </div>
