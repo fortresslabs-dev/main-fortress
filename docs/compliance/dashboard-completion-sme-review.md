@@ -289,6 +289,45 @@ flowchart LR
 
 ---
 
+## 9 · Enforcement Actions — business value (always-on view)
+
+**What it is.** A feed of real regulatory enforcement actions against peer
+institutions (OCC, FDIC, CFPB, FinCEN, FRB) — date, bank, regulator, violation,
+and penalty amount (2,150 actions in this environment).
+
+**Why a CCO needs it — it turns peers' mistakes into your risk intelligence:**
+1. **Risk prioritization** — focus controls + testing on the areas regulators
+   are *actively penalizing*, instead of treating all 186 BSA/AML rules equally.
+2. **Peer benchmarking** — "could this happen to us?" against banks of our
+   charter/asset tier, evidence-based.
+3. **Proactive remediation** — enforcement trends flag regulator focus areas
+   *before* our own exam (self-identified issue vs. an MRA).
+4. **Defensible risk-based program** — a required, auditable input to the risk
+   assessment; feeds the readiness "risk-assessment currency" dimension.
+5. **Board & budget justification** — hard penalty figures justify compliance
+   investment and show examiners the program reflects the enforcement landscape.
+6. **Cost-of-non-compliance** — penalty amounts make prioritization dollar-weighted.
+
+**How it drives the rest of the system:**
+```mermaid
+flowchart LR
+  EA[Enforcement actions<br/>what regulators penalize] --> SCORE[enforcement_risk_score<br/>per regulation]
+  SCORE --> RANK[ranks highest-risk Rules]
+  RANK --> GEN[prioritizes which tests to generate first]
+  SCORE --> RA[Readiness: risk-assessment currency]
+```
+It answers: *"of all our obligations, which do we test and control **first**,
+based on what's actually getting banks fined?"*
+
+**SME verification.** Open **Enforcement** → paginated peer actions with
+regulator filter and penalties.
+
+> Current state: the feed itself is live (benefits 1–3, 5, 6 today). The
+> risk-scoring loop (benefit 4 → `ra_currency`/Risk view) activates once the
+> step-8 enforcement-citation extraction runs in P1 (see Honest gaps).
+
+---
+
 ## Honest gaps (for SME awareness — not defects, not faked)
 | Area | State | Needs |
 |---|---|---|
