@@ -30,6 +30,7 @@ vector + BM25 store (OpenSearch Serverless was removed from the budget
 | Dashboard data map — every page → API endpoint → Postgres tables → aggregation, with flow + ER diagrams | `docs/design/dashboard-data-map.md` |
 | Dashboard completion SME review — 7 work items as business use cases, fixes, SME verification, Mermaid diagrams | `docs/compliance/dashboard-completion-sme-review.md` |
 | Operations — IDE/CLI setup, P1 auto-deploy, bank registration, MCP servers, connectors | `docs/setup/operations.md` |
+| Developer AWS onboarding — tiered access (none/Bedrock/full), Identity Center provisioning, `fortress-local` SSO profile | `docs/setup/developer-aws-onboarding.md` |
 | Local dev & debug — run P1/P2/dashboard locally, hot-reload, P1→P2 sync, debugging | `docs/setup/local-dev.md` |
 | BSA/AML onboarding — end-to-end SME/dev guide (code walkthrough, 6-agent pipeline, CCO validation, rule→test, bank handoff, dashboard pending actions) | `docs/runbooks/bsa-aml-onboarding.md` |
 
@@ -170,6 +171,7 @@ but not reachable in prod — do not delete yet.
 
 ```
 make up | migrate | p1 | p2 | p1-debug | p2-debug
+make p1-live | p2-live     # real LLM via direct Claude API (no AWS; needs ANTHROPIC_API_KEY)
 make test | test-p1 | test-p2 | lint | schema-check
 make build-p1 | build-p2 | build-both
 make push-p1 | push-p2 BANK_ID=firstnational

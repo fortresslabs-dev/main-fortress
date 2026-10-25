@@ -133,6 +133,28 @@ p2: up
 	LLM_MOCK_MODE=true \
 	uvicorn src.main_pipeline2:app --reload --host 0.0.0.0 --port 8002
 
+# ── Run with the DIRECT Claude API (no AWS) ───────────────────────────
+# Real LLM output locally without Bedrock: LLM_MOCK_MODE off + the anthropic
+# provider. ANTHROPIC_API_KEY is read from .env (SettingsConfigDict) — set it
+# there first. See docs/setup/local-dev.md § Real test generation, no AWS.
+p1-live: up
+	@echo "Starting Pipeline 1 on http://localhost:8001 (direct Claude API)"
+	PIPELINE_MODE=pipeline1 \
+	DATABASE_URL="postgresql+asyncpg://fortress:fortress_dev@localhost:5432/fortress_dev" \
+	REDIS_URL="redis://:fortress_dev@localhost:6379" \
+	LLM_MOCK_MODE=false LLM_PROVIDER=anthropic \
+	uvicorn src.main_pipeline1:app --reload --host 0.0.0.0 --port 8001
+
+p2-live: up
+	@echo "Starting Pipeline 2 on http://localhost:8002 (direct Claude API)"
+	PIPELINE_MODE=pipeline2 \
+	CLIENT_NAME=devbank \
+	DATABASE_URL="postgresql+asyncpg://fortress:fortress_dev@localhost:5432/fortress_dev" \
+	REDIS_URL="redis://:fortress_dev@localhost:6379" \
+	PIPELINE1_API_URL=http://localhost:8001 \
+	LLM_MOCK_MODE=false LLM_PROVIDER=anthropic \
+	uvicorn src.main_pipeline2:app --reload --host 0.0.0.0 --port 8002
+
 p1-debug: up
 	PIPELINE_MODE=pipeline1 \
 	DATABASE_URL="postgresql+asyncpg://fortress:fortress_dev@localhost:5432/fortress_dev" \

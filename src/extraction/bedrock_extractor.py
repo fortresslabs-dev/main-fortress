@@ -31,6 +31,7 @@ from botocore.config import Config
 from pydantic import ValidationError
 
 from src.extraction.models import ExtractionMethod, ExtractionResult
+from src.services.bedrock_service import to_anthropic_model_id
 
 logger = structlog.get_logger(__name__)
 
@@ -141,6 +142,22 @@ class BedrockExtractor:
             or getattr(settings, _DEFAULT_EXTRACTION_MODEL_ENV, None)
             or settings.BEDROCK_MODEL
         )
+        self.provider = (settings.LLM_PROVIDER or "bedrock").lower()
+
+        if self.provider == "anthropic":
+            # Direct Claude API — no AWS. tool_use works identically on the
+            # anthropic SDK; model ID is translated to its direct form
+            # (default extraction model → claude-haiku-4-5-20251001).
+            from anthropic import Anthropic
+            self.anthropic_model = settings.ANTHROPIC_MODEL or to_anthropic_model_id(self.model_id)
+            self.client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+            logger.info(
+                "extractor_initialized",
+                provider="anthropic",
+                model_id=self.anthropic_model,
+            )
+            return
+
         self.client = boto3.client(
             service_name="bedrock-runtime",
             region_name=self.region,
@@ -184,27 +201,14 @@ class BedrockExtractor:
             "input_schema": _schema_for_tool(schema_cls),
         }
         user_msg = self._build_user_message(text, instructions, examples)
-        body = json.dumps(
-            {
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 1024,
-                "temperature": 0.0,
-                "tools": [tool],
-                "tool_choice": {"type": "tool", "name": tool_name},
-                "messages": [{"role": "user", "content": user_msg}],
-            }
-        )
 
         schema_name = schema_cls.__name__
         started = time.time()
 
         try:
-            response = await asyncio.to_thread(
-                self.client.invoke_model,
-                modelId=model_id or self.model_id,
-                body=body,
+            envelope = await self._invoke_tool(
+                tool=tool, tool_name=tool_name, user_msg=user_msg, model_id=model_id,
             )
-            envelope = json.loads(response["body"].read())
         except Exception as exc:
             # Bedrock failure is an OPERATIONAL alert — distinct from a
             # schema validation miss (model behavior) or low confidence
@@ -267,6 +271,67 @@ class BedrockExtractor:
                 value=int(usage["output_tokens"]), unit="None",
             )
         return result
+
+    async def _invoke_tool(
+        self,
+        *,
+        tool: Dict[str, Any],
+        tool_name: str,
+        user_msg: str,
+        model_id: Optional[str],
+    ) -> Dict[str, Any]:
+        """Forced-tool_use invoke, normalized to a Bedrock-style envelope dict.
+
+        Direct Claude API when ``LLM_PROVIDER=anthropic`` (no AWS), else Bedrock.
+        Both return ``{"content": [...], "usage": {...}, "stop_reason": ...}`` so
+        ``_unpack_tool_use`` and the usage/metrics path downstream stay
+        provider-agnostic. The tool schema and forced ``tool_choice`` are
+        identical on both wires.
+        """
+        if self.provider == "anthropic":
+            def _call():
+                return self.client.messages.create(
+                    model=to_anthropic_model_id(model_id) if model_id else self.anthropic_model,
+                    max_tokens=1024,
+                    temperature=0.0,
+                    tools=[tool],
+                    tool_choice={"type": "tool", "name": tool_name},
+                    messages=[{"role": "user", "content": user_msg}],
+                )
+
+            message = await asyncio.to_thread(_call)
+            return {
+                "content": [
+                    {
+                        "type": b.type,
+                        "name": getattr(b, "name", None),
+                        "input": getattr(b, "input", None),
+                    }
+                    for b in message.content
+                ],
+                "usage": {
+                    "input_tokens": message.usage.input_tokens,
+                    "output_tokens": message.usage.output_tokens,
+                },
+                "stop_reason": message.stop_reason,
+            }
+
+        body = json.dumps(
+            {
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 1024,
+                "temperature": 0.0,
+                "tools": [tool],
+                "tool_choice": {"type": "tool", "name": tool_name},
+                "messages": [{"role": "user", "content": user_msg}],
+            }
+        )
+        response = await asyncio.to_thread(
+            self.client.invoke_model,
+            modelId=model_id or self.model_id,
+            body=body,
+        )
+        return json.loads(response["body"].read())
 
     @staticmethod
     def _build_user_message(
