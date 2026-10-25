@@ -710,6 +710,7 @@ _BULK_SIGNOFF_MAX_REFS = 500
 async def sign_off_change(
     change_ref: str,
     body: SignOffBody,
+    background: BackgroundTasks,
     user: CurrentUser = Depends(require_approver),
 ) -> Dict:
     db_status = _DECISION_TO_STATUS.get(body.decision)
@@ -719,6 +720,9 @@ async def sign_off_change(
         )
     jira_epic_key = None
     jira_error = None
+    test_jira_key = None
+    test_workflow_id = None
+    test_error = None
     async with get_db() as session:
         rec = (await session.execute(text("""
             SELECT rcr.rule_id, rcr.regulator, rcr.change_summary,
@@ -757,6 +761,24 @@ async def sign_off_change(
                 logger.warning("change_epic_create_failed",
                                ref=change_ref, error=jira_error)
 
+            # A "requires action" change ALSO kicks off the 6-agent test
+            # pipeline for the affected rule → refreshed test + GitHub PR. So
+            # one disposition yields both the remediation epic AND the test.
+            # Non-fatal: a failure here doesn't block the disposition.
+            if rec.rule_id:
+                try:
+                    from src.api.generate_test_api import start_test_generation
+                    tg = await start_test_generation(
+                        rec.rule_id, background, user,
+                        extra_labels=["reg-change", change_ref, "auto-test"],
+                    )
+                    test_jira_key = tg.get("jira_key")
+                    test_workflow_id = tg.get("workflow_id")
+                except Exception as exc:
+                    test_error = str(exc)[:300]
+                    logger.warning("change_autotest_failed",
+                                   ref=change_ref, error=test_error)
+
         # NOTE: bind the status value under two distinct names — reusing one
         # named param in both the SET (varchar column) and the CASE…IN (text
         # literals) makes asyncpg deduce inconsistent types → AmbiguousParameterError.
@@ -764,6 +786,7 @@ async def sign_off_change(
             UPDATE regulatory_change_records
             SET status=:status, client_id=:bank_id, updated_at=NOW(),
                 remediation_jira_key = COALESCE(:epic, remediation_jira_key),
+                test_jira_key = COALESCE(:test, test_jira_key),
                 signed_off_at = CASE
                     WHEN :status_gate IN ('signed_off','closed') AND signed_off_at IS NULL
                     THEN NOW()
@@ -771,11 +794,12 @@ async def sign_off_change(
                 END
             WHERE change_ref=:ref
         """), {"status": db_status, "status_gate": db_status,
-               "bank_id": user.bank_id, "ref": change_ref, "epic": jira_epic_key})
+               "bank_id": user.bank_id, "ref": change_ref,
+               "epic": jira_epic_key, "test": test_jira_key})
         await session.commit()
 
     logger.info("change_signoff", ref=change_ref, decision=body.decision,
-                by=user.email, jira_epic=jira_epic_key)
+                by=user.email, jira_epic=jira_epic_key, test_story=test_jira_key)
     return {
         "change_ref": change_ref,
         "decision": body.decision,
@@ -783,6 +807,9 @@ async def sign_off_change(
         "role": user.role,
         "jira_epic_key": jira_epic_key,
         "jira_error": jira_error,
+        "test_jira_key": test_jira_key,
+        "test_workflow_id": test_workflow_id,
+        "test_error": test_error,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 

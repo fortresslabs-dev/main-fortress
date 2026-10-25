@@ -71,14 +71,18 @@ export default function Changes() {
     const ref = signOff.change_ref
     try {
       const r = await dashboardApi.signOff(ref, { decision, note })
-      const epic = r?.data?.jira_epic_key
-      const jerr = r?.data?.jira_error
+      const d = r?.data || {}
       setSignOff(null)
-      setToast(epic
-        ? { kind:'ok',  text:`Signed off ${ref} — JIRA remediation ${epic} created` }
-        : jerr
-        ? { kind:'err', text:`${ref} marked requires-action, but JIRA epic was NOT created: ${jerr}` }
-        : { kind:'ok',  text:`Signed off ${ref} (${decision.replace(/_/g,' ')})` })
+      if (d.jira_epic_key || d.test_jira_key) {
+        const parts = []
+        if (d.jira_epic_key) parts.push(`remediation ${d.jira_epic_key}`)
+        if (d.test_jira_key) parts.push(`test ${d.test_jira_key} (PR ~5 min)`)
+        setToast({ kind:'ok', text:`${ref} → requires action · created ${parts.join(' + ')}` })
+      } else if (d.jira_error) {
+        setToast({ kind:'err', text:`${ref} marked requires-action, but JIRA failed: ${d.jira_error}` })
+      } else {
+        setToast({ kind:'ok', text:`Signed off ${ref} (${decision.replace(/_/g,' ')})` })
+      }
       load()
       if (detailRef === ref) setDetailRef(null)
     } catch (e) {
