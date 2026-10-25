@@ -283,9 +283,9 @@ export default function Changes() {
                       Sign off
                     </button>
                   )}
-                  {canApprove && c.rule_id && (
+                  {canApprove && c.rule_id && !isDetected && !c.test_jira_key && (
                     <button className="ftr-btn sm"
-                      title="Generate/refresh the compliance test for this rule (opens a GitHub PR)"
+                      title="Generate the compliance test for this rule (opens a GitHub PR)"
                       onClick={(e) => { e.stopPropagation(); handleGenTest(c) }}>
                       Generate test
                     </button>
