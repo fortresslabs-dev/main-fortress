@@ -53,6 +53,12 @@ SELECT 'rcr.remediation_jira_key',
                          WHERE table_name='regulatory_change_records' AND column_name='remediation_jira_key')
             THEN 'PASS' ELSE 'FAIL → requires-action epic key not persisted (migration 053)' END
 UNION ALL
+-- 3c. regulatory_change_records.test_jira_key (migration 054)
+SELECT 'rcr.test_jira_key',
+       CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns
+                         WHERE table_name='regulatory_change_records' AND column_name='test_jira_key')
+            THEN 'PASS' ELSE 'FAIL → change→generate-test key not persisted (migration 054)' END
+UNION ALL
 -- 4. compliance_rules enrichment columns (retrieval + ranking + risk)
 SELECT 'compliance_rules.'||c,
        CASE WHEN EXISTS (SELECT 1 FROM information_schema.columns
@@ -106,6 +112,11 @@ embedding backfill runs). Any **FAIL** → see the matching item below.
 - **Fix:** `alembic upgrade head` (applies **053**), or `ALTER TABLE regulatory_change_records ADD COLUMN IF NOT EXISTS remediation_jira_key varchar(50);`
 - **Also set (config, not schema):** `JIRA_CHANGE_ISSUE_TYPE` in SSM — the epic issue type (defaults to `JIRA_ISSUE_TYPE`; set to `Epic` only if the bank's JIRA project allows it, else leave it to the project's accepted type to avoid a 502).
 
+## 3c. `regulatory_change_records.test_jira_key` — migration 054  🟠 change→generate-test
+- **Expectation:** `test_jira_key varchar(50)` exists.
+- **Symptom:** routing a change into the test-generation pipeline (the Changes "Generate test" button, and the test leg of "Requires action") can't persist/surface the resulting test-story key.
+- **Fix:** `alembic upgrade head` (applies **054**), or `ALTER TABLE regulatory_change_records ADD COLUMN IF NOT EXISTS test_jira_key varchar(50);`
+
 ## 4. `compliance_rules` enrichment columns  🟠 retrieval / ranking / risk
 - **Expectation:** `embedding vector(1024)`, `tsv`, `severity`, `enforcement_risk_score`, `cfr_citation`, `domain` (migrations 013/023/051).
 - **Symptom:** hybrid search, severity ranking, or the Risk view degrade.
@@ -129,6 +140,7 @@ embedding backfill runs). Any **FAIL** → see the matching item below.
 | `obligations.embedding` | 🟠 | `alembic upgrade head` (052) + backfill |
 | `rcr.client_id` / `updated_at` | 🔴 | `ALTER TABLE … ADD COLUMN` (+ ensure a migration carries them) |
 | `rcr.remediation_jira_key` | 🟠 | `alembic upgrade head` (053) + set `JIRA_CHANGE_ISSUE_TYPE` in SSM |
+| `rcr.test_jira_key` | 🟠 | `alembic upgrade head` (054) |
 | `compliance_rules` enrichment cols | 🟠 | `alembic upgrade head` + embedding backfill |
 | Readiness/Reports/Findings tables | 🟠 | `alembic upgrade head` |
 | `control_rule_mappings` seeder | 🟡 | reconcile demo seeder (non-runtime) |
