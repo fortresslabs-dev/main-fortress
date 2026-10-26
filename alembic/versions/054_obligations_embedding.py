@@ -6,13 +6,13 @@ can pull on-topic related obligations as grounding context. Backfill the column
 with the same Titan Embed v2 path used for compliance_rules.embedding
 (see docs/runbooks/embedding-backfill.md).
 
-Revision ID: 052
-Revises: 051
+Revision ID: 054
+Revises: 053
 """
 from alembic import op
 
-revision = "052"
-down_revision = "051"
+revision = "054"
+down_revision = "053"
 branch_labels = None
 depends_on = None
 

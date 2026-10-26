@@ -3,11 +3,11 @@
 Ships the test-generation correctness work to production: the dashboard enum-case
 fix, Fix A (trigger-rule obligation coverage), item 1 (Agent 4 grounding on the
 rule's obligations + authoritative thresholds), and item 2 (per-obligation
-embeddings, migration 052). All application code changes are **P2-only**; P1
+embeddings, migration 054). All application code changes are **P2-only**; P1
 needs only the migration + an embeddings backfill.
 
 Source branch: `code_cleanup`. Key code commits: `7dcc5be` (dashboard enum fix),
-`21dbb42` (Fix A), `2ab9c17` (item 1 + item 2 + migration 052),
+`21dbb42` (Fix A), `2ab9c17` (item 1 + item 2 + migration 054),
 `097df4c` (`scripts/backfill_embeddings.py`).
 
 > **Verified sync fact (do not skip):** `/api/sync/obligations` serializes
@@ -39,8 +39,8 @@ Run on P1 and each P2.
   A code/DB case mismatch breaks the dashboard exactly as observed in local dev.
 
 ## 2 · Schema migration (P1 + each P2)
-- [ ] `alembic upgrade head` → applies **052** (`obligations.embedding vector(1024)` + `idx_obligations_embedding_hnsw`). Nullable/additive, safe.
-- [ ] Confirm `alembic current` = `052` on every DB.
+- [ ] `alembic upgrade head` → applies **054** (`obligations.embedding vector(1024)` + `idx_obligations_embedding_hnsw`). Nullable/additive, safe.
+- [ ] Confirm `alembic current` = `054` on every DB.
 
 ## 3 · Embeddings backfill (Titan v2; idempotent — only NULL rows)
 - [ ] **3a · P1 — rules + obligations:** `python -m scripts.backfill_embeddings --target both`

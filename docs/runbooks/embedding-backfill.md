@@ -78,7 +78,7 @@ aws logs tail /ecs/fortress-pipeline1-production --since 48h \
 ### Option A — surgical: run the backfill script (recommended)
 No scrape, no network crawl — just heal the NULL rows. `scripts/backfill_embeddings.py`
 is idempotent/additive (only `embedding IS NULL` rows) and covers **both**
-`compliance_rules` and `obligations` (the latter needs migration 052). It uses
+`compliance_rules` and `obligations` (the latter needs migration 054). It uses
 the app DB layer, so it runs unchanged on P1, on a bank's P2, or locally.
 
 ```bash

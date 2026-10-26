@@ -3,13 +3,13 @@
 Stores the JIRA remediation epic key opened when a CCO dispositions a
 regulatory change as "requires action" from the dashboard.
 
-Revision ID: 053
-Revises: 052
+Revision ID: 055
+Revises: 054
 """
 from alembic import op
 
-revision = "053"
-down_revision = "052"
+revision = "055"
+down_revision = "054"
 branch_labels = None
 depends_on = None
 

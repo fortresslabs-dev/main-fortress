@@ -4,13 +4,13 @@ Stores the JIRA story key when a regulatory change is routed into the 6-agent
 test-generation pipeline (Changes → "Generate/refresh test"), so a changed rule
 produces a refreshed test + PR just like the Rules flow.
 
-Revision ID: 054
-Revises: 053
+Revision ID: 056
+Revises: 055
 """
 from alembic import op
 
-revision = "054"
-down_revision = "053"
+revision = "056"
+down_revision = "055"
 branch_labels = None
 depends_on = None
 
