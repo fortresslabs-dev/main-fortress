@@ -42,12 +42,118 @@ _AGENCY_KEYWORDS: Dict[str, List[str]] = {
     "FRB": ["federalreserve.gov/enforcement", "Federal Reserve enforcement"],
 }
 
-_SOURCE_URLS = {
+# Legacy landing-page path — DISABLED pending per-regulator index→detail
+# migration. The landing-page scraper stamps the listing URL on every row (no
+# per-action link) and these regulators don't expose a clean HTML
+# list-of-detail-links, so they produced same-link, low-signal rows. Keeping
+# them OFF the active feed so the dashboard only ever shows uniquely-linked,
+# real actions. Re-enable by moving an entry into _DETAIL_CRAWL once migrated:
+#   FDIC — verify the orders-listing link_pattern (likely static-crawlable)
+#   OCC  — PDF orders behind a search tool: needs PDF handling + listing endpoint
+#   FRB  — JavaScript search app: needs the data feed or a headless browser
+_SOURCE_URLS: Dict[str, str] = {}
+_LEGACY_DISABLED = {
     "OCC": "https://www.occ.gov/topics/supervision-and-examination/enforcement/index-enforcement.html",
     "FDIC": "https://www.fdic.gov/bank/individual/enforcement/",
-    "CFPB": "https://www.consumerfinance.gov/enforcement/actions/",
     "FRB": "https://www.federalreserve.gov/apps/enforcementactions/enforcementactions",
 }
+
+# Regulators ingested via an index→detail crawl (the correct pattern): parse the
+# enforcement *listing* for links, then fetch each action's own detail page so
+# every row carries a unique, working source_url (not the landing page) and real
+# prose for the extractors. FinCEN is the BSA/AML-primary regulator and the
+# reference implementation; others can be migrated onto this path the same way.
+_DETAIL_CRAWL: Dict[str, Dict[str, Any]] = {
+    "FINCEN": {
+        "index": "https://www.fincen.gov/news-room/enforcement-actions",
+        "base": "https://www.fincen.gov",
+        # Follow news-room detail pages; non-enforcement items that slip through
+        # are removed by _is_enforcement_noise() after extraction.
+        "link_pattern": "/news-room/",
+        "max_pages": 25,
+    },
+    "CFPB": {
+        "index": "https://www.consumerfinance.gov/enforcement/actions/",
+        "base": "https://www.consumerfinance.gov",
+        # Each action has its own /enforcement/actions/<slug>/ detail page; the
+        # listing itself (== index) and pagination links are skipped/gated.
+        "link_pattern": "/enforcement/actions/",
+        "max_pages": 30,
+    },
+}
+
+# Titles that signal a scraped chunk is site navigation / boilerplate, not an
+# enforcement action (the OCC landing-page failure mode: "Upcoming Events",
+# "Featured Publications", "View All …").
+_NOISE_TITLE_RE = re.compile(
+    r"\b(events?|publications?|view all|featured|newsroom|news room|subscribe|"
+    r"careers|about us|speeches?|testimony|reports?|statistics|data releases?|"
+    r"follow us|contact us|site map)\b",
+    re.I,
+)
+
+
+_MONTHS = {m: i for i, m in enumerate(
+    ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], start=1)}
+_DATE_PATTERNS = [
+    # "September 11, 2024" / "Sep 11, 2024" / "NOV 21, 2024"
+    (re.compile(
+        r"\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})\b",
+        re.I), "mdy"),
+    (re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b"), "iso"),       # 2024-09-11
+    (re.compile(r"\b(\d{1,2})/(\d{1,2})/(\d{4})\b"), "slash"),  # 09/11/2024
+]
+
+
+def _extract_action_date(text: str) -> date:
+    """Best-effort real action date from the prose; falls back to today.
+
+    The landing-page scraper set action_date = scrape date, so the dashboard
+    showed today's date on every row. The real date is in the action text
+    ("On September 11, 2024, the Bureau issued an order…") — pull it out.
+    """
+    if not text:
+        return date.today()
+    max_year = date.today().year + 1
+    for rx, kind in _DATE_PATTERNS:
+        m = rx.search(text)
+        if not m:
+            continue
+        try:
+            if kind == "mdy":
+                y, mo, d = int(m.group(3)), _MONTHS[m.group(1)[:3].lower()], int(m.group(2))
+            elif kind == "iso":
+                y, mo, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            else:  # slash — US m/d/y
+                y, mo, d = int(m.group(3)), int(m.group(1)), int(m.group(2))
+            if 2000 <= y <= max_year:
+                return date(y, mo, d)
+        except (ValueError, KeyError):
+            continue
+    return date.today()
+
+
+def _is_enforcement_noise(action: Dict[str, Any]) -> bool:
+    """True when a scraped row is almost certainly NOT an enforcement action.
+
+    Keeps the row if it carries ANY hard signal — a parsed penalty, a cited
+    regulation, or a recognized institution type. Otherwise (no signal at all)
+    it drops rows whose title reads like site navigation or whose body is too
+    short to be a real action. Deliberately conservative: a genuine action
+    nearly always has a penalty, a citation, or names an institution.
+    """
+    if action.get("penalty_amount_usd") is not None:
+        return False
+    if action.get("regulations_cited"):
+        return False
+    if action.get("institution_type") not in (None, "unknown"):
+        return False
+    title = action.get("_title", "") or ""
+    if _NOISE_TITLE_RE.search(title):
+        return True
+    if len((action.get("violation_summary") or "").strip()) < 120:
+        return True
+    return False
 
 
 def _parse_penalty_usd(text: str) -> Optional[Decimal]:
@@ -175,39 +281,69 @@ class EnforcementActionService:
             except Exception as exc:
                 logger.warning("enforcement_citation_candidates_failed", error=str(exc))
 
+        # Landing-page regulators (legacy path) + index→detail regulators.
         for regulator, url in _SOURCE_URLS.items():
             try:
                 actions = self._scrape_agency(regulator, url)
-                # Penalty extraction runs after scraping (async, per-action)
-                # so the synchronous scrape loop stays fast and the LLM
-                # calls can fan out without blocking HTML parsing.
-                for action in actions:
-                    action["penalty_amount_usd"] = await self._extract_penalty(
-                        action["regulator"],
-                        action["action_ref"],
-                        action.get("_penalty_text", ""),
-                    )
-                    # Citation fallback — only when the regex found nothing.
-                    if (llm_citations and candidate_citations
-                            and not action.get("regulations_cited")):
-                        try:
-                            action["regulations_cited"] = await extract_regulations_cited_llm(
-                                action.get("_penalty_text", "") or action.get("violation_summary", ""),
-                                candidate_citations,
-                                regulator=action.get("regulator"),
-                                action_type=action.get("action_type"),
-                            )
-                        except Exception as exc:
-                            logger.warning("enforcement_citation_llm_failed",
-                                           action_ref=action.get("action_ref"), error=str(exc))
-                    action.pop("_penalty_text", None)
-                    upserted = await self._upsert_action(session, action)
-                    if upserted:
-                        inserted += 1
+                inserted += await self._process_actions(
+                    session, actions, llm_citations, candidate_citations)
+            except Exception as exc:
+                logger.warning("enforcement_scrape_failed", regulator=regulator, error=str(exc))
+
+        for regulator, cfg in _DETAIL_CRAWL.items():
+            try:
+                actions = self._scrape_agency_detail(regulator, cfg)
+                inserted += await self._process_actions(
+                    session, actions, llm_citations, candidate_citations)
             except Exception as exc:
                 logger.warning("enforcement_scrape_failed", regulator=regulator, error=str(exc))
 
         logger.info("enforcement_actions_ingested", inserted=inserted)
+        return inserted
+
+    async def _process_actions(
+        self, session, actions: List[Dict[str, Any]],
+        llm_citations: bool, candidate_citations: List[str],
+    ) -> int:
+        """Per-action: extract penalty + citations, drop noise, then upsert.
+
+        Penalty/citation extraction runs here (async, per-action) so the
+        synchronous scrape stays fast. The relevance gate runs AFTER extraction
+        so it can keep any row that turned out to carry a penalty or citation.
+        """
+        inserted = 0
+        for action in actions:
+            action["penalty_amount_usd"] = await self._extract_penalty(
+                action["regulator"],
+                action["action_ref"],
+                action.get("_penalty_text", ""),
+            )
+            # Citation fallback — only when the regex found nothing.
+            if (llm_citations and candidate_citations
+                    and not action.get("regulations_cited")):
+                try:
+                    action["regulations_cited"] = await extract_regulations_cited_llm(
+                        action.get("_penalty_text", "") or action.get("violation_summary", ""),
+                        candidate_citations,
+                        regulator=action.get("regulator"),
+                        action_type=action.get("action_type"),
+                    )
+                except Exception as exc:
+                    logger.warning("enforcement_citation_llm_failed",
+                                   action_ref=action.get("action_ref"), error=str(exc))
+
+            # Drop navigation/boilerplate rows (the landing-page failure mode).
+            if _is_enforcement_noise(action):
+                logger.info("enforcement_noise_skipped",
+                            regulator=action.get("regulator"),
+                            title=(action.get("_title") or "")[:80],
+                            source_url=action.get("source_url"))
+                continue
+
+            action.pop("_penalty_text", None)
+            action.pop("_title", None)
+            if await self._upsert_action(session, action):
+                inserted += 1
         return inserted
 
     async def _extract_penalty(
@@ -265,7 +401,6 @@ class EnforcementActionService:
         raw_docs = scrape_html_page(session, url, source=regulator, category="Enforcement Actions")
 
         actions: List[Dict[str, Any]] = []
-        today = date.today().isoformat()
 
         for doc in raw_docs:
             content = doc.get("content", "")
@@ -290,25 +425,104 @@ class EnforcementActionService:
                     inst_type = itype
                     break
 
-            action_ref = _action_ref(regulator, title[:80], today)
             content_hash = hashlib.sha256(content.encode()).hexdigest()
+            # Stable, content-keyed ref — NOT date-keyed, so re-scraping the
+            # same page doesn't mint a new row every day.
+            action_ref = f"{regulator}-{content_hash[:16]}"
 
             actions.append(
                 {
-                    "action_ref": f"{regulator}-{action_ref}",
+                    "action_ref": action_ref,
                     "regulator": regulator,
                     "institution_type": inst_type,
-                    "action_date": date.today(),
+                    "action_date": _extract_action_date(title + " " + content),
                     "action_type": self._infer_action_type(title, content),
                     "regulations_cited": regs_cited,
                     "violation_summary": content[:2000],
                     "penalty_amount_usd": None,
                     "_penalty_text": (title + "\n\n" + content)[:6000],
+                    "_title": title,
                     "source_url": doc.get("url", url),
                     "content_hash": content_hash,
                 }
             )
 
+        return actions
+
+    def _scrape_agency_detail(self, regulator: str, cfg: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Index→detail crawl: one action per detail page, each with its own URL.
+
+        Parses the regulator's enforcement *listing* for links, fetches each
+        linked detail page, and collapses the (possibly heading-chunked) detail
+        docs into a single action keyed on that detail URL. This is what makes
+        source_url unique per action and gives the extractors real prose.
+        """
+        from src.connectors.regulatory.usa._scraper_utils import (
+            make_session, scrape_linked_pages,
+        )
+
+        index_url = cfg["index"]
+        session = make_session(index_url)
+        docs = scrape_linked_pages(
+            session,
+            index_url=index_url,
+            source=regulator,
+            category="Enforcement Actions",
+            link_pattern=cfg.get("link_pattern", "/"),
+            base_url=cfg.get("base", ""),
+            max_pages=cfg.get("max_pages", 25),
+        )
+
+        # Collapse all chunks of one detail page into a single action.
+        by_url: Dict[str, Dict[str, Any]] = {}
+        for doc in docs:
+            page_url = doc.get("url") or index_url
+            if page_url == index_url:  # never treat the listing page as an action
+                continue
+            entry = by_url.setdefault(page_url, {"title": doc.get("title", ""), "parts": []})
+            text = doc.get("content", "")
+            if text:
+                entry["parts"].append(text)
+
+        actions: List[Dict[str, Any]] = []
+        for page_url, entry in by_url.items():
+            content = " ".join(entry["parts"]).strip()
+            if not content:
+                continue
+            title = entry["title"]
+            blob = f"{title}\n\n{content}"
+            inst_type = "unknown"
+            for keyword, itype in [
+                ("national bank", "national_bank"),
+                ("savings bank", "savings_bank"),
+                ("credit union", "credit_union"),
+                ("mortgage", "mortgage_company"),
+                ("fintech", "fintech"),
+            ]:
+                if keyword in blob.lower():
+                    inst_type = itype
+                    break
+            content_hash = hashlib.sha256(content.encode()).hexdigest()
+            actions.append(
+                {
+                    # Stable + unique per detail page — kills the "same link" bug.
+                    "action_ref": f"{regulator}-{hashlib.sha256(page_url.encode()).hexdigest()[:16]}",
+                    "regulator": regulator,
+                    "institution_type": inst_type,
+                    "action_date": _extract_action_date(blob),
+                    "action_type": self._infer_action_type(title, content),
+                    "regulations_cited": _extract_regulations_cited(blob),
+                    "violation_summary": content[:2000],
+                    "penalty_amount_usd": None,
+                    "_penalty_text": blob[:6000],
+                    "_title": title,
+                    "source_url": page_url,
+                    "content_hash": content_hash,
+                }
+            )
+
+        logger.info("enforcement_detail_crawl", regulator=regulator,
+                    detail_pages=len(by_url), actions=len(actions))
         return actions
 
     @staticmethod
