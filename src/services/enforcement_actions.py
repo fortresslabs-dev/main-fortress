@@ -78,7 +78,19 @@ _DETAIL_CRAWL: Dict[str, Dict[str, Any]] = {
         # Each action has its own /enforcement/actions/<slug>/ detail page; the
         # listing itself (== index) and pagination links are skipped/gated.
         "link_pattern": "/enforcement/actions/",
-        "max_pages": 30,
+        # CFPB throttles rapid sequential fetches: >~10-12 hits in a burst and
+        # it serves minimal pages (chrome, no order body). Cap the per-run crawl
+        # to the recent actions; a deeper historical backfill needs real backoff.
+        "max_pages": 10,
+        # Scope extraction to the CFPB order-body block. Without this the
+        # generic 'main' selector + heading-chunking grabbed page chrome
+        # (docket #, date, category tags) instead of the order text, so the
+        # penalty/citations were never in the scraped content.
+        "content_selectors": [
+            "div.m-full-width-text",
+            "div.o-full-width-text-group",
+            "main",
+        ],
     },
 }
 
@@ -471,6 +483,7 @@ class EnforcementActionService:
             link_pattern=cfg.get("link_pattern", "/"),
             base_url=cfg.get("base", ""),
             max_pages=cfg.get("max_pages", 25),
+            content_selectors=cfg.get("content_selectors"),
         )
 
         # Collapse all chunks of one detail page into a single action.
@@ -534,8 +547,8 @@ class EnforcementActionService:
             ("civil money penalty", "civil_money_penalty"),
             ("cease and desist", "cease_and_desist"),
             ("formal agreement", "formal_agreement"),
-            ("memorandum of understanding", "mou"),
-            ("prohibition", "prohibition_order"),
+            ("memorandum of understanding", "informal_action"),
+            ("prohibition", "prohibition"),
             ("removal", "removal_order"),
         ]:
             if keyword in combined:
