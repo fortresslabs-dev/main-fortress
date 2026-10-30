@@ -147,9 +147,13 @@ one rule (`FINCEN-1010-660-R3`), 8 opened a GitHub PR, 0 CCO approvals.**
 
 - **What the CCO sees:** a workflow pauses at a checkpoint for CCO approve/reject before test-gen proceeds / a PR is opened.
 - **Problem (measured):** **`checkpoint_approvals` = 0** — the approval gate has **never been exercised**. Every one of the 10 runs went straight through.
-- **Root cause:** runs were triggered without the approval checkpoint engaged (or auto-approved in dev).
-- **Resolution:** ⏳ *pending* — this is the single most important workflow gap for a compliance buyer (they must see the human gate).
-- **Steps to complete:** trigger a workflow that stops at the CCO checkpoint; approve one and reject one from the dashboard so `checkpoint_approvals` shows both outcomes; confirm a rejected run does **not** open a PR.
+- **Root cause (was):** the approvals API existed (`src/api/approvals.py`) but `execute_workflow` ran all six agents straight through to the PR — it never paused, so nothing waited on an approval and a reject couldn't stop a PR that already happened.
+- **Resolution:** 🟡 *implemented behind `REQUIRE_CHECKPOINT_APPROVAL` (default off), pending live e2e test.* With the flag on, the pipeline halts after Agent 5 (validation) with `status=waiting_approval` and **no PR**; approving the `pre_execution` checkpoint runs Agent 6 and opens the PR (`approvals._finalize_after_approval`); rejecting sets `failed` → no PR.
+- **Steps to complete / demo:**
+  1. Set `REQUIRE_CHECKPOINT_APPROVAL=true` for P2.
+  2. Trigger a test-gen run → it stops at `waiting_approval` with the generated test visible, no PR yet.
+  3. From the dashboard, **reject** one (confirm `failed`, no PR) and **approve** another (confirm Agent 6 runs → `github_pr_url` appears, status `completed`).
+  4. ⚠️ **Run this live once before demoing** — the pause/resume path is implemented but has not been exercised end-to-end (needs a real webhook → Bedrock → GitHub cycle).
 - **Demo-ready check:**
   ```sql
   SELECT decision, count(*) FROM checkpoint_approvals GROUP BY 1;  -- want: both approve and reject present

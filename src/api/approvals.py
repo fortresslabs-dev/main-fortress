@@ -80,10 +80,52 @@ async def create_approval(
             note=request.note or "",
         )
 
+    # Approved pre_execution checkpoint → run Agent 6 (open the GitHub PR) from
+    # the paused, persisted artifacts. A rejected run never reaches this, so no
+    # PR is opened — that is the human-in-the-loop guarantee.
+    if request.decision == "approved" and request.checkpoint == "pre_execution":
+        background.add_task(_finalize_after_approval, request.workflow_id)
+
     logger.info("checkpoint_approval", workflow_id=request.workflow_id,
                 decision=request.decision, by=user.email)
     return {"status": "recorded", "workflow_id": request.workflow_id,
             "decision": request.decision, "by": user.email}
+
+
+async def _finalize_after_approval(workflow_id: str) -> None:
+    """Run Agent 6 (execution → GitHub PR) after a pre_execution approval and
+    mark the workflow completed. Dispatched as a background task so the approve
+    endpoint returns immediately."""
+    from datetime import datetime, timezone
+    from src.orchestration.workflow_engine import WorkflowOrchestrator
+    from src.models.database import WorkflowExecution, WorkflowStatus
+    try:
+        async with get_db() as session:
+            wf = await session.get(WorkflowExecution, workflow_id)
+            if not wf or not wf.artifacts:
+                logger.warning("finalize_no_artifacts", workflow_id=workflow_id)
+                return
+            prior = dict(wf.artifacts)
+            prior.setdefault("workflow_id", str(workflow_id))
+
+        execution = await WorkflowOrchestrator().finalize_execution(prior)
+        pr_url = execution.get("pr_url") or (execution.get("artifacts") or {}).get("pr_url")
+
+        async with get_db() as session:
+            wf = await session.get(WorkflowExecution, workflow_id)
+            if wf:
+                arts = dict(wf.artifacts or {})
+                arts["execution"] = execution
+                if pr_url:
+                    arts["github_pr_url"] = pr_url
+                wf.artifacts = arts
+                wf.status = WorkflowStatus.COMPLETED
+                wf.completed_at = datetime.now(timezone.utc)
+                await session.commit()
+        logger.info("workflow_finalized_after_approval",
+                    workflow_id=workflow_id, pr_opened=bool(pr_url))
+    except Exception as exc:
+        logger.error("workflow_finalize_failed", workflow_id=workflow_id, error=str(exc))
 
 
 def _post_jira_approval_comment(

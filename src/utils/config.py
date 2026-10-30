@@ -163,6 +163,10 @@ class Settings(BaseSettings):
     # ── LLM / Bedrock ───────────────────────────────────────────────────
     LLM_PROVIDER: str = Field(default="bedrock")
     LLM_MOCK_MODE: bool = Field(default=False)
+    # When true, the 6-agent pipeline pauses after validation (before Agent 6
+    # opens the PR) for a CCO approve/reject at the pre_execution checkpoint.
+    # Default off preserves the straight-through behavior.
+    REQUIRE_CHECKPOINT_APPROVAL: bool = Field(default=False)
     LLM_CACHE_TTL: int = Field(default=86400)
     LLM_MAX_TOKENS: int = Field(default=2000)
     ANTHROPIC_API_KEY: str = Field(default="")

@@ -265,13 +265,28 @@ async def process_workflow(workflow_id: str, jira_key: str, story_text: str, rul
                     wf = await db.get(WorkflowExecution, workflow_id)
                     rule_id = wf.rule_id if wf else None
 
+            from src.utils.config import settings as _settings
+            gate = getattr(_settings, "REQUIRE_CHECKPOINT_APPROVAL", False)
             orchestrator = WorkflowOrchestrator()
             result = await orchestrator.execute_workflow({
                 "workflow_id": workflow_id,
                 "key": jira_key,
                 "description": story_text,
                 "rule_id": rule_id
-            })
+            }, stop_before_execution=gate)
+
+            # Paused at the CCO checkpoint: persist the generated + validated
+            # artifacts and stop. No PR is opened — Agent 6 runs only after the
+            # pre_execution checkpoint is approved (src/api/approvals.py).
+            if result.get("status") == "waiting_approval":
+                async with get_db() as db:
+                    workflow = await db.get(WorkflowExecution, workflow_id)
+                    if workflow:
+                        workflow.status = WorkflowStatus.WAITING_APPROVAL
+                        workflow.artifacts = dict(result)
+                        await db.commit()
+                logger.info("workflow_awaiting_cco_approval", workflow_id=workflow_id)
+                return
 
             # Hoist the PR URL to artifacts.github_pr_url so the dashboard's
             # /test-status endpoint and Workflows tab can find it without

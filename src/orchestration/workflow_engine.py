@@ -22,8 +22,15 @@ class WorkflowOrchestrator:
         self.validation = ValidationAgent()
         self.execution = ExecutionAgent()
 
-    async def execute_workflow(self, jira_story: Dict) -> Dict[str, Any]:
-        """Execute complete 6-agent workflow"""
+    async def execute_workflow(self, jira_story: Dict, stop_before_execution: bool = False) -> Dict[str, Any]:
+        """Execute the 6-agent workflow.
+
+        When ``stop_before_execution`` is True the pipeline halts after Agent 5
+        (validation) and returns ``status="waiting_approval"`` WITHOUT running
+        Agent 6 — i.e. no GitHub PR — so a CCO can approve/reject at the
+        pre_execution checkpoint. ``finalize_execution()`` runs Agent 6 later,
+        on approval. Default False preserves straight-through behavior.
+        """
         
         workflow_id = jira_story.get("workflow_id")
         jira_key = jira_story.get("key", "")
@@ -100,6 +107,24 @@ class WorkflowOrchestrator:
                 }
             )
             
+            # Human-in-the-loop checkpoint: hold before opening the PR so the
+            # CCO can review the generated + validated test. Agent 6 runs only
+            # after approval, via finalize_execution().
+            if stop_before_execution:
+                self.logger.info("workflow_awaiting_approval", workflow_id=workflow_id)
+                return {
+                    "workflow_id": workflow_id,
+                    "jira_key": jira_key,
+                    "status": "waiting_approval",
+                    "checkpoint": "pre_execution",
+                    "discovery": discovery_result,
+                    "understanding": understanding_result,
+                    "scenarios": scenarios,
+                    "test_code": test_code,
+                    "validation": validation_result,
+                    "quality_score": validation_result.get("quality_score", 0),
+                }
+
             # AGENT 6: Execution (Finalize — opens GitHub PR, posts JIRA comment)
             self.logger.info("agent_6_execution", workflow_id=workflow_id)
             execution_result = await self.execution.execute(
@@ -144,3 +169,23 @@ class WorkflowOrchestrator:
                 exc_info=True
             )
             raise
+
+    async def finalize_execution(self, prior: Dict[str, Any]) -> Dict[str, Any]:
+        """Run Agent 6 (execution → GitHub PR) from a generated + validated +
+        CCO-approved workflow. Called after the pre_execution checkpoint is
+        approved; ``prior`` is the persisted artifacts from the paused run.
+        Returns the execution result (includes ``pr_url``)."""
+        workflow_id = prior.get("workflow_id")
+        jira_key = prior.get("jira_key", "")
+        self.logger.info("agent_6_execution_post_approval", workflow_id=workflow_id)
+        return await self.execution.execute(
+            {"workflow_id": workflow_id, "jira_key": jira_key},
+            {
+                "workflow_id": workflow_id,
+                "jira_key": jira_key,
+                "validation": prior.get("validation", {}),
+                "test_code": prior.get("test_code", ""),
+                "scenarios": prior.get("scenarios", []),
+                "understanding": prior.get("understanding", {}),
+            },
+        )

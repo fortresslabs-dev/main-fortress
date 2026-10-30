@@ -105,6 +105,46 @@ Concrete, data-grounded next steps. Each ends at a **demo-ready** bar.
 
 ---
 
+## 4c · Measured demo-readiness scorecard — all 11 use cases (2026-10-30)
+
+Full per-use-case detail (problem → root cause → resolution → steps → SQL check)
+lives in `customer-demo-readiness-runbook.md`. Summary:
+
+| # | Use case | Status | Measured | Blocker |
+|---|---|---|---|---|
+| 5 | OFAC / SDN screening | ✅ ready | 47,608 vectors, 100% embedded | — (lead with this) |
+| 9 | Test generation (6-agent) | ✅ works | 9 completed runs, full agent trail | single-rule breadth |
+| 10 | Validation (Agents 5–6) | ✅ works | quality score + sandbox execution | breadth (§9) |
+| 11 | Product integration (PR) | ✅ works | 8/9 completed opened a GitHub PR | confirm bank repo/token |
+| 7 | Rule onboarding | 🟡 thin | 1 `rule_overrides` | §1 backfills |
+| 4 | Enforcement | 🟡 partial | CFPB 9 (6 penalties); others empty | regulators + risk scorer |
+| 1 | Compliance rules | 🟡 partial | 476; 300 cited / 175 severity / **0 risk** | citations + severity + risk |
+| 2 | Obligations | 🟡 partial | 198, covering 174/472 rules (~37%) | extract remaining rules |
+| 8 | **CCO approval gate** | 🔴 not functional | **`checkpoint_approvals` = 0** | engine never pauses (see below) |
+| 3 | **Changes** | 🔴 noisy | 52,383 rows / 23 deltas / **0 dispositions** | purge + tighten + disposition |
+| 6 | Composite reports | ⏳ pending | 6 `export_artifacts`, 50 seeded findings | needs §§1–4 green |
+
+**The two must-fix before any demo:**
+1. **CCO approval gate (§8)** — a compliance buyer must see the human-in-the-loop.
+   Root cause: the approvals API exists (`src/api/approvals.py`), but
+   `execute_workflow` runs all six agents straight through to the PR and **never
+   pauses** at a checkpoint — so nothing ever waits, and a reject can't stop a PR
+   that already happened. Fix = pause before the PR step (Agent 6), gate it on an
+   approval, reject → no PR. Tracked in `customer-demo-readiness-runbook.md §8`.
+2. **Changes (§3)** — 99.9% scrape-churn; purge `added`/`removed` with no delta,
+   emit records only on a real `change_delta`, seed a disposition.
+
+**Method note (what these checks do and don't prove).** The measurements above
+verify **completeness and gross noise** — row counts, citations/severity present,
+coverage %, deltas present, PRs opened, approvals recorded. They do **not**
+confirm **semantic correctness**: whether each extracted citation is the *right*
+one, whether a generated test is *actually valid*, whether a penalty figure is
+the *real* one. That requires SME / engineer spot-review, which is the acceptance
+gate for the composite reports (§6) — "green" in the scorecard means "present and
+not obviously broken," not "SME-verified correct."
+
+---
+
 ## 5 · Governance gate (independent of data correctness)
 
 Correct *data* is necessary but not sufficient. Every report also requires
